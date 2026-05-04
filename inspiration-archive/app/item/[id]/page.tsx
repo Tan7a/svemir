@@ -12,16 +12,30 @@ import type { Item, Tag, ItemWithTags } from "@/lib/types";
 
 export const revalidate = 60;
 
-type ItemRow = Item & {
-  item_tags: { tags: Tag | null }[] | null;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type RawItemRow = Record<string, unknown> & {
+  item_tags?: unknown;
 };
 
-function flattenTags(row: ItemRow): ItemWithTags {
+function flattenTags(row: RawItemRow): ItemWithTags {
   const { item_tags, ...rest } = row;
-  const tags: Tag[] = (item_tags ?? [])
-    .map((it) => it.tags)
+  const tagList = Array.isArray(item_tags) ? item_tags : [];
+  const tags: Tag[] = tagList
+    .map((it: unknown) => {
+      if (it && typeof it === "object" && "tags" in it) {
+        return (it as { tags: Tag | null }).tags;
+      }
+      return null;
+    })
     .filter((t): t is Tag => !!t);
-  return { ...rest, tags };
+  return { ...(rest as Item), tags };
+}
+
+function safeImageUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+  return url.startsWith("https://") ? url : null;
 }
 
 export default async function ItemPage({
@@ -31,11 +45,11 @@ export default async function ItemPage({
 }) {
   const { id } = await params;
 
+  if (!UUID_RE.test(id)) notFound();
+
   if (!supabase) {
     return (
-      <div className="p-8 text-zinc-600">
-        Supabase is not configured.
-      </div>
+      <div className="p-8 text-zinc-600">Supabase is not configured.</div>
     );
   }
 
@@ -55,42 +69,57 @@ export default async function ItemPage({
 
   if (!itemData) notFound();
 
-  const item = flattenTags(itemData as ItemRow);
+  const item = flattenTags(itemData as RawItemRow);
   const tagIds = item.tags.map((t) => t.id);
 
   let related: ItemWithTags[] = [];
   if (tagIds.length > 0) {
-    const { data: shareRows } = await supabase
-      .from("item_tags")
-      .select("item_id, tag_id")
-      .in("tag_id", tagIds)
-      .neq("item_id", id);
+    try {
+      const { data: shareRows, error: shareErr } = await supabase
+        .from("item_tags")
+        .select("item_id, tag_id")
+        .in("tag_id", tagIds)
+        .neq("item_id", id);
 
-    const counts = new Map<string, number>();
-    (shareRows ?? []).forEach((r) => {
-      counts.set(r.item_id, (counts.get(r.item_id) ?? 0) + 1);
-    });
-    const topIds = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([itemId]) => itemId);
+      if (shareErr) {
+        console.error("related-items shareRows query failed:", shareErr);
+      } else {
+        const counts = new Map<string, number>();
+        (shareRows ?? []).forEach((r) => {
+          counts.set(r.item_id, (counts.get(r.item_id) ?? 0) + 1);
+        });
+        const topIds = [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 12)
+          .map(([itemId]) => itemId);
 
-    if (topIds.length > 0) {
-      const { data: relatedRows } = await supabase
-        .from("items")
-        .select("*, item_tags(tags(*))")
-        .in("id", topIds);
+        if (topIds.length > 0) {
+          const { data: relatedRows, error: relatedErr } = await supabase
+            .from("items")
+            .select("*, item_tags(tags(*))")
+            .in("id", topIds);
 
-      const order = new Map(topIds.map((tid, i) => [tid, i]));
-      related = ((relatedRows ?? []) as ItemRow[])
-        .map(flattenTags)
-        .sort(
-          (a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999)
-        );
+          if (relatedErr) {
+            console.error("related-items rows query failed:", relatedErr);
+          } else {
+            const order = new Map(topIds.map((tid, i) => [tid, i]));
+            related = ((relatedRows ?? []) as RawItemRow[])
+              .map(flattenTags)
+              .sort(
+                (a, b) =>
+                  (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999)
+              );
+          }
+        }
+      }
+    } catch (e) {
+      console.error("related-items block threw:", e);
+      related = [];
     }
   }
 
   const sourceLetter = SOURCE_TYPE_LETTER[item.source_type] ?? "○";
+  const heroImage = safeImageUrl(item.image_url);
 
   return (
     <div className="min-h-screen bg-[#FBF8F4]">
@@ -114,9 +143,9 @@ export default async function ItemPage({
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="grid gap-8 md:grid-cols-[3fr_2fr]">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border-4 border-white bg-white shadow-md">
-            {item.image_url ? (
+            {heroImage ? (
               <Image
-                src={item.image_url}
+                src={heroImage}
                 alt={item.title}
                 fill
                 sizes="(min-width: 768px) 60vw, 100vw"
