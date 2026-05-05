@@ -12,21 +12,21 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type RawItemRow = Record<string, unknown> & {
-  item_channels?: unknown;
+  item_tags?: unknown;
 };
 
-function flattenChannels(row: RawItemRow): ItemWithChannels {
-  const { item_channels, ...rest } = row;
-  const list = Array.isArray(item_channels) ? item_channels : [];
-  const channels: Channel[] = list
+function flattenTags(row: RawItemRow): ItemWithTags {
+  const { item_tags, ...rest } = row;
+  const tagList = Array.isArray(item_tags) ? item_tags : [];
+  const tags: Tag[] = tagList
     .map((it: unknown) => {
-      if (it && typeof it === "object" && "channels" in it) {
-        return (it as { channels: Channel | null }).channels;
+      if (it && typeof it === "object" && "tags" in it) {
+        return (it as { tags: Tag | null }).tags;
       }
       return null;
     })
-    .filter((c): c is Channel => !!c);
-  return { ...(rest as Item), channels };
+    .filter((t): t is Tag => !!t);
+  return { ...(rest as Item), tags };
 }
 
 function safeImageUrl(url: string | null | undefined): string | null {
@@ -65,16 +65,16 @@ export default async function ItemPage({
 
   if (!itemData) notFound();
 
-  const item = flattenChannels(itemData as RawItemRow);
-  const channelIds = item.channels.map((c) => c.id);
+  const item = flattenTags(itemData as RawItemRow);
+  const tagIds = item.tags.map((t) => t.id);
 
-  let related: ItemWithChannels[] = [];
-  if (channelIds.length > 0) {
+  let related: ItemWithTags[] = [];
+  if (tagIds.length > 0) {
     try {
       const { data: shareRows, error: shareErr } = await supabase
-        .from("item_channels")
-        .select("item_id, channel_id")
-        .in("channel_id", channelIds)
+        .from("item_tags")
+        .select("item_id, tag_id")
+        .in("tag_id", tagIds)
         .neq("item_id", id);
 
       if (shareErr) {
@@ -92,7 +92,7 @@ export default async function ItemPage({
         if (topIds.length > 0) {
           const { data: relatedRows, error: relatedErr } = await supabase
             .from("items")
-            .select("*, item_channels(channels(*))")
+            .select("*, item_tags(tags(*))")
             .in("id", topIds);
 
           if (relatedErr) {
@@ -100,7 +100,7 @@ export default async function ItemPage({
           } else {
             const order = new Map(topIds.map((tid, i) => [tid, i]));
             related = ((relatedRows ?? []) as RawItemRow[])
-              .map(flattenChannels)
+              .map(flattenTags)
               .sort(
                 (a, b) =>
                   (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999)
@@ -114,6 +114,7 @@ export default async function ItemPage({
     }
   }
 
+  const sourceLetter = SOURCE_TYPE_LETTER[item.source_type] ?? "○";
   const heroImage = safeImageUrl(item.image_url);
 
   return (

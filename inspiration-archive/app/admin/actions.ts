@@ -373,6 +373,152 @@ export async function bulkDeleteItems(
   return { success: true, count: count ?? ids.length };
 }
 
+export async function updateItemTagsAndCategories(
+  itemId: string,
+  tagNames: string[],
+  categories: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+
+  const { error: catErr } = await client
+    .from("items")
+    .update({ categories })
+    .eq("id", itemId);
+  if (catErr) return { success: false, error: catErr.message };
+
+  const { error: deleteErr } = await client
+    .from("item_tags")
+    .delete()
+    .eq("item_id", itemId);
+  if (deleteErr) return { success: false, error: deleteErr.message };
+
+  const tagIds = (
+    await Promise.all(tagNames.map((n) => ensureTagId(client, n)))
+  ).filter((id): id is string => id !== null);
+
+  if (tagIds.length > 0) {
+    const { error: linkErr } = await client
+      .from("item_tags")
+      .insert(tagIds.map((tag_id) => ({ item_id: itemId, tag_id })));
+    if (linkErr) return { success: false, error: linkErr.message };
+  }
+
+  revalidatePath("/archive");
+  revalidatePath("/graph");
+  revalidatePath(`/item/${itemId}`);
+  revalidatePath("/admin/manage");
+  return { success: true };
+}
+
+export async function scrapeMissingMetadata(
+  limit: number = 8,
+  cursorId?: string
+): Promise<
+  | {
+      success: true;
+      scraped: number;
+      failed: number;
+      lastId: string | null;
+      remaining: number;
+    }
+  | { success: false; error: string }
+> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+
+  let query = client
+    .from("items")
+    .select("id, url")
+    .is("image_url", null)
+    .order("id")
+    .limit(limit);
+  if (cursorId) query = query.gt("id", cursorId);
+
+  const { data: targets, error: selectErr } = await query;
+  if (selectErr) return { success: false, error: selectErr.message };
+  if (!targets || targets.length === 0) {
+    return { success: true, scraped: 0, failed: 0, lastId: null, remaining: 0 };
+  }
+
+  const ogs = (await import("open-graph-scraper")).default;
+  const PER_ITEM_TIMEOUT_MS = 5000;
+
+  const results = await Promise.allSettled(
+    targets.map(async (t) => {
+      const id = t.id as string;
+      const url = t.url as string;
+      try {
+        const { result } = (await Promise.race([
+          ogs({ url, timeout: PER_ITEM_TIMEOUT_MS }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), PER_ITEM_TIMEOUT_MS)
+          ),
+        ])) as Awaited<ReturnType<typeof ogs>>;
+
+        const ogImage = Array.isArray(result.ogImage)
+          ? result.ogImage[0]?.url
+          : (result.ogImage as { url?: string } | undefined)?.url;
+
+        const updates: Record<string, unknown> = {};
+        if (result.ogTitle) updates.title = result.ogTitle;
+        if (result.ogDescription) updates.description = result.ogDescription;
+        if (ogImage && ogImage.startsWith("https://")) {
+          updates.image_url = ogImage;
+        }
+        if (result.ogSiteName) updates.source_name = result.ogSiteName;
+
+        if (!updates.image_url) {
+          return { id, scraped: false } as const;
+        }
+
+        const { error: updateErr } = await client
+          .from("items")
+          .update(updates)
+          .eq("id", id);
+        if (updateErr) {
+          return { id, scraped: false } as const;
+        }
+        return { id, scraped: true } as const;
+      } catch {
+        return { id, scraped: false } as const;
+      }
+    })
+  );
+
+  let scraped = 0;
+  let failed = 0;
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value.scraped) scraped++;
+    else failed++;
+  }
+
+  const lastId = (targets[targets.length - 1] as { id: string }).id;
+
+  const { count } = await client
+    .from("items")
+    .select("*", { count: "exact", head: true })
+    .is("image_url", null)
+    .gt("id", lastId);
+
+  if (scraped > 0) {
+    revalidatePath("/archive");
+    revalidatePath("/admin/manage");
+  }
+
+  return {
+    success: true,
+    scraped,
+    failed,
+    lastId,
+    remaining: count ?? 0,
+  };
+}
+
 export async function scrapeAndUpdateItem(
   itemId: string,
   url: string
