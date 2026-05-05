@@ -1,11 +1,11 @@
 import { supabase } from "@/lib/supabase-client";
 import ArchiveGrid from "@/components/ArchiveGrid";
-import type { Item, Tag, ItemWithTags } from "@/lib/types";
+import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 export const revalidate = 60;
 
 type ItemRow = Item & {
-  item_tags: { tags: Tag | null }[] | null;
+  item_channels: { channels: Channel | null }[] | null;
 };
 
 export default async function ArchivePage() {
@@ -20,7 +20,7 @@ export default async function ArchivePage() {
 
   const { data, error } = await supabase
     .from("items")
-    .select("*, item_tags(tags(*))")
+    .select("*, item_channels(channels(*))")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -31,12 +31,12 @@ export default async function ArchivePage() {
     );
   }
 
-  const items: ItemWithTags[] = ((data ?? []) as ItemRow[]).map((row) => {
-    const { item_tags, ...item } = row;
-    const tags: Tag[] = (item_tags ?? [])
-      .map((it) => it.tags)
-      .filter((t): t is Tag => !!t);
-    return { ...item, tags };
+  const items: ItemWithChannels[] = ((data ?? []) as ItemRow[]).map((row) => {
+    const { item_channels, ...item } = row;
+    const channels: Channel[] = (item_channels ?? [])
+      .map((it) => it.channels)
+      .filter((c): c is Channel => !!c);
+    return { ...item, channels };
   });
 
   return <ArchiveGrid items={items} />;

@@ -3,12 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import ArchiveCard from "@/components/ArchiveCard";
-import {
-  CATEGORY_PILL_CLASSES,
-  SOURCE_TYPE_LETTER,
-  colorForTag,
-} from "@/lib/constants";
-import type { Item, Tag, ItemWithTags } from "@/lib/types";
+import { CATEGORY_PILL_CLASSES, colorForTag } from "@/lib/constants";
+import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -16,21 +12,21 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type RawItemRow = Record<string, unknown> & {
-  item_tags?: unknown;
+  item_channels?: unknown;
 };
 
-function flattenTags(row: RawItemRow): ItemWithTags {
-  const { item_tags, ...rest } = row;
-  const tagList = Array.isArray(item_tags) ? item_tags : [];
-  const tags: Tag[] = tagList
+function flattenChannels(row: RawItemRow): ItemWithChannels {
+  const { item_channels, ...rest } = row;
+  const list = Array.isArray(item_channels) ? item_channels : [];
+  const channels: Channel[] = list
     .map((it: unknown) => {
-      if (it && typeof it === "object" && "tags" in it) {
-        return (it as { tags: Tag | null }).tags;
+      if (it && typeof it === "object" && "channels" in it) {
+        return (it as { channels: Channel | null }).channels;
       }
       return null;
     })
-    .filter((t): t is Tag => !!t);
-  return { ...(rest as Item), tags };
+    .filter((c): c is Channel => !!c);
+  return { ...(rest as Item), channels };
 }
 
 function safeImageUrl(url: string | null | undefined): string | null {
@@ -55,7 +51,7 @@ export default async function ItemPage({
 
   const { data: itemData, error } = await supabase
     .from("items")
-    .select("*, item_tags(tags(*))")
+    .select("*, item_channels(channels(*))")
     .eq("id", id)
     .maybeSingle();
 
@@ -69,16 +65,16 @@ export default async function ItemPage({
 
   if (!itemData) notFound();
 
-  const item = flattenTags(itemData as RawItemRow);
-  const tagIds = item.tags.map((t) => t.id);
+  const item = flattenChannels(itemData as RawItemRow);
+  const channelIds = item.channels.map((c) => c.id);
 
-  let related: ItemWithTags[] = [];
-  if (tagIds.length > 0) {
+  let related: ItemWithChannels[] = [];
+  if (channelIds.length > 0) {
     try {
       const { data: shareRows, error: shareErr } = await supabase
-        .from("item_tags")
-        .select("item_id, tag_id")
-        .in("tag_id", tagIds)
+        .from("item_channels")
+        .select("item_id, channel_id")
+        .in("channel_id", channelIds)
         .neq("item_id", id);
 
       if (shareErr) {
@@ -96,7 +92,7 @@ export default async function ItemPage({
         if (topIds.length > 0) {
           const { data: relatedRows, error: relatedErr } = await supabase
             .from("items")
-            .select("*, item_tags(tags(*))")
+            .select("*, item_channels(channels(*))")
             .in("id", topIds);
 
           if (relatedErr) {
@@ -104,7 +100,7 @@ export default async function ItemPage({
           } else {
             const order = new Map(topIds.map((tid, i) => [tid, i]));
             related = ((relatedRows ?? []) as RawItemRow[])
-              .map(flattenTags)
+              .map(flattenChannels)
               .sort(
                 (a, b) =>
                   (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999)
@@ -118,7 +114,6 @@ export default async function ItemPage({
     }
   }
 
-  const sourceLetter = SOURCE_TYPE_LETTER[item.source_type] ?? "○";
   const heroImage = safeImageUrl(item.image_url);
 
   return (
@@ -157,9 +152,6 @@ export default async function ItemPage({
                 No image
               </div>
             )}
-            <div className="absolute top-3 left-3 flex h-7 w-7 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
-              {sourceLetter}
-            </div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -186,7 +178,7 @@ export default async function ItemPage({
               Open original ↗
             </a>
 
-            {(item.categories.length > 0 || item.tags.length > 0) && (
+            {(item.categories.length > 0 || item.channels.length > 0) && (
               <div className="flex flex-wrap gap-1.5 pt-2">
                 {item.categories.map((cat) => (
                   <span
@@ -198,15 +190,16 @@ export default async function ItemPage({
                     {cat}
                   </span>
                 ))}
-                {item.tags.map((tag) => {
-                  const c = colorForTag(tag.id);
+                {item.channels.map((ch) => {
+                  const c = colorForTag(ch.id);
                   return (
-                    <span
-                      key={`t-${tag.id}`}
-                      className={`px-2.5 py-1 rounded-full text-xs ${c.bg} ${c.text}`}
+                    <Link
+                      key={`ch-${ch.id}`}
+                      href={`/channel/${ch.slug}`}
+                      className={`px-2.5 py-1 rounded-full text-xs ${c.bg} ${c.text} hover:opacity-80`}
                     >
-                      #{tag.name}
-                    </span>
+                      {ch.name}
+                    </Link>
                   );
                 })}
               </div>
@@ -226,7 +219,7 @@ export default async function ItemPage({
           </h2>
           {related.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              No related items yet — add more entries with overlapping tags.
+              No related items yet — add more entries that share a channel.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
