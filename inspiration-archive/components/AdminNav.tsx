@@ -1,13 +1,13 @@
 import Link from "next/link";
 
 type Props = {
-  active?: "add" | "import" | "manage";
+  active?: "add" | "manage" | "channels";
 };
 
 const tabs = [
   { id: "add", label: "Add one", href: "/admin" },
-  { id: "import", label: "Bulk import", href: "/admin/import" },
   { id: "manage", label: "Manage", href: "/admin/manage" },
+  { id: "channels", label: "Channels", href: "/channels" },
 ] as const;
 
 export default function AdminNav({ active }: Props) {

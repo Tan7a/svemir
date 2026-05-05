@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { ItemWithTags } from "@/lib/types";
-import { CATEGORIES } from "@/lib/constants";
-import { supabase } from "@/lib/supabase-client";
+import Image from "next/image";
+import type { ItemWithChannels } from "@/lib/types";
+import {
+  CATEGORIES,
+  CATEGORY_PILL_CLASSES,
+  colorForTag,
+} from "@/lib/constants";
 import {
   bulkDeleteItems,
   deleteItem,
@@ -13,22 +17,28 @@ import {
   scrapeMissingMetadata,
   updateItemTagsAndCategories,
 } from "@/app/admin/actions";
+import ConnectPicker from "@/components/ConnectPicker";
 
 type Props = {
-  items: ItemWithTags[];
+  items: ItemWithChannels[];
   page: number;
   totalPages: number;
   query: string;
+  view: "list" | "grid";
 };
 
-export default function ManageList({ items, page, totalPages, query }: Props) {
+export default function ManageList({
+  items,
+  page,
+  totalPages,
+  query,
+  view,
+}: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
-  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editChannelIds, setEditChannelIds] = useState<string[]>([]);
   const [editCategories, setEditCategories] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [allTagNames, setAllTagNames] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(query);
   const [scraping, setScraping] = useState(false);
@@ -41,20 +51,9 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("tags")
-      .select("name")
-      .order("name")
-      .then(({ data }) => {
-        if (data) setAllTagNames(data.map((t) => t.name as string));
-      });
-  }, []);
-
-  useEffect(() => {
     setSelected(new Set());
     setEditing(null);
-  }, [page, query]);
+  }, [page, query, view]);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -65,38 +64,33 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     });
   }
 
-  function selectAllOnPage() {
-    if (selected.size === items.length) setSelected(new Set());
-    else setSelected(new Set(items.map((i) => i.id)));
-  }
-
-  function startEdit(item: ItemWithTags) {
+  function startEdit(item: ItemWithChannels) {
     setEditing(item.id);
-    setEditTags(item.tags.map((t) => t.name));
+    setEditChannelIds(item.channels.map((c) => c.id));
     setEditCategories([...item.categories]);
-    setTagInput("");
   }
 
   function cancelEdit() {
     setEditing(null);
-    setTagInput("");
   }
 
   async function saveEdit() {
     if (!editing) return;
     setBusy(editing);
-    const r = await updateItemTagsAndCategories(
-      editing,
-      editTags,
-      editCategories
-    );
-    setBusy(null);
-    if (r.success) {
-      setEditing(null);
-      router.refresh();
-    } else {
-      setError(r.error);
+    const r1 = await updateItemChannels(editing, editChannelIds);
+    if (!r1.success) {
+      setError(r1.error);
+      setBusy(null);
+      return;
     }
+    const r2 = await updateItemCategories(editing, editCategories);
+    setBusy(null);
+    if (!r2.success) {
+      setError(r2.error);
+      return;
+    }
+    setEditing(null);
+    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -113,7 +107,8 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
 
   async function handleBulkDelete() {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} items? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${selected.size} items? This cannot be undone.`))
+      return;
     setBusy("bulk");
     const r = await bulkDeleteItems([...selected]);
     setBusy(null);
@@ -135,7 +130,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
       try {
         await scrapeAndUpdateItem(item.id, item.url);
       } catch {
-        // continue with the next one
+        // ignore one-off failures
       }
     }
     setScraping(false);
@@ -200,19 +195,11 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     );
   }
 
-  const tagSuggestions = useMemo(() => {
-    const q = tagInput.trim().toLowerCase();
-    if (!q) return [];
-    const used = new Set(editTags.map((t) => t.toLowerCase()));
-    return allTagNames
-      .filter((n) => n.toLowerCase().includes(q) && !used.has(n.toLowerCase()))
-      .slice(0, 8);
-  }, [tagInput, allTagNames, editTags]);
-
   function go(toPage: number) {
     const sp = new URLSearchParams();
     if (toPage > 1) sp.set("page", String(toPage));
     if (query) sp.set("q", query);
+    if (view === "grid") sp.set("view", "grid");
     const qs = sp.toString();
     router.push(`/admin/manage${qs ? "?" + qs : ""}`);
   }
@@ -221,6 +208,16 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     e.preventDefault();
     const sp = new URLSearchParams();
     if (searchInput.trim()) sp.set("q", searchInput.trim());
+    if (view === "grid") sp.set("view", "grid");
+    const qs = sp.toString();
+    router.push(`/admin/manage${qs ? "?" + qs : ""}`);
+  }
+
+  function switchView(next: "list" | "grid") {
+    if (next === view) return;
+    const sp = new URLSearchParams();
+    if (query) sp.set("q", query);
+    if (next === "grid") sp.set("view", "grid");
     const qs = sp.toString();
     router.push(`/admin/manage${qs ? "?" + qs : ""}`);
   }
@@ -284,6 +281,26 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         </p>
       )}
 
+      {view === "grid" && items.length > 0 && (
+        <div className="flex items-center gap-3 text-xs text-zinc-600">
+          <span>
+            {items.length} item{items.length === 1 ? "" : "s"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (selected.size === items.length) setSelected(new Set());
+              else setSelected(new Set(items.map((i) => i.id)));
+            }}
+            className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 hover:bg-zinc-50"
+          >
+            {selected.size === items.length && items.length > 0
+              ? "Deselect all"
+              : "Select all"}
+          </button>
+        </div>
+      )}
+
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm text-white">
           <span>{selected.size} selected</span>
@@ -311,237 +328,319 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         </p>
       )}
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-xs text-zinc-500">
-            <tr>
-              <th className="w-10 p-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selected.size === items.length && items.length > 0}
-                  onChange={selectAllOnPage}
-                />
-              </th>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-left w-48">Categories / Tags</th>
-              <th className="p-3 text-right w-32">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {items.length === 0 && (
+      {view === "list" && (
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 text-xs text-zinc-500">
               <tr>
-                <td colSpan={4} className="p-6 text-center text-zinc-500">
-                  No items.
-                </td>
+                <th className="w-10 p-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selected.size === items.length && items.length > 0
+                    }
+                    onChange={() => {
+                      if (selected.size === items.length)
+                        setSelected(new Set());
+                      else setSelected(new Set(items.map((i) => i.id)));
+                    }}
+                  />
+                </th>
+                <th className="p-3 text-left">Title</th>
+                <th className="p-3 text-left w-64">Channels / Categories</th>
+                <th className="p-3 text-right w-32">Actions</th>
               </tr>
-            )}
-            {items.map((item) => {
-              const isSelected = selected.has(item.id);
-              const isEditing = editing === item.id;
-              const missing = !item.image_url || !item.description;
-              return (
-                <tr
-                  key={item.id}
-                  className={isSelected ? "bg-zinc-50" : undefined}
-                >
-                  <td className="p-3 align-top">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(item.id)}
-                    />
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-6 text-center text-zinc-500">
+                    No items.
                   </td>
-                  <td className="p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded bg-zinc-100">
-                        {item.image_url && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.image_url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/item/${item.id}`}
-                          className="line-clamp-2 font-medium text-zinc-900 hover:underline"
-                        >
-                          {item.title}
-                        </Link>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-0.5 line-clamp-1 text-xs text-zinc-500 hover:text-zinc-800"
-                        >
-                          {item.url}
-                        </a>
-                        {missing && (
-                          <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-                            no metadata yet
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 align-top">
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-1">
-                          {CATEGORIES.map((cat) => {
-                            const active = editCategories.includes(cat);
-                            return (
-                              <button
-                                key={cat}
-                                type="button"
-                                onClick={() => toggleEditCategory(cat)}
-                                className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                                  active
-                                    ? "bg-zinc-900 text-white border-zinc-900"
-                                    : "bg-white text-zinc-600 border-zinc-300"
-                                }`}
-                              >
-                                {cat}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div className="rounded border border-zinc-200 bg-white px-2 py-1.5">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {editTags.map((t) => (
-                              <span
-                                key={t}
-                                className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px]"
-                              >
-                                {t}
-                                <button
-                                  type="button"
-                                  onClick={() => removeTagChip(t)}
-                                  className="text-zinc-500 hover:text-zinc-900"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                            <input
-                              type="text"
-                              value={tagInput}
-                              onChange={(e) => setTagInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === ",") {
-                                  e.preventDefault();
-                                  addTagChip(tagInput);
-                                }
-                              }}
-                              placeholder="add tag…"
-                              className="flex-1 min-w-[6rem] border-0 px-1 py-0.5 text-xs focus:outline-none"
+                </tr>
+              )}
+              {items.map((item) => {
+                const isSelected = selected.has(item.id);
+                const isEditing = editing === item.id;
+                const missing = !item.image_url || !item.description;
+                return (
+                  <tr
+                    key={item.id}
+                    className={isSelected ? "bg-zinc-50" : undefined}
+                  >
+                    <td className="p-3 align-top">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(item.id)}
+                      />
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="h-12 w-16 shrink-0 overflow-hidden rounded bg-zinc-100">
+                          {item.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.image_url}
+                              alt=""
+                              className="h-full w-full object-cover"
                             />
-                          </div>
-                          {tagSuggestions.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1 border-t border-zinc-100 pt-1">
-                              {tagSuggestions.map((s) => (
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/item/${item.id}`}
+                            className="line-clamp-2 font-medium text-zinc-900 hover:underline"
+                          >
+                            {item.title}
+                          </Link>
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 line-clamp-1 text-xs text-zinc-500 hover:text-zinc-800"
+                          >
+                            {item.url}
+                          </a>
+                          {missing && (
+                            <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                              no metadata yet
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 align-top">
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {CATEGORIES.map((cat) => {
+                              const active = editCategories.includes(cat);
+                              return (
                                 <button
-                                  key={s}
+                                  key={cat}
                                   type="button"
-                                  onClick={() => addTagChip(s)}
-                                  className="rounded-full bg-zinc-50 px-2 py-0.5 text-[10px] text-zinc-600 hover:bg-zinc-100"
+                                  onClick={() => toggleEditCategory(cat)}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] border ${
+                                    active
+                                      ? "bg-zinc-900 text-white border-zinc-900"
+                                      : "bg-white text-zinc-600 border-zinc-300"
+                                  }`}
                                 >
-                                  + {s}
+                                  {cat}
                                 </button>
+                              );
+                            })}
+                          </div>
+                          <ConnectPicker
+                            selected={editChannelIds}
+                            onChange={setEditChannelIds}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {item.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {item.categories.map((c) => (
+                                <span
+                                  key={c}
+                                  className={`rounded-full px-2 py-0.5 text-[10px] ${
+                                    CATEGORY_PILL_CLASSES[c] ??
+                                    "bg-zinc-200 text-zinc-700"
+                                  }`}
+                                >
+                                  {c}
+                                </span>
                               ))}
                             </div>
                           )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {item.categories.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {item.categories.map((c) => (
-                              <span
-                                key={c}
-                                className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px]"
-                              >
-                                {c}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {item.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {item.tags.slice(0, 6).map((t) => (
-                              <span
-                                key={t.id}
-                                className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-700"
-                              >
-                                #{t.name}
-                              </span>
-                            ))}
-                            {item.tags.length > 6 && (
-                              <span className="text-[10px] text-zinc-500">
-                                +{item.tags.length - 6}
+                          {item.channels.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {item.channels.slice(0, 6).map((ch) => {
+                                const c = colorForTag(ch.id);
+                                return (
+                                  <span
+                                    key={ch.id}
+                                    className={`rounded-full px-2 py-0.5 text-[10px] ${c.bg} ${c.text}`}
+                                  >
+                                    {ch.name}
+                                  </span>
+                                );
+                              })}
+                              {item.channels.length > 6 && (
+                                <span className="text-[10px] text-zinc-500">
+                                  +{item.channels.length - 6}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {item.categories.length === 0 &&
+                            item.channels.length === 0 && (
+                              <span className="text-xs text-zinc-400">
+                                none
                               </span>
                             )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3 align-top text-right">
+                      {isEditing ? (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            disabled={busy === item.id}
+                            className="rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                          >
+                            {busy === item.id ? "…" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs hover:bg-zinc-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={busy === item.id}
+                            className="rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {busy === item.id ? "…" : "Delete"}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view === "grid" && (
+        <div>
+          {items.length === 0 ? (
+            <p className="rounded-xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-500">
+              No items.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {items.map((item) => {
+                const isSelected = selected.has(item.id);
+                const visibleCategories = item.categories.slice(0, 2);
+                const visibleChannels = item.channels.slice(0, 3);
+                return (
+                  <div key={item.id} className="group relative">
+                    <Link href={`/item/${item.id}`} className="block">
+                      <div
+                        className={`relative aspect-[4/3] w-full overflow-hidden rounded-xl border-4 ${
+                          isSelected ? "border-zinc-900" : "border-white"
+                        } bg-white shadow-sm transition-shadow group-hover:shadow-lg`}
+                      >
+                        {item.image_url ? (
+                          <Image
+                            src={item.image_url}
+                            alt={item.title}
+                            fill
+                            sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 text-zinc-400">
+                            <span className="text-xs">No image</span>
                           </div>
                         )}
-                        {item.categories.length === 0 &&
-                          item.tags.length === 0 && (
-                            <span className="text-xs text-zinc-400">
-                              none
+                      </div>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelect(item.id);
+                      }}
+                      aria-label={isSelected ? "Deselect" : "Select"}
+                      className={`absolute top-3 left-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold shadow-sm ${
+                        isSelected
+                          ? "bg-zinc-900 text-white border-zinc-900"
+                          : "bg-white/95 text-zinc-400 border-white hover:text-zinc-900"
+                      }`}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                      disabled={busy === item.id}
+                      aria-label="Delete"
+                      title="Delete"
+                      className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-base leading-none text-red-600 shadow-sm border border-white/80 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {busy === item.id ? "…" : "×"}
+                    </button>
+                    <div className="mt-3 px-1">
+                      {item.source_name && (
+                        <p className="text-xs text-zinc-500">
+                          {item.source_name}
+                        </p>
+                      )}
+                      <h3 className="mt-0.5 text-sm font-medium text-zinc-900 line-clamp-2 leading-snug">
+                        {item.title}
+                      </h3>
+                      {(visibleCategories.length > 0 ||
+                        visibleChannels.length > 0) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          {visibleCategories.map((cat) => (
+                            <span
+                              key={`c-${cat}`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                CATEGORY_PILL_CLASSES[cat] ??
+                                "bg-zinc-200 text-zinc-700"
+                              }`}
+                            >
+                              {cat}
                             </span>
-                          )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="p-3 align-top text-right">
-                    {isEditing ? (
-                      <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={saveEdit}
-                          disabled={busy === item.id}
-                          className="rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
-                        >
-                          {busy === item.id ? "…" : "Save"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEdit}
-                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs hover:bg-zinc-50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={busy === item.id}
-                          className="rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {busy === item.id ? "…" : "Delete"}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                          ))}
+                          {visibleChannels.map((ch) => {
+                            const c = colorForTag(ch.id);
+                            return (
+                              <span
+                                key={`ch-${ch.id}`}
+                                className={`px-2 py-0.5 rounded-full text-[10px] ${c.bg} ${c.text}`}
+                              >
+                                {ch.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-      {totalPages > 1 && (
+      {totalPages > 1 && view === "list" && (
         <div className="flex items-center justify-center gap-2">
           <button
             type="button"

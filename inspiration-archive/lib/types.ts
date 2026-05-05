@@ -12,14 +12,22 @@ export type Item = {
   created_at: string;
 };
 
-export type Tag = {
+export type Channel = {
   id: string;
   name: string;
   slug: string;
-  color: string | null;
+  description: string | null;
+  cover_image_url: string | null;
   created_at: string;
 };
 
-export type ItemWithTags = Item & {
-  tags: Tag[];
+export type ChannelWithCount = Channel & { item_count: number };
+
+export type ChannelMembership = {
+  position: number;
+  added_at: string;
+};
+
+export type ItemWithChannels = Item & {
+  channels: Channel[];
 };

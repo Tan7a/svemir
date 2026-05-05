@@ -4,33 +4,31 @@ import KnowledgeGraph, { type GraphItem } from "@/components/KnowledgeGraph";
 
 export const revalidate = 60;
 
-type TagRef = { id: string; name: string };
+type ChannelRef = { id: string; name: string };
 
 type GraphRow = {
   id: string;
   title: string;
   categories: string[] | null;
-  item_tags: { tags: unknown }[] | null;
+  item_channels: { channels: unknown }[] | null;
 };
 
-function asTagList(raw: unknown): TagRef[] {
+function asChannelList(raw: unknown): ChannelRef[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw as TagRef[];
-  return [raw as TagRef];
+  if (Array.isArray(raw)) return raw as ChannelRef[];
+  return [raw as ChannelRef];
 }
 
 export default async function GraphPage() {
   if (!supabase) {
     return (
-      <div className="p-8 text-zinc-600">
-        Supabase is not configured.
-      </div>
+      <div className="p-8 text-zinc-600">Supabase is not configured.</div>
     );
   }
 
   const { data, error } = await supabase
     .from("items")
-    .select("id, title, categories, item_tags(tags(id, name))");
+    .select("id, title, categories, item_channels(channels(id, name))");
 
   if (error) {
     return (
@@ -42,13 +40,15 @@ export default async function GraphPage() {
 
   const items: GraphItem[] = ((data ?? []) as unknown as GraphRow[]).map(
     (row) => {
-      const tagPairs = (row.item_tags ?? []).flatMap((it) => asTagList(it.tags));
+      const channels = (row.item_channels ?? []).flatMap((it) =>
+        asChannelList(it.channels)
+      );
       return {
         id: row.id,
         title: row.title,
         category: row.categories?.[0] ?? null,
-        tagIds: tagPairs.map((t) => t.id),
-        tagNames: tagPairs.map((t) => t.name),
+        tagIds: channels.map((c) => c.id),
+        tagNames: channels.map((c) => c.name),
       };
     }
   );

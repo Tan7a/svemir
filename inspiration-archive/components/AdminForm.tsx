@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { addItem } from "@/app/admin/actions";
 import { CATEGORIES, SOURCE_TYPES } from "@/lib/constants";
-import { supabase } from "@/lib/supabase-client";
+import ConnectPicker, { pushRecentChannels } from "./ConnectPicker";
 
 type Status =
   | { kind: "idle" }
@@ -27,6 +28,9 @@ function looksLikeUrl(s: string): boolean {
 }
 
 export default function AdminForm() {
+  const searchParams = useSearchParams();
+  const preselectChannelId = searchParams.get("channel");
+
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -35,26 +39,15 @@ export default function AdminForm() {
   const [sourceHandle, setSourceHandle] = useState("");
   const [sourceType, setSourceType] = useState<string>("website");
   const [categories, setCategories] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [allTagNames, setAllTagNames] = useState<string[]>([]);
+  const [channelIds, setChannelIds] = useState<string[]>(
+    preselectChannelId ? [preselectChannelId] : []
+  );
+  const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   const lastFetchedUrl = useRef<string>("");
   const formRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("tags")
-      .select("name")
-      .order("name")
-      .then(({ data }) => {
-        if (data) setAllTagNames(data.map((t) => t.name as string));
-      });
-  }, []);
-
-  // Auto-fetch metadata when URL changes (debounced)
   useEffect(() => {
     if (!looksLikeUrl(url)) return;
     if (url === lastFetchedUrl.current) return;
@@ -68,7 +61,6 @@ export default function AdminForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
-  // Cmd+Enter / Ctrl+Enter to save
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -88,17 +80,9 @@ export default function AdminForm() {
     sourceHandle,
     sourceType,
     categories,
-    tags,
+    channelIds,
+    notes,
   ]);
-
-  const suggestions = useMemo(() => {
-    const q = tagInput.trim().toLowerCase();
-    if (!q) return [];
-    const used = new Set(tags.map((t) => t.toLowerCase()));
-    return allTagNames
-      .filter((n) => n.toLowerCase().includes(q) && !used.has(n.toLowerCase()))
-      .slice(0, 8);
-  }, [tagInput, allTagNames, tags]);
 
   function reset() {
     setUrl("");
@@ -109,33 +93,9 @@ export default function AdminForm() {
     setSourceHandle("");
     setSourceType("website");
     setCategories([]);
-    setTags([]);
-    setTagInput("");
+    setChannelIds([]);
+    setNotes("");
     lastFetchedUrl.current = "";
-  }
-
-  function addTag(raw: string) {
-    const name = raw.trim().toLowerCase();
-    if (!name) return;
-    if (tags.some((t) => t.toLowerCase() === name)) {
-      setTagInput("");
-      return;
-    }
-    setTags((prev) => [...prev, name]);
-    setTagInput("");
-  }
-
-  function removeTag(name: string) {
-    setTags((prev) => prev.filter((t) => t !== name));
-  }
-
-  function onTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag(tagInput);
-    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
-      setTags((prev) => prev.slice(0, -1));
-    }
   }
 
   async function uploadImageBlob(blob: Blob): Promise<string | null> {
@@ -171,12 +131,11 @@ export default function AdminForm() {
         e.preventDefault();
         const blob = it.getAsFile();
         if (!blob) continue;
-        const url = await uploadImageBlob(blob);
-        if (url) setImageUrl(url);
+        const newUrl = await uploadImageBlob(blob);
+        if (newUrl) setImageUrl(newUrl);
         return;
       }
     }
-    // Otherwise: if URL field is empty and clipboard text looks like a URL, fill it
     const text = e.clipboardData?.getData("text/plain");
     if (!url.trim() && text && looksLikeUrl(text)) {
       setUrl(text.trim());
@@ -230,17 +189,13 @@ export default function AdminForm() {
       source_handle: sourceHandle,
       source_type: sourceType,
       categories,
-      tagNames: tags,
+      channelIds,
+      notes,
     });
     if (result.success) {
-      const justAdded = [...tags];
+      pushRecentChannels(channelIds);
       reset();
       setStatus({ kind: "success" });
-      setAllTagNames((prev) => {
-        const set = new Set(prev);
-        justAdded.forEach((t) => set.add(t));
-        return [...set].sort();
-      });
     } else {
       setStatus({ kind: "error", message: result.error });
     }
@@ -413,53 +368,22 @@ export default function AdminForm() {
 
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-2">
-          Tags
+          Channels
         </label>
-        <div className="rounded-md border border-zinc-300 bg-white p-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {tags.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-800"
-              >
-                {t}
-                <button
-                  type="button"
-                  onClick={() => removeTag(t)}
-                  className="text-zinc-400 hover:text-zinc-700"
-                  aria-label={`Remove ${t}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={onTagKeyDown}
-              onBlur={() => addTag(tagInput)}
-              placeholder={
-                tags.length === 0 ? "Type a tag and press Enter…" : ""
-              }
-              className="flex-1 min-w-[8rem] border-0 px-1 py-1 text-sm focus:outline-none"
-            />
-          </div>
-          {suggestions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5 border-t border-zinc-100 pt-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => addTag(s)}
-                  className="rounded-full bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100"
-                >
-                  + {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ConnectPicker selected={channelIds} onChange={setChannelIds} />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 mb-1">
+          Notes (optional)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className={inputClass}
+          placeholder="Why this caught your eye…"
+        />
       </div>
 
       <div className="flex items-center gap-3 pt-2">

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inspiration Archive — Settings</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      body { width: 480px; padding: 24px; }
+      h1 { margin: 0 0 16px; font-size: 18px; }
+      .form-row { margin-bottom: 14px; }
+      .form-row label { display: block; font-size: 11px; color: #71717a; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+      .form-row input { width: 100%; padding: 8px 10px; }
+      .help { font-size: 11px; color: #71717a; margin-top: 4px; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 3px; font-family: ui-monospace, monospace; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <h1>Inspiration Archive</h1>
+
+    <div class="form-row">
+      <label for="baseUrl">Archive URL</label>
+      <input id="baseUrl" type="url" placeholder="https://your-archive.vercel.app" />
+      <p class="help">No trailing slash. Use <code>http://localhost:3000</code> for local dev.</p>
+    </div>
+
+    <div class="form-row">
+      <label for="token">API token</label>
+      <input id="token" type="password" placeholder="paste the value of ARCHIVE_API_TOKEN" />
+      <p class="help">
+        Set <code>ARCHIVE_API_TOKEN</code> in the archive's <code>.env.local</code> (and
+        in Vercel's env vars) to any random string. Paste the same string here.
+      </p>
+    </div>
+
+    <button id="save" class="primary">Save</button>
+    <p id="status" class="muted small" style="margin-top: 10px;"></p>
+
+    <script src="options.js"></script>
+  </body>
+</html>

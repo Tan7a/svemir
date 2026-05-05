@@ -3,13 +3,18 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  deriveTagsAndCategories,
-  detectSourceType,
-  type ParsedBookmark,
-} from "@/lib/bookmarks-parser";
 
-async function ensureTagId(
+function detectSourceType(url: string): string {
+  if (url.includes("twitter.com") || url.includes("x.com")) return "x";
+  if (url.includes("github.com")) return "github";
+  if (url.includes("threads.net")) return "threads";
+  if (url.includes("instagram.com")) return "instagram";
+  if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+  if (url.includes("dribbble.com")) return "dribbble";
+  return "website";
+}
+
+async function ensureChannelId(
   client: SupabaseClient,
   rawName: string
 ): Promise<string | null> {
@@ -17,20 +22,143 @@ async function ensureTagId(
   if (!name) return null;
 
   const { data: inserted, error: insertErr } = await client
-    .from("tags")
+    .from("channels")
     .insert({ name })
     .select("id")
     .single();
 
-  if (!insertErr && inserted) return inserted.id;
+  if (!insertErr && inserted) return inserted.id as string;
 
   const { data: existing } = await client
-    .from("tags")
+    .from("channels")
     .select("id")
     .ilike("name", name)
     .maybeSingle();
 
-  return existing?.id ?? null;
+  return (existing?.id as string) ?? null;
+}
+
+async function nextPositionInChannel(
+  client: SupabaseClient,
+  channelId: string
+): Promise<number> {
+  const { data } = await client
+    .from("item_channels")
+    .select("position")
+    .eq("channel_id", channelId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return ((data?.position as number | undefined) ?? -1) + 1;
+}
+
+export async function createChannel(
+  name: string,
+  description?: string
+): Promise<
+  | { success: true; channel: { id: string; name: string; slug: string } }
+  | { success: false; error: string }
+> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = name.trim();
+  if (!trimmed) return { success: false, error: "Channel name required" };
+
+  const { data, error } = await supabaseAdmin
+    .from("channels")
+    .insert({ name: trimmed, description: description?.trim() || null })
+    .select("id, name, slug")
+    .single();
+
+  if (error) {
+    const { data: existing } = await supabaseAdmin
+      .from("channels")
+      .select("id, name, slug")
+      .ilike("name", trimmed)
+      .maybeSingle();
+    if (existing) {
+      return {
+        success: true,
+        channel: existing as { id: string; name: string; slug: string },
+      };
+    }
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/channels");
+  return {
+    success: true,
+    channel: data as { id: string; name: string; slug: string },
+  };
+}
+
+export async function renameChannel(
+  id: string,
+  name: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = name.trim();
+  if (!trimmed) return { success: false, error: "Name required" };
+  const { error } = await supabaseAdmin
+    .from("channels")
+    .update({ name: trimmed })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/channels");
+  revalidatePath("/archive");
+  return { success: true };
+}
+
+export async function updateChannelDescription(
+  id: string,
+  description: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("channels")
+    .update({ description: description.trim() || null })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/channels");
+  return { success: true };
+}
+
+export async function deleteChannel(
+  id: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin.from("channels").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/channels");
+  revalidatePath("/archive");
+  revalidatePath("/graph");
+  return { success: true };
+}
+
+async function connectItemToChannelsInternal(
+  client: SupabaseClient,
+  itemId: string,
+  channelIds: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (channelIds.length === 0) return { success: true };
+  const rows: { item_id: string; channel_id: string; position: number }[] = [];
+  for (const channelId of channelIds) {
+    const position = await nextPositionInChannel(client, channelId);
+    rows.push({ item_id: itemId, channel_id: channelId, position });
+  }
+  const { error } = await client.from("item_channels").upsert(rows, {
+    onConflict: "item_id,channel_id",
+    ignoreDuplicates: true,
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 export async function addItem(data: {
@@ -42,22 +170,30 @@ export async function addItem(data: {
   source_handle: string;
   source_type: string;
   categories: string[];
-  tagNames: string[];
-}): Promise<{ success: true } | { success: false; error: string }> {
+  channelIds: string[];
+  notes?: string;
+}): Promise<
+  | { success: true; itemId: string }
+  | { success: false; error: string }
+> {
   if (!supabaseAdmin) {
     return {
       success: false,
-      error:
-        "Supabase admin is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+      error: "Supabase admin not configured",
     };
   }
-
   const client = supabaseAdmin;
-  const { tagNames, ...itemData } = data;
+  const { channelIds, ...rest } = data;
+
+  const itemPayload = {
+    ...rest,
+    source_type: rest.source_type || detectSourceType(rest.url),
+    notes: rest.notes ?? null,
+  };
 
   const { data: inserted, error: itemErr } = await client
     .from("items")
-    .insert([itemData])
+    .insert([itemPayload])
     .select("id")
     .single();
 
@@ -67,150 +203,138 @@ export async function addItem(data: {
       error: itemErr?.message ?? "Failed to insert item",
     };
   }
-
   const itemId = inserted.id as string;
 
-  const tagIds = (
-    await Promise.all(tagNames.map((n) => ensureTagId(client, n)))
-  ).filter((id): id is string => id !== null);
-
-  if (tagIds.length > 0) {
-    const links = tagIds.map((tag_id) => ({ item_id: itemId, tag_id }));
-    const { error: linkErr } = await client.from("item_tags").insert(links);
-    if (linkErr) {
-      return {
-        success: false,
-        error: `Item saved but tags failed: ${linkErr.message}`,
-      };
+  if (channelIds.length > 0) {
+    const r = await connectItemToChannelsInternal(client, itemId, channelIds);
+    if (!r.success) {
+      return { success: false, error: `Item saved but channels failed: ${r.error}` };
     }
   }
 
   revalidatePath("/archive");
+  revalidatePath("/channels");
   revalidatePath("/graph");
+  revalidatePath(`/item/${itemId}`);
+  return { success: true, itemId };
+}
+
+export async function connectItemToChannels(
+  itemId: string,
+  channelIds: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const r = await connectItemToChannelsInternal(
+    supabaseAdmin,
+    itemId,
+    channelIds
+  );
+  if (!r.success) return r;
+  revalidatePath("/archive");
+  revalidatePath("/channels");
   revalidatePath(`/item/${itemId}`);
   return { success: true };
 }
 
-export async function bulkImportBookmarks(
-  bookmarks: ParsedBookmark[]
-): Promise<
-  | { success: true; inserted: number; skipped: number }
-  | { success: false; error: string }
-> {
+export async function disconnectItemFromChannel(
+  itemId: string,
+  channelId: string
+): Promise<{ success: true } | { success: false; error: string }> {
   if (!supabaseAdmin) {
-    return {
-      success: false,
-      error:
-        "Supabase admin is not configured. Set SUPABASE_SERVICE_ROLE_KEY.",
-    };
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("item_channels")
+    .delete()
+    .eq("item_id", itemId)
+    .eq("channel_id", channelId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/archive");
+  revalidatePath("/channels");
+  revalidatePath(`/item/${itemId}`);
+  return { success: true };
+}
+
+export async function updateItemChannels(
+  itemId: string,
+  channelIds: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
   }
   const client = supabaseAdmin;
 
-  if (bookmarks.length === 0) {
-    return { success: true, inserted: 0, skipped: 0 };
+  const { data: existing, error: selErr } = await client
+    .from("item_channels")
+    .select("channel_id")
+    .eq("item_id", itemId);
+  if (selErr) return { success: false, error: selErr.message };
+
+  const currentIds = new Set(
+    (existing ?? []).map((r) => r.channel_id as string)
+  );
+  const targetIds = new Set(channelIds);
+
+  const toRemove = [...currentIds].filter((id) => !targetIds.has(id));
+  const toAdd = [...targetIds].filter((id) => !currentIds.has(id));
+
+  if (toRemove.length > 0) {
+    const { error: delErr } = await client
+      .from("item_channels")
+      .delete()
+      .eq("item_id", itemId)
+      .in("channel_id", toRemove);
+    if (delErr) return { success: false, error: delErr.message };
   }
 
-  const urls = bookmarks.map((b) => b.url);
-  const { data: existing } = await client
-    .from("items")
-    .select("url")
-    .in("url", urls);
-  const existingSet = new Set((existing ?? []).map((r) => r.url as string));
-
-  const seenInPayload = new Set<string>();
-  const fresh = bookmarks.filter((b) => {
-    if (existingSet.has(b.url)) return false;
-    if (seenInPayload.has(b.url)) return false;
-    seenInPayload.add(b.url);
-    return true;
-  });
-
-  if (fresh.length === 0) {
-    return {
-      success: true,
-      inserted: 0,
-      skipped: bookmarks.length,
-    };
-  }
-
-  const tagNamePerBookmark: string[][] = [];
-  const allTagNames = new Set<string>();
-
-  const rows = fresh.map((b) => {
-    const { tags, categories } = deriveTagsAndCategories(b.folderPath);
-    tagNamePerBookmark.push(tags);
-    tags.forEach((t) => allTagNames.add(t));
-    return {
-      url: b.url,
-      title: b.title,
-      description: null,
-      image_url: null,
-      source_name: null,
-      source_handle: null,
-      source_type: detectSourceType(b.url),
-      categories,
-    };
-  });
-
-  const tagIdByName = new Map<string, string>();
-  for (const name of allTagNames) {
-    const id = await ensureTagId(client, name);
-    if (id) tagIdByName.set(name, id);
-  }
-
-  const CHUNK = 200;
-  let inserted = 0;
-  for (let offset = 0; offset < rows.length; offset += CHUNK) {
-    const chunk = rows.slice(offset, offset + CHUNK);
-    const tagsChunk = tagNamePerBookmark.slice(offset, offset + CHUNK);
-
-    const { data: insertedRows, error } = await client
-      .from("items")
-      .insert(chunk)
-      .select("id, url");
-
-    if (error) {
-      return {
-        success: false,
-        error: `Insert failed at offset ${offset}: ${error.message}`,
-      };
-    }
-
-    const linkRows: { item_id: string; tag_id: string }[] = [];
-    (insertedRows ?? []).forEach((row, i) => {
-      const tagsForThis = tagsChunk[i] ?? [];
-      tagsForThis.forEach((tagName) => {
-        const tagId = tagIdByName.get(tagName);
-        if (tagId) {
-          linkRows.push({ item_id: row.id as string, tag_id: tagId });
-        }
-      });
-    });
-
-    if (linkRows.length > 0) {
-      const { error: linkErr } = await client
-        .from("item_tags")
-        .insert(linkRows);
-      if (linkErr) {
-        return {
-          success: false,
-          error: `Tag links failed at offset ${offset}: ${linkErr.message}`,
-        };
-      }
-    }
-
-    inserted += insertedRows?.length ?? 0;
+  if (toAdd.length > 0) {
+    const r = await connectItemToChannelsInternal(client, itemId, toAdd);
+    if (!r.success) return r;
   }
 
   revalidatePath("/archive");
-  revalidatePath("/graph");
+  revalidatePath("/channels");
+  revalidatePath(`/item/${itemId}`);
   revalidatePath("/admin/manage");
+  return { success: true };
+}
 
-  return {
-    success: true,
-    inserted,
-    skipped: bookmarks.length - inserted,
-  };
+export async function updateItemCategories(
+  itemId: string,
+  categories: string[]
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("items")
+    .update({ categories })
+    .eq("id", itemId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/archive");
+  revalidatePath(`/item/${itemId}`);
+  revalidatePath("/admin/manage");
+  return { success: true };
+}
+
+export async function reorderChannelItem(
+  channelId: string,
+  itemId: string,
+  newPosition: number
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("item_channels")
+    .update({ position: newPosition })
+    .eq("channel_id", channelId)
+    .eq("item_id", itemId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/channels");
+  return { success: true };
 }
 
 export async function deleteItem(
@@ -222,6 +346,7 @@ export async function deleteItem(
   const { error } = await supabaseAdmin.from("items").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   revalidatePath("/archive");
+  revalidatePath("/channels");
   revalidatePath("/graph");
   revalidatePath("/admin/manage");
   return { success: true };
@@ -229,7 +354,9 @@ export async function deleteItem(
 
 export async function bulkDeleteItems(
   ids: string[]
-): Promise<{ success: true; count: number } | { success: false; error: string }> {
+): Promise<
+  { success: true; count: number } | { success: false; error: string }
+> {
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -240,6 +367,7 @@ export async function bulkDeleteItems(
     .in("id", ids);
   if (error) return { success: false, error: error.message };
   revalidatePath("/archive");
+  revalidatePath("/channels");
   revalidatePath("/graph");
   revalidatePath("/admin/manage");
   return { success: true, count: count ?? ids.length };

@@ -3,12 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import ArchiveCard from "@/components/ArchiveCard";
-import {
-  CATEGORY_PILL_CLASSES,
-  SOURCE_TYPE_LETTER,
-  colorForTag,
-} from "@/lib/constants";
-import type { Item, Tag, ItemWithTags } from "@/lib/types";
+import { CATEGORY_PILL_CLASSES, colorForTag } from "@/lib/constants";
+import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -55,7 +51,7 @@ export default async function ItemPage({
 
   const { data: itemData, error } = await supabase
     .from("items")
-    .select("*, item_tags(tags(*))")
+    .select("*, item_channels(channels(*))")
     .eq("id", id)
     .maybeSingle();
 
@@ -157,9 +153,6 @@ export default async function ItemPage({
                 No image
               </div>
             )}
-            <div className="absolute top-3 left-3 flex h-7 w-7 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
-              {sourceLetter}
-            </div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -186,7 +179,7 @@ export default async function ItemPage({
               Open original ↗
             </a>
 
-            {(item.categories.length > 0 || item.tags.length > 0) && (
+            {(item.categories.length > 0 || item.channels.length > 0) && (
               <div className="flex flex-wrap gap-1.5 pt-2">
                 {item.categories.map((cat) => (
                   <span
@@ -198,15 +191,16 @@ export default async function ItemPage({
                     {cat}
                   </span>
                 ))}
-                {item.tags.map((tag) => {
-                  const c = colorForTag(tag.id);
+                {item.channels.map((ch) => {
+                  const c = colorForTag(ch.id);
                   return (
-                    <span
-                      key={`t-${tag.id}`}
-                      className={`px-2.5 py-1 rounded-full text-xs ${c.bg} ${c.text}`}
+                    <Link
+                      key={`ch-${ch.id}`}
+                      href={`/channel/${ch.slug}`}
+                      className={`px-2.5 py-1 rounded-full text-xs ${c.bg} ${c.text} hover:opacity-80`}
                     >
-                      #{tag.name}
-                    </span>
+                      {ch.name}
+                    </Link>
                   );
                 })}
               </div>
@@ -226,7 +220,7 @@ export default async function ItemPage({
           </h2>
           {related.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              No related items yet — add more entries with overlapping tags.
+              No related items yet — add more entries that share a channel.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">

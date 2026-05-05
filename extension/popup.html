@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Save to Inspiration Archive</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="needs-config" hidden>
+      <p class="muted">No archive configured.</p>
+      <button id="open-options" class="primary">Open settings</button>
+    </div>
+
+    <div id="main" hidden>
+      <div class="header">
+        <strong id="page-title">Loading…</strong>
+        <p class="muted" id="page-url"></p>
+      </div>
+
+      <input
+        id="search"
+        type="text"
+        placeholder="Search channels…"
+        autocomplete="off"
+      />
+
+      <div id="recent-section" class="section" hidden>
+        <p class="section-label">Recent channels</p>
+        <div id="recent-list" class="channel-list"></div>
+      </div>
+
+      <div id="all-section" class="section">
+        <p class="section-label">All channels</p>
+        <div id="all-list" class="channel-list"></div>
+        <p id="empty-msg" class="muted small" hidden>No channels yet.</p>
+      </div>
+
+      <div id="create-row" class="create-row" hidden>
+        <button id="create-btn">+ New channel: <strong id="create-name"></strong></button>
+      </div>
+
+      <details class="advanced">
+        <summary>Advanced</summary>
+        <label>
+          <span>Title</span>
+          <input id="title-input" type="text" />
+        </label>
+        <label>
+          <span>Notes</span>
+          <textarea id="notes-input" rows="2" placeholder="Why this caught your eye…"></textarea>
+        </label>
+      </details>
+
+      <button id="save-btn" class="primary" disabled>Connect to 0 channels</button>
+      <p id="status" class="muted small"></p>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

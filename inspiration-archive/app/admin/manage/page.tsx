@@ -1,18 +1,18 @@
 import { supabase } from "@/lib/supabase-client";
 import AdminNav from "@/components/AdminNav";
 import ManageList from "@/components/ManageList";
-import type { Item, Tag, ItemWithTags } from "@/lib/types";
+import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 type ItemRow = Item & {
-  item_tags: { tags: unknown }[] | null;
+  item_channels: { channels: unknown }[] | null;
 };
 
-function asTagList(raw: unknown): Tag[] {
+function asChannelList(raw: unknown): Channel[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw as Tag[];
-  return [raw as Tag];
+  if (Array.isArray(raw)) return raw as Channel[];
+  return [raw as Channel];
 }
 
 const PAGE_SIZE = 50;
@@ -20,11 +20,12 @@ const PAGE_SIZE = 50;
 export default async function ManagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? "1"));
   const q = (params.q ?? "").trim();
+  const view: "list" | "grid" = params.view === "grid" ? "grid" : "list";
 
   if (!supabase) {
     return (
@@ -39,9 +40,12 @@ export default async function ManagePage({
 
   let query = supabase
     .from("items")
-    .select("*, item_tags(tags(*))", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    .select("*, item_channels(channels(*))", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  if (view === "list") {
+    query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  }
 
   if (q) {
     query = query.or(
@@ -62,11 +66,13 @@ export default async function ManagePage({
     );
   }
 
-  const items: ItemWithTags[] = ((data ?? []) as unknown as ItemRow[]).map(
+  const items: ItemWithChannels[] = ((data ?? []) as unknown as ItemRow[]).map(
     (row) => {
-      const { item_tags, ...rest } = row;
-      const tags = (item_tags ?? []).flatMap((it) => asTagList(it.tags));
-      return { ...rest, tags };
+      const { item_channels, ...rest } = row;
+      const channels = (item_channels ?? []).flatMap((it) =>
+        asChannelList(it.channels)
+      );
+      return { ...rest, channels };
     }
   );
 
@@ -89,8 +95,13 @@ export default async function ManagePage({
             </span>
           </h1>
           <p className="text-xs text-zinc-500">
-            Page {page} of {totalPages}
-            {missingMetaCount > 0 && ` · ${missingMetaCount} missing metadata on this page`}
+            {view === "list" && (
+              <>
+                Page {page} of {totalPages}
+                {missingMetaCount > 0 &&
+                  ` · ${missingMetaCount} missing metadata on this page`}
+              </>
+            )}
           </p>
         </div>
 
@@ -99,6 +110,7 @@ export default async function ManagePage({
           page={page}
           totalPages={totalPages}
           query={q}
+          view={view}
         />
       </main>
     </div>
