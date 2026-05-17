@@ -10,6 +10,7 @@ import {
   bulkDeleteItems,
   deleteItem,
   scrapeAndUpdateItem,
+  scrapeMissingMetadata,
   updateItemChannelsAndCategories,
 } from "@/app/admin/actions";
 
@@ -31,6 +32,12 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(query);
   const [scraping, setScraping] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState<{
+    scraped: number;
+    failed: number;
+    remaining: number | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -136,6 +143,43 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     router.refresh();
   }
 
+  async function handleBackfillAll() {
+    if (
+      !confirm(
+        "Backfill thumbnails for ALL items missing an image? This may take a few minutes."
+      )
+    )
+      return;
+    setBackfilling(true);
+    setBackfillProgress({ scraped: 0, failed: 0, remaining: null });
+    setError(null);
+
+    let cursor: string | undefined;
+    let totalScraped = 0;
+    let totalFailed = 0;
+    const MAX_BATCHES = 200;
+
+    for (let i = 0; i < MAX_BATCHES; i++) {
+      const r = await scrapeMissingMetadata(8, cursor);
+      if (!r.success) {
+        setError(r.error);
+        break;
+      }
+      totalScraped += r.scraped;
+      totalFailed += r.failed;
+      setBackfillProgress({
+        scraped: totalScraped,
+        failed: totalFailed,
+        remaining: r.remaining,
+      });
+      if (!r.lastId || r.remaining === 0) break;
+      cursor = r.lastId;
+    }
+
+    setBackfilling(false);
+    router.refresh();
+  }
+
   function addTagChip(raw: string) {
     const name = raw.trim().toLowerCase();
     if (!name) return;
@@ -212,13 +256,34 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         <button
           type="button"
           onClick={handleScrapeMissing}
-          disabled={scraping}
+          disabled={scraping || backfilling}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50"
           title="Fetch missing image/description for up to 10 items on this page"
         >
           {scraping ? "Scraping…" : "Scrape missing (10)"}
         </button>
+        <button
+          type="button"
+          onClick={handleBackfillAll}
+          disabled={scraping || backfilling}
+          className="rounded-md border border-zinc-900 bg-zinc-900 px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
+          title="Scrape image/description for ALL items in the archive that are missing them"
+        >
+          {backfilling
+            ? `Backfilling… ${backfillProgress?.scraped ?? 0} done${
+                backfillProgress?.remaining != null
+                  ? ` · ${backfillProgress.remaining} left`
+                  : ""
+              }`
+            : "Backfill all thumbnails"}
+        </button>
       </div>
+      {backfillProgress && !backfilling && (
+        <p className="text-xs text-zinc-500">
+          Backfill complete · {backfillProgress.scraped} scraped ·{" "}
+          {backfillProgress.failed} failed
+        </p>
+      )}
 
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm text-white">
