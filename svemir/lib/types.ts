@@ -10,6 +10,7 @@ export type Item = {
   categories: string[];
   notes: string | null;
   kind: "link" | "image" | "text";
+  body_text: string | null;
   created_at: string;
 };
 

@@ -1,0 +1,17 @@
+# Build output
+dist/
+
+# Dependencies (also covered by repo root .gitignore)
+node_modules/
+
+# Vite / TS build caches
+*.tsbuildinfo
+.vite/
+
+# Local env
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store

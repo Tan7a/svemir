@@ -27,39 +27,122 @@ function relativeTime(iso: string): string {
   return `${yr} year${yr === 1 ? "" : "s"} ago`;
 }
 
-/**
- * Block detail view — used by both the full-page route at /block/[id] and
- * the intercepted @modal/(.)block/[id] modal route.
- *
- * IA per the screenshot: image left ~60%, metadata sidebar right, source URL
- * at the bottom. The Comments tab is hidden in svemir (no social layer);
- * the Connect → and Actions ⌄ buttons are present but inert until Phase B.
- */
+function GlobeIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function ExternalIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M15 3h6v6" />
+      <path d="M10 14L21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+
 export default function BlockDetail({ block, inModal = false }: Props) {
   return (
     <div className="relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]">
-      {/* Left — image / text body */}
-      <div className="flex items-center justify-center">
-        {block.image_url ? (
-          <div className="relative max-h-[80vh] w-full">
-            <Image
-              src={block.image_url}
-              alt={block.title}
-              width={1200}
-              height={1200}
-              sizes="(min-width: 768px) 60vw, 100vw"
-              className="h-auto max-h-[80vh] w-full object-contain"
-              priority
-            />
-          </div>
-        ) : block.kind === "text" && block.description ? (
-          <article className="prose prose-invert max-w-prose whitespace-pre-wrap text-neutral-200">
-            {block.description}
-          </article>
-        ) : (
-          <div className="flex h-64 w-full items-center justify-center border border-neutral-800 bg-neutral-900 text-neutral-700">
-            No image
-          </div>
+      {/* Left column — URL bar, image (clickable), and body text */}
+      <div className="flex flex-col gap-4">
+        {block.url && (
+          <a
+            href={block.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 self-start rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
+            title="Open source in new tab"
+          >
+            <span className="text-neutral-500">
+              <GlobeIcon />
+            </span>
+            <span className="max-w-[42rem] truncate font-mono">
+              {block.url}
+            </span>
+            <span className="text-neutral-600 opacity-0 transition-opacity group-hover:opacity-100">
+              <ExternalIcon />
+            </span>
+          </a>
+        )}
+
+        <div className="flex flex-1 items-start justify-center">
+          {block.image_url ? (
+            block.url ? (
+              <a
+                href={block.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open source in new tab"
+                className="block max-h-[70vh] w-full"
+              >
+                <Image
+                  src={block.image_url}
+                  alt={block.title}
+                  width={1200}
+                  height={1200}
+                  sizes="(min-width: 768px) 60vw, 100vw"
+                  className="h-auto max-h-[70vh] w-full object-contain"
+                  priority
+                />
+              </a>
+            ) : (
+              <Image
+                src={block.image_url}
+                alt={block.title}
+                width={1200}
+                height={1200}
+                sizes="(min-width: 768px) 60vw, 100vw"
+                className="h-auto max-h-[70vh] w-full object-contain"
+                priority
+              />
+            )
+          ) : block.kind === "text" && block.description ? (
+            <article className="prose prose-invert max-w-prose whitespace-pre-wrap text-neutral-200">
+              {block.description}
+            </article>
+          ) : (
+            <div className="flex h-64 w-full items-center justify-center border border-neutral-800 bg-neutral-900 text-neutral-700">
+              No image
+            </div>
+          )}
+        </div>
+
+        {block.body_text && (
+          <details className="mt-2 rounded-md border border-neutral-800 bg-neutral-950/60">
+            <summary className="cursor-pointer select-none px-4 py-2 text-xs text-neutral-400 hover:text-neutral-200">
+              Reader — page text saved at the time
+            </summary>
+            <article className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-4 pb-4 pt-1 text-sm leading-relaxed text-neutral-300">
+              {block.body_text}
+            </article>
+          </details>
         )}
       </div>
 
@@ -119,7 +202,6 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           <button
             type="button"
             className="border-b-2 border-neutral-200 px-0 py-1.5 text-xs text-neutral-100"
-            // Comments tab intentionally omitted in svemir.
           >
             Connections{" "}
             <span className="ml-1 text-neutral-500">
@@ -169,12 +251,6 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           </div>
         )}
       </aside>
-
-      {block.url && (
-        <div className="absolute bottom-2 left-8 right-8 truncate text-[10px] text-neutral-700">
-          {block.url}
-        </div>
-      )}
     </div>
   );
 }

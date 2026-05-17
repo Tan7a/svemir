@@ -8,7 +8,17 @@ import {
   type ParsedBookmark,
 } from "@/lib/bookmarks-parser";
 import { scrapeOpenGraph } from "@/lib/scrape";
-import { ensureChannelId } from "@/lib/channels";
+import {
+  ensureChannelId,
+  recentChannels,
+  channelStats,
+  type RecentChannel,
+} from "@/lib/channels";
+import {
+  suggestChannels,
+  type Suggestion,
+  type SuggestionInput,
+} from "@/lib/suggest";
 
 export type AddItemInput = {
   kind: "link" | "image" | "text";
@@ -21,6 +31,7 @@ export type AddItemInput = {
   source_type: string;
   categories: string[];
   channelTitles: string[];
+  body_text?: string;
 };
 
 export async function addItem(
@@ -44,6 +55,10 @@ export async function addItem(
     ...rest,
     kind,
     url: kind === "link" ? rest.url : rest.url || null,
+    source_type:
+      rest.source_type?.trim() ||
+      (kind === "link" && rest.url ? detectSourceType(rest.url) : "website"),
+    body_text: rest.body_text?.trim() ? rest.body_text.trim() : null,
   };
 
   const { data: inserted, error: itemErr } = await client
@@ -549,4 +564,34 @@ export async function scrapeAndUpdateItem(
     const message = e instanceof Error ? e.message : "Scrape failed";
     return { success: false, error: message };
   }
+}
+
+export async function deleteChannel(
+  channelId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin is not configured." };
+  }
+  const { error } = await supabaseAdmin
+    .from("channels")
+    .delete()
+    .eq("id", channelId);
+  if (error) return { success: false, error: error.message };
+  // connections cascade-delete via the FK in migration 0001.
+  revalidatePath("/");
+  revalidatePath("/graph");
+  return { success: true };
+}
+
+export async function recentChannelsAction(): Promise<RecentChannel[]> {
+  if (!supabaseAdmin) return [];
+  return recentChannels(supabaseAdmin, 20);
+}
+
+export async function suggestChannelsAction(
+  input: SuggestionInput
+): Promise<Suggestion[]> {
+  if (!supabaseAdmin) return [];
+  const stats = await channelStats(supabaseAdmin);
+  return suggestChannels(input, stats);
 }

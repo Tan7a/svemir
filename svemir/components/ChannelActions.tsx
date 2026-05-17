@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
-import { setChannelParent, removeChannelParent } from "@/app/admin/actions";
+import {
+  setChannelParent,
+  removeChannelParent,
+  deleteChannel,
+} from "@/app/admin/actions";
 
 type Props = {
   channelId: string;
@@ -36,6 +40,17 @@ function IconUnlink() {
       <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M5.16 11.75l-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
       <line x1="2" y1="2" x2="22" y2="22" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg {...stroke}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </svg>
   );
 }
@@ -127,6 +142,26 @@ export default function ChannelActions({
     }
   }
 
+  async function handleDelete() {
+    if (
+      !confirm(
+        `Delete channel "${channelTitle}"? Blocks will stay, but their connection to this channel will be removed. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const result = await deleteChannel(channelId);
+    setBusy(false);
+    if (result.success) {
+      setOpen(false);
+      router.push("/?view=channels");
+    } else {
+      setError(result.error);
+    }
+  }
+
   const hasExactMatch =
     value.trim() !== "" &&
     allChannels.some(
@@ -164,6 +199,14 @@ export default function ChannelActions({
                   disabled={busy}
                 />
               )}
+              <div className="my-1 border-t border-neutral-800" />
+              <MenuItem
+                icon={<IconTrash />}
+                label="Delete channel"
+                onClick={handleDelete}
+                disabled={busy}
+                danger
+              />
             </>
           ) : (
             <div className="p-1.5">
@@ -224,20 +267,31 @@ function MenuItem({
   label,
   onClick,
   disabled,
+  danger,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  danger?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-neutral-200 transition-colors hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        danger
+          ? "text-red-400 hover:bg-red-950/50"
+          : "text-neutral-200 hover:bg-neutral-900"
+      }`}
     >
-      <span aria-hidden className="flex h-4 w-4 shrink-0 items-center justify-center text-neutral-400">
+      <span
+        aria-hidden
+        className={`flex h-4 w-4 shrink-0 items-center justify-center ${
+          danger ? "text-red-400" : "text-neutral-400"
+        }`}
+      >
         {icon}
       </span>
       <span className="flex-1">{label}</span>

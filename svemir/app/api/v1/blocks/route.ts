@@ -17,6 +17,7 @@ type Body = {
   source_type?: string;
   categories?: string[];
   channels?: string[];
+  body_text?: string;
 };
 
 function looksLikeUrl(s: string): boolean {
@@ -118,6 +119,7 @@ export async function POST(req: NextRequest) {
       body.source_type?.trim() || (url ? detectSourceType(url) : "website"),
     categories,
     channelTitles: channels,
+    body_text: body.body_text,
   });
 
   if (!result.success) {

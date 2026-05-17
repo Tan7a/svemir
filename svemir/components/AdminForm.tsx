@@ -1,19 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { addItem } from "@/app/admin/actions";
-import { CATEGORIES, SOURCE_TYPES } from "@/lib/constants";
-import { supabase } from "@/lib/supabase-client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  addItem,
+  recentChannelsAction,
+  suggestChannelsAction,
+} from "@/app/admin/actions";
+import ChannelPicker from "@/components/ChannelPicker";
+import type { Suggestion } from "@/lib/suggest";
+import type { RecentChannel } from "@/lib/channels";
 
 type Kind = "link" | "image" | "text";
 
 type Status =
   | { kind: "idle" }
+  | { kind: "detecting"; label: string }
   | { kind: "scraping" }
-  | { kind: "saving" }
   | { kind: "uploading" }
+  | { kind: "saving" }
   | { kind: "success" }
   | { kind: "error"; message: string };
+
+type SmartHint =
+  | null
+  | { kind: "link"; label: string }
+  | { kind: "image"; label: string }
+  | { kind: "text"; label: string };
 
 const inputClass =
   "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500";
@@ -35,44 +47,26 @@ export default function AdminForm() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
-  const [sourceHandle, setSourceHandle] = useState("");
-  const [sourceType, setSourceType] = useState<string>("website");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [allTagNames, setAllTagNames] = useState<string[]>([]);
+  const [channels, setChannels] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [smartHint, setSmartHint] = useState<SmartHint>(null);
+  const [smartInput, setSmartInput] = useState("");
+  const [smartDragOver, setSmartDragOver] = useState(false);
+
+  const [recents, setRecents] = useState<RecentChannel[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestKey, setSuggestKey] = useState<string | null>(null);
 
   const lastFetchedUrl = useRef<string>("");
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
+  // Initial: fetch recents.
   useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("channels")
-      .select("title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) setAllTagNames(data.map((t) => t.title as string));
-      });
+    recentChannelsAction().then(setRecents).catch(() => {});
   }, []);
 
-  // Auto-fetch metadata when URL changes (debounced) — link kind only.
-  useEffect(() => {
-    if (kind !== "link") return;
-    if (!looksLikeUrl(url)) return;
-    if (url === lastFetchedUrl.current) return;
-    if (status.kind === "scraping" || status.kind === "saving") return;
-    if (title.trim() && imageUrl.trim()) return;
-
-    const handle = setTimeout(() => {
-      handleFetchMetadata(true);
-    }, 500);
-    return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, kind]);
-
-  // Cmd+Enter / Ctrl+Enter to save
+  // Cmd/Ctrl+Enter to save.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -83,27 +77,33 @@ export default function AdminForm() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    kind,
-    url,
-    title,
-    description,
-    imageUrl,
-    sourceName,
-    sourceHandle,
-    sourceType,
-    categories,
-    tags,
-  ]);
+  }, [kind, url, title, description, imageUrl, sourceName, channels]);
 
-  const suggestions = useMemo(() => {
-    const q = tagInput.trim().toLowerCase();
-    if (!q) return [];
-    const used = new Set(tags.map((t) => t.toLowerCase()));
-    return allTagNames
-      .filter((n) => n.toLowerCase().includes(q) && !used.has(n.toLowerCase()))
-      .slice(0, 8);
-  }, [tagInput, allTagNames, tags]);
+  // Debounced channel suggester. Runs once title is non-empty and settles.
+  useEffect(() => {
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    if (!title.trim()) {
+      setSuggestions([]);
+      setSuggestKey(null);
+      return;
+    }
+    suggestTimer.current = setTimeout(async () => {
+      try {
+        const result = await suggestChannelsAction({
+          title: title.trim(),
+          description: description.trim(),
+          source_name: sourceName.trim(),
+        });
+        setSuggestions(result);
+        setSuggestKey(`${title}|${description}|${sourceName}`);
+      } catch {
+        /* ignore */
+      }
+    }, 1500);
+    return () => {
+      if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    };
+  }, [title, description, sourceName]);
 
   function reset() {
     setUrl("");
@@ -111,36 +111,13 @@ export default function AdminForm() {
     setDescription("");
     setImageUrl("");
     setSourceName("");
-    setSourceHandle("");
-    setSourceType("website");
-    setCategories([]);
-    setTags([]);
-    setTagInput("");
+    setChannels([]);
+    setKind("link");
+    setSmartInput("");
+    setSmartHint(null);
+    setSuggestions([]);
+    setSuggestKey(null);
     lastFetchedUrl.current = "";
-  }
-
-  function addTag(raw: string) {
-    const name = raw.trim().toLowerCase();
-    if (!name) return;
-    if (tags.some((t) => t.toLowerCase() === name)) {
-      setTagInput("");
-      return;
-    }
-    setTags((prev) => [...prev, name]);
-    setTagInput("");
-  }
-
-  function removeTag(name: string) {
-    setTags((prev) => prev.filter((t) => t !== name));
-  }
-
-  function onTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag(tagInput);
-    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
-      setTags((prev) => prev.slice(0, -1));
-    }
   }
 
   async function uploadImageBlob(blob: Blob): Promise<string | null> {
@@ -168,40 +145,15 @@ export default function AdminForm() {
     }
   }
 
-  async function handleFormPaste(e: React.ClipboardEvent) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const it of items) {
-      if (it.type.startsWith("image/")) {
-        e.preventDefault();
-        const blob = it.getAsFile();
-        if (!blob) continue;
-        const url = await uploadImageBlob(blob);
-        if (url) setImageUrl(url);
-        return;
-      }
-    }
-    // Otherwise: if URL field is empty and clipboard text looks like a URL, fill it.
-    // Only relevant when we're showing the URL field.
-    if (kind !== "link") return;
-    const text = e.clipboardData?.getData("text/plain");
-    if (!url.trim() && text && looksLikeUrl(text)) {
-      setUrl(text.trim());
-    }
-  }
-
-  async function handleFetchMetadata(silent = false) {
-    if (!url.trim()) {
-      if (!silent) setStatus({ kind: "error", message: "Enter a URL first" });
-      return;
-    }
-    lastFetchedUrl.current = url;
+  async function scrapeUrl(targetUrl: string) {
+    if (targetUrl === lastFetchedUrl.current) return;
+    lastFetchedUrl.current = targetUrl;
     setStatus({ kind: "scraping" });
     try {
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: targetUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -212,14 +164,124 @@ export default function AdminForm() {
       if (data.description && !description.trim()) setDescription(data.description);
       if (data.image && !imageUrl.trim()) setImageUrl(data.image);
       if (data.siteName && !sourceName.trim()) setSourceName(data.siteName);
-      if (data.sourceType) setSourceType(data.sourceType);
       setStatus({ kind: "idle" });
+      setSmartHint({ kind: "link", label: new URL(targetUrl).hostname });
     } catch (e) {
       setStatus({
         kind: "error",
         message: e instanceof Error ? e.message : "Failed to scrape",
       });
     }
+  }
+
+  // Smart-entry: clipboard paste.
+  const handleSmartPaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (const it of items) {
+          if (it.type.startsWith("image/")) {
+            e.preventDefault();
+            const blob = it.getAsFile();
+            if (!blob) continue;
+            const uploaded = await uploadImageBlob(blob);
+            if (uploaded) {
+              setKind("image");
+              setImageUrl(uploaded);
+              setSmartHint({
+                kind: "image",
+                label: `${(blob.size / 1024).toFixed(0)} KB uploaded`,
+              });
+              setSmartInput("");
+            }
+            return;
+          }
+        }
+      }
+      const text = e.clipboardData?.getData("text/plain") ?? "";
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      if (looksLikeUrl(trimmed)) {
+        e.preventDefault();
+        setKind("link");
+        setUrl(trimmed);
+        setSmartInput("");
+        await scrapeUrl(trimmed);
+        return;
+      }
+      // Plain text paste: treat as text block.
+      e.preventDefault();
+      setKind("text");
+      setDescription((prev) => (prev ? `${prev}\n${trimmed}` : trimmed));
+      if (!title.trim()) setTitle(trimmed.slice(0, 60));
+      setSmartHint({ kind: "text", label: `${trimmed.length} chars` });
+      setSmartInput("");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [title, description, imageUrl, sourceName]
+  );
+
+  // Smart-entry: drop file.
+  const handleSmartDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setSmartDragOver(false);
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        const uploaded = await uploadImageBlob(file);
+        if (uploaded) {
+          setKind("image");
+          setImageUrl(uploaded);
+          setSmartHint({
+            kind: "image",
+            label: `${(file.size / 1024).toFixed(0)} KB uploaded`,
+          });
+        }
+        return;
+      }
+      if (
+        file.type === "text/plain" ||
+        file.type === "text/markdown" ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".md")
+      ) {
+        const text = await file.text();
+        setKind("text");
+        setDescription(text);
+        if (!title.trim()) {
+          const stem = file.name.replace(/\.(txt|md)$/i, "");
+          setTitle(stem);
+        }
+        setSmartHint({ kind: "text", label: `${text.length} chars` });
+        return;
+      }
+      setStatus({
+        kind: "error",
+        message: `Unsupported file type: ${file.type || "unknown"}`,
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [title]
+  );
+
+  // Smart-entry: blur with typed (non-URL) text → treat as text block.
+  async function handleSmartBlur() {
+    const trimmed = smartInput.trim();
+    if (!trimmed) return;
+    if (looksLikeUrl(trimmed)) {
+      setKind("link");
+      setUrl(trimmed);
+      setSmartInput("");
+      await scrapeUrl(trimmed);
+      return;
+    }
+    setKind("text");
+    setDescription((prev) => (prev ? `${prev}\n${trimmed}` : trimmed));
+    if (!title.trim()) setTitle(trimmed.slice(0, 60));
+    setSmartHint({ kind: "text", label: `${trimmed.length} chars` });
+    setSmartInput("");
   }
 
   async function handleSave() {
@@ -234,12 +296,16 @@ export default function AdminForm() {
     if (kind === "image" && !imageUrl.trim()) {
       setStatus({
         kind: "error",
-        message: "Image URL is required for image blocks (paste a screenshot or paste a URL)",
+        message:
+          "Image URL is required for image blocks (paste a screenshot, drop an image, or paste a URL)",
       });
       return;
     }
     if (kind === "text" && !description.trim()) {
-      setStatus({ kind: "error", message: "Text content is required for text blocks" });
+      setStatus({
+        kind: "error",
+        message: "Text content is required for text blocks",
+      });
       return;
     }
 
@@ -251,40 +317,91 @@ export default function AdminForm() {
       description,
       image_url: imageUrl,
       source_name: sourceName,
-      source_handle: sourceHandle,
-      source_type: sourceType,
-      categories,
-      channelTitles: tags,
+      source_handle: "",
+      source_type: "",
+      categories: [],
+      channelTitles: channels,
     });
     if (result.success) {
-      const justAdded = [...tags];
+      const justAdded = [...channels];
       reset();
       setStatus({ kind: "success" });
-      setAllTagNames((prev) => {
-        const set = new Set(prev);
-        justAdded.forEach((t) => set.add(t));
-        return [...set].sort();
-      });
+      // Refresh recents so just-saved channels float to top.
+      recentChannelsAction().then(setRecents).catch(() => {});
+      // Best-effort: push the new titles into recents immediately for snappy UX.
+      void justAdded;
     } else {
       setStatus({ kind: "error", message: result.error });
     }
   }
 
-  function toggleCategory(cat: string) {
-    setCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  }
-
   const showUrl = kind === "link";
   const showImage = kind === "link" || kind === "image";
   const showSource = kind === "link";
-  // For text blocks, the description IS the content — give it more room.
   const descriptionRows = kind === "text" ? 10 : 3;
   const descriptionLabel = kind === "text" ? "Text" : "Description";
 
   return (
-    <div ref={formRef} onPaste={handleFormPaste} className="space-y-5">
+    <div ref={formRef} className="space-y-5">
+      {/* Smart entry strip */}
+      <div
+        onPaste={handleSmartPaste}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setSmartDragOver(true);
+        }}
+        onDragLeave={() => setSmartDragOver(false)}
+        onDrop={handleSmartDrop}
+        className={`rounded-md border border-dashed px-4 py-3 transition-colors ${
+          smartDragOver
+            ? "border-neutral-400 bg-neutral-900"
+            : "border-neutral-700 bg-neutral-950"
+        }`}
+      >
+        {smartHint ? (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-emerald-400">
+              ✓ {smartHint.kind === "link" && "Link"}
+              {smartHint.kind === "image" && "Image"}
+              {smartHint.kind === "text" && "Text"}
+              <span className="ml-2 text-neutral-400">{smartHint.label}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSmartHint(null);
+                setSmartInput("");
+              }}
+              className="text-xs text-neutral-500 hover:text-neutral-200"
+            >
+              clear
+            </button>
+          </div>
+        ) : (
+          <>
+            <input
+              type="text"
+              value={smartInput}
+              onChange={(e) => setSmartInput(e.target.value)}
+              onBlur={handleSmartBlur}
+              placeholder="Paste a URL, drop an image, write or drop a text file…"
+              className="w-full bg-transparent text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
+              autoFocus
+            />
+            <p className="mt-1 text-[11px] text-neutral-500">
+              Paste a URL → metadata fills automatically. Drop an image →
+              uploads. Drop a <code>.txt</code> or <code>.md</code> → text
+              block. Press{" "}
+              <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">
+                ⌘ Enter
+              </kbd>{" "}
+              to save.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Kind tabs */}
       <div className="flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 p-1 text-xs">
         {(["link", "image", "text"] as const).map((k) => {
           const active = kind === k;
@@ -305,32 +422,6 @@ export default function AdminForm() {
         })}
       </div>
 
-      <p className="text-xs text-neutral-500">
-        {kind === "link" && (
-          <>
-            Paste a URL → metadata fills automatically. Paste a screenshot →
-            uploads as the image. Press{" "}
-            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
-            to save.
-          </>
-        )}
-        {kind === "image" && (
-          <>
-            Paste a screenshot anywhere to upload it, or paste an image URL.
-            Press{" "}
-            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
-            to save.
-          </>
-        )}
-        {kind === "text" && (
-          <>
-            A text-only block — title plus a body of text. Press{" "}
-            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
-            to save.
-          </>
-        )}
-      </p>
-
       {showUrl && (
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-300">
@@ -343,11 +434,10 @@ export default function AdminForm() {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://..."
               className={inputClass}
-              autoFocus
             />
             <button
               type="button"
-              onClick={() => handleFetchMetadata(false)}
+              onClick={() => url && scrapeUrl(url)}
               disabled={status.kind === "scraping"}
               className="shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
               title="Re-fetch metadata"
@@ -392,7 +482,7 @@ export default function AdminForm() {
               type="url"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://… or paste a screenshot anywhere on this page"
+              placeholder="https://… or use the smart entry above"
               className={inputClass}
             />
             {imageUrl && (
@@ -406,7 +496,7 @@ export default function AdminForm() {
             )}
           </div>
           {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={imageUrl}
               alt=""
@@ -414,132 +504,37 @@ export default function AdminForm() {
             />
           )}
           {status.kind === "uploading" && (
-            <p className="mt-1 text-xs text-neutral-500">Uploading screenshot…</p>
+            <p className="mt-1 text-xs text-neutral-500">Uploading…</p>
           )}
         </div>
       )}
 
       {showSource && (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-neutral-300">
-                Source name
-              </label>
-              <input
-                type="text"
-                value={sourceName}
-                onChange={(e) => setSourceName(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-neutral-300">
-                Source handle (optional)
-              </label>
-              <input
-                type="text"
-                value={sourceHandle}
-                onChange={(e) => setSourceHandle(e.target.value)}
-                placeholder="@username"
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-300">
-              Source type
-            </label>
-            <select
-              value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
-              className={inputClass}
-            >
-              {SOURCE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-        </>
-      )}
-
-      <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-300">
-          Categories
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((cat) => {
-            const active = categories.includes(cat);
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "border-neutral-100 bg-neutral-100 text-neutral-900"
-                    : "border-neutral-700 bg-transparent text-neutral-300 hover:border-neutral-500"
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-300">
+            Source
+          </label>
+          <input
+            type="text"
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            placeholder="Auto-filled from page metadata"
+            className={inputClass}
+          />
         </div>
-      </div>
+      )}
 
       <div>
         <label className="mb-2 block text-sm font-medium text-neutral-300">
           Channels
         </label>
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {tags.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded-full bg-neutral-800 px-2.5 py-1 text-xs text-neutral-200"
-              >
-                {t}
-                <button
-                  type="button"
-                  onClick={() => removeTag(t)}
-                  className="text-neutral-500 hover:text-neutral-200"
-                  aria-label={`Remove ${t}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={onTagKeyDown}
-              onBlur={() => addTag(tagInput)}
-              placeholder={
-                tags.length === 0 ? "Type a channel and press Enter…" : ""
-              }
-              className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
-            />
-          </div>
-          {suggestions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5 border-t border-neutral-800 pt-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => addTag(s)}
-                  className="rounded-full bg-neutral-800 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-                >
-                  + {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ChannelPicker
+          value={channels}
+          onChange={setChannels}
+          suggestions={suggestions}
+          recents={recents}
+          autoApplyKey={suggestKey ?? undefined}
+        />
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -549,7 +544,13 @@ export default function AdminForm() {
           disabled={status.kind === "saving"}
           className="rounded-md bg-neutral-100 px-5 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
         >
-          {status.kind === "saving" ? "Saving…" : "Save"}
+          {status.kind === "saving"
+            ? "Saving…"
+            : channels.length > 0
+            ? `Connect to ${channels.length} channel${
+                channels.length === 1 ? "" : "s"
+              }`
+            : "Save"}
         </button>
         {status.kind === "success" && (
           <span className="text-sm text-emerald-400">Saved.</span>
