@@ -5,3 +5,9 @@ node_modules/
 .env*.local
 .vercel
 *.log
+
+# Claude Code local agent state (worktrees, launch.json, etc.)
+.claude/
+
+# Stray Conductor worktree — not part of the project tree
+/archive/

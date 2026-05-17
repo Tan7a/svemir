@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  /* svemir dark palette — mirrors are.na */
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --muted: #737373;
+  --border: #262626;
+  --card-hover: #1a1a1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: #2a2a2a;
+  color: #fafafa;
+}

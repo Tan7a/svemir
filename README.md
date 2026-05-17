@@ -1,5 +1,7 @@
-# archive
+# svemir
 
-Personal inspiration archive — link knowledge base with tags, search, and an Obsidian-style knowledge graph.
+Personal are.na — a private link & idea archive with blocks, channels, a knowledge graph, and a Chrome extension to save anywhere on the web. No social layer; just your own universe of references.
 
-The Next.js app lives in [`inspiration-archive/`](./inspiration-archive). See [`inspiration-archive/PLAN.md`](./inspiration-archive/PLAN.md) for the current state and roadmap.
+The Next.js app lives in [`svemir/`](./svemir). See [`svemir/PLAN.md`](./svemir/PLAN.md) for the active roadmap.
+
+The Chrome extension (when built) will live in `extension/` at this repo root.

@@ -1,0 +1,37 @@
+export type Item = {
+  id: string;
+  url: string | null;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  source_name: string | null;
+  source_handle: string | null;
+  source_type: string;
+  categories: string[];
+  notes: string | null;
+  kind: "link" | "image" | "text";
+  created_at: string;
+};
+
+export type Channel = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  cover_url: string | null;
+  parent_id: string | null;
+  created_at: string;
+};
+
+export type ItemWithChannels = Item & {
+  channels: Channel[];
+};
+
+/**
+ * A channel paired with its first N blocks — used by the Channels view to
+ * render the horizontal thumb strip.
+ */
+export type ChannelWithBlocks = Channel & {
+  blocks: Item[];
+  block_count: number;
+};
