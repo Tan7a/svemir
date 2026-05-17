@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 
@@ -85,6 +86,10 @@ export default function FilterBar({
             <span className="text-neutral-400">Channels</span>
             <span className="text-neutral-200">{channelCount}</span>
           </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-neutral-400">Nodes</span>
+            <span className="text-neutral-200">{blockCount}</span>
+          </div>
         </div>
       </div>
 
@@ -118,6 +123,18 @@ export default function FilterBar({
               </li>
             );
           })}
+          <li>
+            <Link
+              href="/graph"
+              className="group flex items-center gap-2 text-left text-neutral-400 hover:text-neutral-100"
+            >
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 rounded-full border border-neutral-600 group-hover:border-neutral-200"
+              />
+              Graph
+            </Link>
+          </li>
           {(["Table", "Index", "All"] as const).map((label) => (
             <li key={label}>
               <span

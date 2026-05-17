@@ -18,7 +18,7 @@ export default function ChannelsView({ channels }: Props) {
     );
   }
   return (
-    <div className="space-y-0 px-5 pb-16">
+    <div className="flex flex-col gap-10 px-5 pb-16">
       {channels.map((c) => (
         <ChannelCard key={c.id} channel={c} />
       ))}

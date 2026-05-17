@@ -11,7 +11,7 @@ import type { ComponentType } from "react";
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center text-sm text-zinc-500">
+    <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
       Loading graph…
     </div>
   ),
@@ -134,15 +134,15 @@ export default function KnowledgeGraph({ items }: Props) {
   }, [data, size.w]);
 
   return (
-    <div ref={containerRef} className="relative h-[calc(100vh-4rem)] w-full">
+    <div ref={containerRef} className="relative h-[calc(100vh-3rem)] w-full">
       <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-white/60 bg-white/80 px-4 py-2 text-xs text-zinc-700 backdrop-blur-md shadow-sm">
+        <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-neutral-800 bg-neutral-950/85 px-4 py-2 text-xs text-neutral-300 backdrop-blur-md">
           <label className="flex items-center gap-1.5">
-            <span className="text-zinc-500">Min shared tags</span>
+            <span className="text-neutral-500">Min shared channels</span>
             <select
               value={minOverlap}
               onChange={(e) => setMinOverlap(Number(e.target.value))}
-              className="rounded border border-zinc-300 bg-white px-1.5 py-0.5"
+              className="rounded border border-neutral-700 bg-neutral-900 px-1.5 py-0.5 text-neutral-200"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
@@ -156,14 +156,14 @@ export default function KnowledgeGraph({ items }: Props) {
               checked={hideCommon}
               onChange={(e) => setHideCommon(e.target.checked)}
             />
-            <span>Ignore common tags ({commonTagIds.size})</span>
+            <span>Ignore common channels ({commonTagIds.size})</span>
           </label>
-          <span className="text-zinc-400">·</span>
-          <span className="text-zinc-500">
+          <span className="text-neutral-700">·</span>
+          <span className="text-neutral-500">
             {data.nodes.length} nodes · {data.links.length} edges
           </span>
-          <span className="text-zinc-400">·</span>
-          <span className="text-zinc-400">scroll = zoom · drag = pan</span>
+          <span className="text-neutral-700">·</span>
+          <span className="text-neutral-500">scroll = zoom · drag = pan</span>
         </div>
       </div>
       {size.w > 0 && size.h > 0 && (
@@ -172,7 +172,7 @@ export default function KnowledgeGraph({ items }: Props) {
           graphData={data}
           width={size.w}
           height={size.h}
-          backgroundColor="#FBF8F4"
+          backgroundColor="#0a0a0a"
           nodeAutoColorBy="category"
           nodeRelSize={4}
           minZoom={0.2}
@@ -185,14 +185,14 @@ export default function KnowledgeGraph({ items }: Props) {
             const tagsToShow = node.tags.slice(0, 12);
             return `<div style="background:#111;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:280px;line-height:1.4"><div style="font-weight:600;margin-bottom:4px">${escapeHtml(node.name)}</div>${tagsToShow.length > 0 ? `<div style="opacity:.7;font-size:11px">${tagsToShow.map((t) => "#" + escapeHtml(t)).join(" ")}${node.tags.length > tagsToShow.length ? " …" : ""}</div>` : ""}</div>`;
           }}
-          linkColor={() => "rgba(0,0,0,0.08)"}
+          linkColor={() => "rgba(255,255,255,0.12)"}
           linkWidth={(raw: unknown) => {
             const l = raw as GraphLink;
             return Math.min(0.5 + l.value * 0.4, 3);
           }}
           onNodeClick={(raw: unknown) => {
             const node = raw as GraphNode;
-            router.push(`/item/${node.id}`);
+            router.push(`/block/${node.id}`);
           }}
           nodeCanvasObjectMode={() => "after"}
           nodeCanvasObject={(
@@ -207,7 +207,7 @@ export default function KnowledgeGraph({ items }: Props) {
             // World-space font: stays a constant on-screen size at any zoom
             const fontSize = 4;
             ctx.font = `${fontSize}px Inter, system-ui, sans-serif`;
-            ctx.fillStyle = "#1f2937";
+            ctx.fillStyle = "#d4d4d4";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             const label =

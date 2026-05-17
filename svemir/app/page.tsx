@@ -61,14 +61,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <TopBar />
       <div className="border-b border-neutral-900">
         <div className="px-5 pt-8 pb-4">
-          <h1 className="text-3xl font-light text-neutral-200">
-            <span className="text-neutral-500">svemir</span>{" "}
-            <span className="text-neutral-700">/</span>{" "}
-            Tanja Radovanovic
-            <span
-              aria-hidden
-              className="ml-2 inline-block h-2 w-2 translate-y-[-3px] rounded-full bg-emerald-500"
-            />
+          <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
+            svemir
           </h1>
         </div>
         <FilterBar
@@ -159,7 +153,7 @@ async function ChannelsRoute() {
           .select("position, items(*)")
           .eq("channel_id", c.id)
           .order("position", { ascending: true })
-          .limit(5),
+          .limit(8),
         client
           .from("connections")
           .select("block_id", { count: "exact", head: true })

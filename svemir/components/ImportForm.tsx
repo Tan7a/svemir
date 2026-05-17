@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { bulkImportBookmarks } from "@/app/admin/actions";
 import type { ParsedBookmark } from "@/lib/bookmarks-parser";
 
@@ -92,13 +93,13 @@ export default function ImportForm() {
     return (
       <div className="space-y-4">
         <label className="block">
-          <div className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 bg-white p-10 text-center hover:border-zinc-500">
-            <p className="text-sm text-zinc-700 font-medium">
+          <div className="cursor-pointer rounded-2xl border-2 border-dashed border-neutral-700 bg-neutral-900 p-10 text-center hover:border-neutral-500">
+            <p className="text-sm font-medium text-neutral-200">
               {status.kind === "parsing"
                 ? "Parsing…"
                 : "Click to choose a bookmarks .html file"}
             </p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-neutral-500">
               Or drag & drop the file here
             </p>
           </div>
@@ -114,7 +115,7 @@ export default function ImportForm() {
           />
         </label>
         {status.kind === "error" && (
-          <p className="text-sm text-red-600">{status.message}</p>
+          <p className="text-sm text-red-400">{status.message}</p>
         )}
       </div>
     );
@@ -124,50 +125,50 @@ export default function ImportForm() {
     const { totalBookmarks, folders } = status.data;
     return (
       <div className="space-y-5">
-        <div className="rounded-xl bg-white border border-zinc-200 p-4">
-          <p className="text-sm">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+          <p className="text-sm text-neutral-200">
             Found <strong>{totalBookmarks}</strong> bookmarks across{" "}
             <strong>{folders.length}</strong> folders.
           </p>
-          <p className="mt-1 text-sm text-zinc-600">
+          <p className="mt-1 text-sm text-neutral-400">
             <strong>{filteredCount}</strong> will be imported with the current
             folder selection.
           </p>
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-medium text-zinc-700">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-neutral-300">
               Folders ({folders.length})
             </h2>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setExcludedFolders(new Set())}
-                className="text-xs text-zinc-500 hover:text-zinc-900"
+                className="text-xs text-neutral-500 hover:text-neutral-100"
               >
                 Select all
               </button>
-              <span className="text-zinc-300">·</span>
+              <span className="text-neutral-700">·</span>
               <button
                 type="button"
                 onClick={() =>
                   setExcludedFolders(new Set(folders.map((f) => f.key)))
                 }
-                className="text-xs text-zinc-500 hover:text-zinc-900"
+                className="text-xs text-neutral-500 hover:text-neutral-100"
               >
                 Deselect all
               </button>
             </div>
           </div>
-          <div className="max-h-96 overflow-y-auto rounded-xl bg-white border border-zinc-200">
-            <ul className="divide-y divide-zinc-100">
+          <div className="max-h-96 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900">
+            <ul className="divide-y divide-neutral-800">
               {folders.map((f) => {
                 const checked = !excludedFolders.has(f.key);
                 const indent = (f.path.length - 1) * 16;
                 return (
                   <li key={f.key}>
-                    <label className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-zinc-50">
+                    <label className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -175,11 +176,11 @@ export default function ImportForm() {
                       />
                       <span style={{ paddingLeft: indent }} className="flex-1">
                         {f.path[f.path.length - 1]}
-                        <span className="ml-2 text-xs text-zinc-400">
+                        <span className="ml-2 text-xs text-neutral-500">
                           {f.path.slice(0, -1).join(" / ")}
                         </span>
                       </span>
-                      <span className="text-xs text-zinc-500">{f.count}</span>
+                      <span className="text-xs text-neutral-500">{f.count}</span>
                     </label>
                   </li>
                 );
@@ -193,21 +194,21 @@ export default function ImportForm() {
             type="button"
             onClick={handleImport}
             disabled={filteredCount === 0}
-            className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
           >
             Import {filteredCount} bookmarks
           </button>
           <button
             type="button"
             onClick={() => setStatus({ kind: "idle" })}
-            className="rounded-md px-3 py-2.5 text-sm text-zinc-600 hover:text-zinc-900"
+            className="rounded-md px-3 py-2.5 text-sm text-neutral-400 hover:text-neutral-100"
           >
             Cancel
           </button>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-neutral-500">
           Existing URLs (already in the archive) will be skipped automatically.
-          Folder names become tags. No images or descriptions are scraped at
+          Folder names become channels. No images or descriptions are scraped at
           this stage — use the Manage page to fill those in.
         </p>
       </div>
@@ -216,8 +217,8 @@ export default function ImportForm() {
 
   if (status.kind === "importing") {
     return (
-      <div className="rounded-xl bg-white border border-zinc-200 p-8 text-center">
-        <p className="text-sm text-zinc-700">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+        <p className="text-sm text-neutral-200">
           Importing… (this may take 10–60 seconds for large batches)
         </p>
       </div>
@@ -226,9 +227,9 @@ export default function ImportForm() {
 
   if (status.kind === "done") {
     return (
-      <div className="rounded-xl bg-white border border-zinc-200 p-6 space-y-3">
-        <h2 className="text-lg font-medium">Import complete</h2>
-        <p className="text-sm text-zinc-700">
+      <div className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-6">
+        <h2 className="text-lg font-light text-neutral-100">Import complete</h2>
+        <p className="text-sm text-neutral-300">
           ✓ Inserted <strong>{status.inserted}</strong> new bookmarks
           {status.skipped > 0 && (
             <>
@@ -238,22 +239,22 @@ export default function ImportForm() {
           .
         </p>
         <div className="flex gap-2 pt-2">
-          <a
+          <Link
             href="/admin/manage"
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
           >
             Manage imported items
-          </a>
-          <a
-            href="/archive"
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-700"
+          </Link>
+          <Link
+            href="/"
+            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
           >
             View archive
-          </a>
+          </Link>
           <button
             type="button"
             onClick={() => setStatus({ kind: "idle" })}
-            className="rounded-md px-4 py-2 text-sm text-zinc-600"
+            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
           >
             Import another file
           </button>

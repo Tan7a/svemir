@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { supabase } from "@/lib/supabase-client";
+import TopBar from "@/components/TopBar";
 import KnowledgeGraph, { type GraphItem } from "@/components/KnowledgeGraph";
 
 export const revalidate = 60;
@@ -22,9 +22,12 @@ function asChannelList(raw: unknown): ChannelRef[] {
 export default async function GraphPage() {
   if (!supabase) {
     return (
-      <div className="p-8 text-zinc-400 bg-[#0a0a0a] min-h-screen">
-        Supabase is not configured.
-      </div>
+      <>
+        <TopBar />
+        <main className="p-8 text-sm text-neutral-400">
+          Supabase is not configured.
+        </main>
+      </>
     );
   }
 
@@ -34,9 +37,12 @@ export default async function GraphPage() {
 
   if (error) {
     return (
-      <div className="p-8 text-red-400 bg-[#0a0a0a] min-h-screen">
-        Failed to load graph: {error.message}
-      </div>
+      <>
+        <TopBar />
+        <main className="p-8 text-sm text-red-400">
+          Failed to load graph: {error.message}
+        </main>
+      </>
     );
   }
 
@@ -56,28 +62,15 @@ export default async function GraphPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-200">
-      <header className="border-b border-neutral-800">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link
-            href="/"
-            className="text-sm text-neutral-400 hover:text-neutral-100"
-          >
-            ← svemir
-          </Link>
-          <p className="text-xs text-neutral-500">
-            {items.length} {items.length === 1 ? "block" : "blocks"} · click a
-            node to open
-          </p>
-        </div>
-      </header>
+    <>
+      <TopBar />
       {items.length === 0 ? (
-        <div className="flex h-[calc(100vh-4rem)] items-center justify-center text-sm text-neutral-500">
-          No blocks yet — add some from /admin.
-        </div>
+        <main className="flex h-[calc(100vh-3rem)] items-center justify-center text-sm text-neutral-500">
+          No blocks yet — add some from <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
+        </main>
       ) : (
         <KnowledgeGraph items={items} />
       )}
-    </div>
+    </>
   );
 }

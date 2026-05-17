@@ -1,14 +1,18 @@
 import AdminForm from "@/components/AdminForm";
-import AdminNav from "@/components/AdminNav";
+import AdminTabs from "@/components/AdminTabs";
+import TopBar from "@/components/TopBar";
 
 export default function AdminPage() {
   return (
-    <div className="min-h-screen bg-[#FBF8F4]">
-      <AdminNav active="add" />
+    <>
+      <TopBar />
+      <AdminTabs active="add" />
       <main className="mx-auto max-w-2xl px-6 py-10">
-        <h1 className="text-2xl font-bold mb-6">Add to archive</h1>
+        <h1 className="mb-6 text-2xl font-light text-neutral-100">
+          Add to svemir
+        </h1>
         <AdminForm />
       </main>
-    </div>
+    </>
   );
 }

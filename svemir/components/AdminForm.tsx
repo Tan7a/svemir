@@ -5,6 +5,8 @@ import { addItem } from "@/app/admin/actions";
 import { CATEGORIES, SOURCE_TYPES } from "@/lib/constants";
 import { supabase } from "@/lib/supabase-client";
 
+type Kind = "link" | "image" | "text";
+
 type Status =
   | { kind: "idle" }
   | { kind: "scraping" }
@@ -14,7 +16,7 @@ type Status =
   | { kind: "error"; message: string };
 
 const inputClass =
-  "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400";
+  "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500";
 
 function looksLikeUrl(s: string): boolean {
   if (!s) return false;
@@ -27,6 +29,7 @@ function looksLikeUrl(s: string): boolean {
 }
 
 export default function AdminForm() {
+  const [kind, setKind] = useState<Kind>("link");
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -54,8 +57,9 @@ export default function AdminForm() {
       });
   }, []);
 
-  // Auto-fetch metadata when URL changes (debounced)
+  // Auto-fetch metadata when URL changes (debounced) — link kind only.
   useEffect(() => {
+    if (kind !== "link") return;
     if (!looksLikeUrl(url)) return;
     if (url === lastFetchedUrl.current) return;
     if (status.kind === "scraping" || status.kind === "saving") return;
@@ -66,7 +70,7 @@ export default function AdminForm() {
     }, 500);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
+  }, [url, kind]);
 
   // Cmd+Enter / Ctrl+Enter to save
   useEffect(() => {
@@ -80,6 +84,7 @@ export default function AdminForm() {
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    kind,
     url,
     title,
     description,
@@ -176,7 +181,9 @@ export default function AdminForm() {
         return;
       }
     }
-    // Otherwise: if URL field is empty and clipboard text looks like a URL, fill it
+    // Otherwise: if URL field is empty and clipboard text looks like a URL, fill it.
+    // Only relevant when we're showing the URL field.
+    if (kind !== "link") return;
     const text = e.clipboardData?.getData("text/plain");
     if (!url.trim() && text && looksLikeUrl(text)) {
       setUrl(text.trim());
@@ -216,12 +223,29 @@ export default function AdminForm() {
   }
 
   async function handleSave() {
-    if (!url.trim() || !title.trim()) {
-      setStatus({ kind: "error", message: "URL and title are required" });
+    if (!title.trim()) {
+      setStatus({ kind: "error", message: "Title is required" });
       return;
     }
+    if (kind === "link" && !url.trim()) {
+      setStatus({ kind: "error", message: "URL is required for link blocks" });
+      return;
+    }
+    if (kind === "image" && !imageUrl.trim()) {
+      setStatus({
+        kind: "error",
+        message: "Image URL is required for image blocks (paste a screenshot or paste a URL)",
+      });
+      return;
+    }
+    if (kind === "text" && !description.trim()) {
+      setStatus({ kind: "error", message: "Text content is required for text blocks" });
+      return;
+    }
+
     setStatus({ kind: "saving" });
     const result = await addItem({
+      kind,
       url,
       title,
       description,
@@ -252,40 +276,90 @@ export default function AdminForm() {
     );
   }
 
+  const showUrl = kind === "link";
+  const showImage = kind === "link" || kind === "image";
+  const showSource = kind === "link";
+  // For text blocks, the description IS the content — give it more room.
+  const descriptionRows = kind === "text" ? 10 : 3;
+  const descriptionLabel = kind === "text" ? "Text" : "Description";
+
   return (
     <div ref={formRef} onPaste={handleFormPaste} className="space-y-5">
-      <p className="text-xs text-zinc-500">
-        Paste a URL → metadata fills automatically. Paste a screenshot → uploads
-        as the image. Press <kbd className="rounded bg-zinc-200 px-1">⌘ Enter</kbd> to save.
-      </p>
-
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">
-          URL
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            className={inputClass}
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() => handleFetchMetadata(false)}
-            disabled={status.kind === "scraping"}
-            className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 disabled:opacity-60"
-            title="Re-fetch metadata"
-          >
-            {status.kind === "scraping" ? "Fetching…" : "↻"}
-          </button>
-        </div>
+      <div className="flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 p-1 text-xs">
+        {(["link", "image", "text"] as const).map((k) => {
+          const active = kind === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`flex-1 rounded px-3 py-1.5 capitalize transition-colors ${
+                active
+                  ? "bg-neutral-100 text-neutral-900"
+                  : "text-neutral-400 hover:text-neutral-100"
+              }`}
+            >
+              {k}
+            </button>
+          );
+        })}
       </div>
 
+      <p className="text-xs text-neutral-500">
+        {kind === "link" && (
+          <>
+            Paste a URL → metadata fills automatically. Paste a screenshot →
+            uploads as the image. Press{" "}
+            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
+            to save.
+          </>
+        )}
+        {kind === "image" && (
+          <>
+            Paste a screenshot anywhere to upload it, or paste an image URL.
+            Press{" "}
+            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
+            to save.
+          </>
+        )}
+        {kind === "text" && (
+          <>
+            A text-only block — title plus a body of text. Press{" "}
+            <kbd className="rounded bg-neutral-800 px-1 text-neutral-300">⌘ Enter</kbd>{" "}
+            to save.
+          </>
+        )}
+      </p>
+
+      {showUrl && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-300">
+            URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://..."
+              className={inputClass}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => handleFetchMetadata(false)}
+              disabled={status.kind === "scraping"}
+              className="shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
+              title="Re-fetch metadata"
+            >
+              {status.kind === "scraping" ? "Fetching…" : "↻"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">
+        <label className="mb-1 block text-sm font-medium text-neutral-300">
           Title
         </label>
         <input
@@ -297,97 +371,103 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">
-          Description
+        <label className="mb-1 block text-sm font-medium text-neutral-300">
+          {descriptionLabel}
         </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows={3}
+          rows={descriptionRows}
           className={inputClass}
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">
-          Image
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://… or paste a screenshot anywhere on this page"
-            className={inputClass}
-          />
+      {showImage && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-300">
+            Image
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://… or paste a screenshot anywhere on this page"
+              className={inputClass}
+            />
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           {imageUrl && (
-            <button
-              type="button"
-              onClick={() => setImageUrl("")}
-              className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-600"
-            >
-              Clear
-            </button>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt=""
+              className="mt-2 h-32 w-auto rounded-md border border-neutral-800 object-cover"
+            />
+          )}
+          {status.kind === "uploading" && (
+            <p className="mt-1 text-xs text-neutral-500">Uploading screenshot…</p>
           )}
         </div>
-        {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt=""
-            className="mt-2 h-32 w-auto rounded-md border border-zinc-200 object-cover"
-          />
-        )}
-        {status.kind === "uploading" && (
-          <p className="mt-1 text-xs text-zinc-500">Uploading screenshot…</p>
-        )}
-      </div>
+      )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">
-            Source name
-          </label>
-          <input
-            type="text"
-            value={sourceName}
-            onChange={(e) => setSourceName(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">
-            Source handle (optional)
-          </label>
-          <input
-            type="text"
-            value={sourceHandle}
-            onChange={(e) => setSourceHandle(e.target.value)}
-            placeholder="@username"
-            className={inputClass}
-          />
-        </div>
-      </div>
+      {showSource && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-300">
+                Source name
+              </label>
+              <input
+                type="text"
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-300">
+                Source handle (optional)
+              </label>
+              <input
+                type="text"
+                value={sourceHandle}
+                onChange={(e) => setSourceHandle(e.target.value)}
+                placeholder="@username"
+                className={inputClass}
+              />
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">
-          Source type
-        </label>
-        <select
-          value={sourceType}
-          onChange={(e) => setSourceType(e.target.value)}
-          className={inputClass}
-        >
-          {SOURCE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-300">
+              Source type
+            </label>
+            <select
+              value={sourceType}
+              onChange={(e) => setSourceType(e.target.value)}
+              className={inputClass}
+            >
+              {SOURCE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-2">
+        <label className="mb-2 block text-sm font-medium text-neutral-300">
           Categories
         </label>
         <div className="flex flex-wrap gap-2">
@@ -398,10 +478,10 @@ export default function AdminForm() {
                 key={cat}
                 type="button"
                 onClick={() => toggleCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   active
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "bg-white text-zinc-700 border-zinc-300 hover:border-zinc-500"
+                    ? "border-neutral-100 bg-neutral-100 text-neutral-900"
+                    : "border-neutral-700 bg-transparent text-neutral-300 hover:border-neutral-500"
                 }`}
               >
                 {cat}
@@ -412,21 +492,21 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-2">
-          Tags
+        <label className="mb-2 block text-sm font-medium text-neutral-300">
+          Channels
         </label>
-        <div className="rounded-md border border-zinc-300 bg-white p-2">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-2">
           <div className="flex flex-wrap items-center gap-1.5">
             {tags.map((t) => (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-800"
+                className="inline-flex items-center gap-1 rounded-full bg-neutral-800 px-2.5 py-1 text-xs text-neutral-200"
               >
                 {t}
                 <button
                   type="button"
                   onClick={() => removeTag(t)}
-                  className="text-zinc-400 hover:text-zinc-700"
+                  className="text-neutral-500 hover:text-neutral-200"
                   aria-label={`Remove ${t}`}
                 >
                   ×
@@ -440,19 +520,19 @@ export default function AdminForm() {
               onKeyDown={onTagKeyDown}
               onBlur={() => addTag(tagInput)}
               placeholder={
-                tags.length === 0 ? "Type a tag and press Enter…" : ""
+                tags.length === 0 ? "Type a channel and press Enter…" : ""
               }
-              className="flex-1 min-w-[8rem] border-0 px-1 py-1 text-sm focus:outline-none"
+              className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
             />
           </div>
           {suggestions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5 border-t border-zinc-100 pt-2">
+            <div className="mt-2 flex flex-wrap gap-1.5 border-t border-neutral-800 pt-2">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => addTag(s)}
-                  className="rounded-full bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100"
+                  className="rounded-full bg-neutral-800 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
                 >
                   + {s}
                 </button>
@@ -467,15 +547,15 @@ export default function AdminForm() {
           type="button"
           onClick={handleSave}
           disabled={status.kind === "saving"}
-          className="rounded-md bg-zinc-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-neutral-100 px-5 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
         >
           {status.kind === "saving" ? "Saving…" : "Save"}
         </button>
         {status.kind === "success" && (
-          <span className="text-sm text-green-700">Saved.</span>
+          <span className="text-sm text-emerald-400">Saved.</span>
         )}
         {status.kind === "error" && (
-          <span className="text-sm text-red-600">{status.message}</span>
+          <span className="text-sm text-red-400">{status.message}</span>
         )}
       </div>
     </div>

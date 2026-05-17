@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,9 +7,19 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const bebasNeue = Bebas_Neue({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "svemir",
   description: "Personal universe of references — blocks, channels, graph.",
+  icons: {
+    icon: "/svemir.svg",
+    apple: "/svemir.svg",
+  },
 };
 
 /**
@@ -27,7 +37,7 @@ export default function RootLayout({
   modal: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} antialiased`}>
+    <html lang="en" className={`${inter.variable} ${bebasNeue.variable} antialiased`}>
       <body className="min-h-screen bg-[#0a0a0a] font-sans text-neutral-200">
         {children}
         {modal}

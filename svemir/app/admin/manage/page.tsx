@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase-client";
-import AdminNav from "@/components/AdminNav";
+import AdminTabs from "@/components/AdminTabs";
+import TopBar from "@/components/TopBar";
 import ManageList from "@/components/ManageList";
 import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
@@ -28,12 +29,13 @@ export default async function ManagePage({
 
   if (!supabase) {
     return (
-      <div className="min-h-screen bg-[#FBF8F4]">
-        <AdminNav active="manage" />
-        <main className="mx-auto max-w-6xl px-6 py-10 text-zinc-600">
+      <>
+        <TopBar />
+        <AdminTabs active="manage" />
+        <main className="mx-auto max-w-6xl px-6 py-10 text-neutral-400">
           Supabase is not configured.
         </main>
-      </div>
+      </>
     );
   }
 
@@ -53,12 +55,13 @@ export default async function ManagePage({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#FBF8F4]">
-        <AdminNav active="manage" />
-        <main className="mx-auto max-w-6xl px-6 py-10 text-red-600">
+      <>
+        <TopBar />
+        <AdminTabs active="manage" />
+        <main className="mx-auto max-w-6xl px-6 py-10 text-red-400">
           Failed to load items: {error.message}
         </main>
-      </div>
+      </>
     );
   }
 
@@ -80,17 +83,18 @@ export default async function ManagePage({
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#FBF8F4]">
-      <AdminNav active="manage" />
-      <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
+    <>
+      <TopBar />
+      <AdminTabs active="manage" />
+      <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-light text-neutral-100">
             Manage{" "}
-            <span className="ml-2 text-sm font-normal text-zinc-500">
+            <span className="ml-2 text-sm font-normal text-neutral-500">
               {totalCount} items
             </span>
           </h1>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-neutral-500">
             Page {page} of {totalPages}
             {missingMetaCount > 0 &&
               ` · ${missingMetaCount} missing metadata on this page`}
@@ -104,6 +108,6 @@ export default async function ManagePage({
           query={q}
         />
       </main>
-    </div>
+    </>
   );
 }

@@ -2,47 +2,16 @@
 
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   deriveTagsAndCategories,
   detectSourceType,
   type ParsedBookmark,
 } from "@/lib/bookmarks-parser";
-import { slugify } from "@/lib/constants";
+import { scrapeOpenGraph } from "@/lib/scrape";
+import { ensureChannelId } from "@/lib/channels";
 
-/**
- * Insert-then-lookup pattern for channels. Race-safe at personal scale: if
- * the insert fails on the lower(title) unique index, we ilike-match the
- * existing row.
- */
-async function ensureChannelId(
-  client: SupabaseClient,
-  rawTitle: string
-): Promise<string | null> {
-  const title = rawTitle.trim();
-  if (!title) return null;
-
-  const slug = slugify(title);
-  if (!slug) return null;
-
-  const { data: inserted, error: insertErr } = await client
-    .from("channels")
-    .insert({ title, slug })
-    .select("id")
-    .single();
-
-  if (!insertErr && inserted) return inserted.id as string;
-
-  const { data: existing } = await client
-    .from("channels")
-    .select("id")
-    .ilike("title", title)
-    .maybeSingle();
-
-  return (existing?.id as string | undefined) ?? null;
-}
-
-export async function addItem(data: {
+export type AddItemInput = {
+  kind: "link" | "image" | "text";
   url: string;
   title: string;
   description: string;
@@ -52,7 +21,14 @@ export async function addItem(data: {
   source_type: string;
   categories: string[];
   channelTitles: string[];
-}): Promise<{ success: true } | { success: false; error: string }> {
+};
+
+export async function addItem(
+  data: AddItemInput
+): Promise<
+  | { success: true; id: string }
+  | { success: false; error: string }
+> {
   if (!supabaseAdmin) {
     return {
       success: false,
@@ -62,11 +38,17 @@ export async function addItem(data: {
   }
 
   const client = supabaseAdmin;
-  const { channelTitles, ...itemData } = data;
+  const { channelTitles, kind, ...rest } = data;
+
+  const itemData = {
+    ...rest,
+    kind,
+    url: kind === "link" ? rest.url : rest.url || null,
+  };
 
   const { data: inserted, error: itemErr } = await client
     .from("items")
-    .insert([{ ...itemData, kind: "link" }])
+    .insert([itemData])
     .select("id")
     .single();
 
@@ -100,7 +82,7 @@ export async function addItem(data: {
   revalidatePath("/");
   revalidatePath("/graph");
   revalidatePath(`/block/${blockId}`);
-  return { success: true };
+  return { success: true, id: blockId };
 }
 
 export async function bulkImportBookmarks(
@@ -266,6 +248,134 @@ export async function bulkDeleteItems(
   return { success: true, count: count ?? ids.length };
 }
 
+/**
+ * Nest one channel inside another. The child gets the parent's id assigned to
+ * its `parent_id` column. Resolves the parent by title (creating it if needed).
+ * Used by the "Connect to channel" action in the channel card "…" menu.
+ */
+export async function setChannelParent(
+  childId: string,
+  parentTitle: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+  const parentId = await ensureChannelId(client, parentTitle);
+  if (!parentId) {
+    return { success: false, error: "Could not resolve or create parent channel" };
+  }
+  if (parentId === childId) {
+    return { success: false, error: "A channel cannot be nested inside itself." };
+  }
+  const { error } = await client
+    .from("channels")
+    .update({ parent_id: parentId })
+    .eq("id", childId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/graph");
+  return { success: true };
+}
+
+/**
+ * Detach a channel from its parent. Used by the "Remove from parent" action.
+ */
+export async function removeChannelParent(
+  childId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("channels")
+    .update({ parent_id: null })
+    .eq("id", childId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  return { success: true };
+}
+
+/**
+ * Update the image_url of an existing block. Called by the "Change image"
+ * action in the block detail menu after the client has uploaded a file
+ * via /api/upload-image and received back a URL.
+ */
+export async function updateBlockImage(
+  blockId: string,
+  imageUrl: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = imageUrl.trim();
+  if (!trimmed) {
+    return { success: false, error: "Image URL is required." };
+  }
+  const { error } = await supabaseAdmin
+    .from("items")
+    .update({ image_url: trimmed })
+    .eq("id", blockId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath(`/block/${blockId}`);
+  revalidatePath("/admin/manage");
+  return { success: true };
+}
+
+/**
+ * Append a single channel to an existing block. Resolves the channel by title
+ * (creating it if missing), then upserts the (block_id, channel_id) connection.
+ * Used by the inline Connect button on the block detail modal.
+ */
+export async function addChannelToBlock(
+  blockId: string,
+  channelTitle: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+  const channelId = await ensureChannelId(client, channelTitle);
+  if (!channelId) {
+    return { success: false, error: "Could not resolve or create channel" };
+  }
+  const { error } = await client
+    .from("connections")
+    .upsert(
+      { block_id: blockId, channel_id: channelId },
+      { onConflict: "block_id,channel_id" }
+    );
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/graph");
+  revalidatePath(`/block/${blockId}`);
+  return { success: true };
+}
+
+/**
+ * Remove a single channel from a block. Used by the × on each channel chip
+ * in the block detail's "Your connections" list.
+ */
+export async function removeChannelFromBlock(
+  blockId: string,
+  channelId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const { error } = await supabaseAdmin
+    .from("connections")
+    .delete()
+    .eq("block_id", blockId)
+    .eq("channel_id", channelId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/graph");
+  revalidatePath(`/block/${blockId}`);
+  return { success: true };
+}
+
 export async function updateItemChannelsAndCategories(
   blockId: string,
   channelTitles: string[],
@@ -340,32 +450,20 @@ export async function scrapeMissingMetadata(
     return { success: true, scraped: 0, failed: 0, lastId: null, remaining: 0 };
   }
 
-  const ogs = (await import("open-graph-scraper")).default;
-  const PER_ITEM_TIMEOUT_MS = 5000;
-
   const results = await Promise.allSettled(
     targets.map(async (t) => {
       const id = t.id as string;
       const url = t.url as string;
       try {
-        const { result } = (await Promise.race([
-          ogs({ url, timeout: PER_ITEM_TIMEOUT_MS }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("timeout")), PER_ITEM_TIMEOUT_MS)
-          ),
-        ])) as Awaited<ReturnType<typeof ogs>>;
-
-        const ogImage = Array.isArray(result.ogImage)
-          ? result.ogImage[0]?.url
-          : (result.ogImage as { url?: string } | undefined)?.url;
+        const meta = await scrapeOpenGraph(url);
 
         const updates: Record<string, unknown> = {};
-        if (result.ogTitle) updates.title = result.ogTitle;
-        if (result.ogDescription) updates.description = result.ogDescription;
-        if (ogImage && ogImage.startsWith("https://")) {
-          updates.image_url = ogImage;
+        if (meta.title) updates.title = meta.title;
+        if (meta.description) updates.description = meta.description;
+        if (meta.image && meta.image.startsWith("https://")) {
+          updates.image_url = meta.image;
         }
-        if (result.ogSiteName) updates.source_name = result.ogSiteName;
+        if (meta.siteName) updates.source_name = meta.siteName;
 
         if (!updates.image_url) {
           return { id, scraped: false } as const;
@@ -425,17 +523,13 @@ export async function scrapeAndUpdateItem(
     return { success: false, error: "Supabase admin not configured" };
   }
   try {
-    const ogs = (await import("open-graph-scraper")).default;
-    const { result } = await ogs({ url });
-    const ogImage = Array.isArray(result.ogImage)
-      ? result.ogImage[0]?.url
-      : (result.ogImage as { url?: string } | undefined)?.url;
+    const meta = await scrapeOpenGraph(url);
 
     const updates: Record<string, unknown> = {};
-    if (result.ogTitle) updates.title = result.ogTitle;
-    if (result.ogDescription) updates.description = result.ogDescription;
-    if (ogImage) updates.image_url = ogImage;
-    if (result.ogSiteName) updates.source_name = result.ogSiteName;
+    if (meta.title) updates.title = meta.title;
+    if (meta.description) updates.description = meta.description;
+    if (meta.image) updates.image_url = meta.image;
+    if (meta.siteName) updates.source_name = meta.siteName;
 
     if (Object.keys(updates).length === 0) {
       return { success: true, updated: false };

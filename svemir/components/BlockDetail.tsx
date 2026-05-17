@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ItemWithChannels } from "@/lib/types";
+import BlockActions from "./BlockActions";
 
 type Props = {
   block: ItemWithChannels;
@@ -107,24 +108,12 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           )}
         </dl>
 
-        <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            disabled
-            className="rounded-sm border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 disabled:cursor-not-allowed"
-            title="Coming in Phase C"
-          >
-            Connect <span className="ml-1">→</span>
-          </button>
-          <button
-            type="button"
-            disabled
-            className="rounded-sm border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 disabled:cursor-not-allowed"
-            title="Coming in Phase C"
-          >
-            Actions <span className="ml-0.5">⌄</span>
-          </button>
-        </div>
+        <BlockActions
+          blockId={block.id}
+          url={block.url}
+          imageUrl={block.image_url}
+          inModal={inModal}
+        />
 
         <div className="mt-2 border-b border-neutral-800">
           <button

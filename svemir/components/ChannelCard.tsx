@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ChannelWithBlocks } from "@/lib/types";
+import ChannelActions from "./ChannelActions";
 
 type Props = {
   channel: ChannelWithBlocks;
@@ -24,42 +25,49 @@ function relativeTime(iso: string): string {
   return `${yr} year${yr === 1 ? "" : "s"} ago`;
 }
 
+const MAX_THUMBS = 8;
+
 /**
- * One channel as a horizontal row. Title + meta on the left, horizontal
- * thumbnail strip on the right (first ~5 blocks).
+ * Wide horizontal channel card in the home Channels view, matching the are.na
+ * pattern. Left half: centred title + meta. Right half: a horizontal strip of
+ * real block thumbnails (no empty placeholder cells). The "…" actions menu
+ * appears in the top-right on hover.
  */
 export default function ChannelCard({ channel }: Props) {
-  const thumbs = channel.blocks.slice(0, 5);
+  const thumbs = channel.blocks.slice(0, MAX_THUMBS);
   const count = channel.block_count;
 
   return (
-    <div className="grid grid-cols-[16rem_1fr] gap-6 border border-neutral-800 px-6 py-8">
-      <div className="flex flex-col justify-center gap-1.5">
-        <Link
-          href={`/channel/${channel.slug}`}
-          className="text-2xl font-light leading-tight text-neutral-100 hover:underline"
-        >
+    <div className="group relative grid grid-cols-1 border border-neutral-800 transition-colors hover:border-white md:grid-cols-[1fr_2fr]">
+      {/* Left — centred title + meta */}
+      <Link
+        href={`/channel/${channel.slug}`}
+        className="flex flex-col items-center justify-center gap-1.5 px-8 py-16 text-center"
+      >
+        <span className="text-2xl font-light text-neutral-100">
           {channel.title}
-        </Link>
-        <p className="text-xs text-neutral-500">
-          by Tanja Radovanovic
-        </p>
-        <p className="text-xs text-neutral-500">
+        </span>
+        <span className="text-xs text-neutral-500">by Tanja Radovanovic</span>
+        <span className="text-xs text-neutral-500">
           {count} block{count === 1 ? "" : "s"}
-        </p>
-        <p className="text-xs text-neutral-500">
+        </span>
+        <span className="text-xs text-neutral-500">
           {relativeTime(channel.created_at)}
-        </p>
-      </div>
-      <div className="flex items-center gap-3 overflow-hidden">
+        </span>
+      </Link>
+
+      {/* Right — horizontal strip of real thumbnails, no placeholders */}
+      <div className="flex items-center gap-3 overflow-hidden px-6 py-6">
         {thumbs.length === 0 ? (
-          <div className="text-xs text-neutral-600">No blocks yet</div>
+          <div className="flex h-32 w-full items-center justify-center text-xs text-neutral-600">
+            No blocks yet
+          </div>
         ) : (
           thumbs.map((b) => (
             <Link
               key={b.id}
               href={`/block/${b.id}`}
-              className="relative h-32 w-32 shrink-0 overflow-hidden border border-neutral-800 bg-neutral-900"
+              className="relative aspect-square h-32 w-32 shrink-0 overflow-hidden bg-neutral-900"
             >
               {b.image_url ? (
                 <Image
@@ -70,7 +78,7 @@ export default function ChannelCard({ channel }: Props) {
                   className="object-cover transition-opacity hover:opacity-90"
                 />
               ) : b.kind === "text" && b.description ? (
-                <div className="flex h-full w-full items-center justify-center bg-neutral-900 p-2 text-[9px] leading-snug text-neutral-400">
+                <div className="flex h-full w-full items-center justify-center p-2 text-[9px] leading-snug text-neutral-400">
                   <span className="line-clamp-5">{b.description}</span>
                 </div>
               ) : (
@@ -81,6 +89,17 @@ export default function ChannelCard({ channel }: Props) {
             </Link>
           ))
         )}
+      </div>
+
+      {/* Hover-revealed actions menu */}
+      <div className="pointer-events-none absolute right-3 top-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <div className="pointer-events-auto">
+          <ChannelActions
+            channelId={channel.id}
+            channelTitle={channel.title}
+            hasParent={channel.parent_id !== null}
+          />
+        </div>
       </div>
     </div>
   );
