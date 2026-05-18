@@ -44,68 +44,58 @@ export default async function ChannelPage({ params }: { params: Params }) {
   }
   const client = supabase;
 
+  // Parent + connections + children + their connections in ONE query via
+  // Supabase's nested-select self-join. Replaces the previous 1 + 1 + N×2
+  // round-trip pattern with a single PostgREST request.
+  type ChannelWithConns = Channel & {
+    connections: { position: number; items: unknown }[] | null;
+  };
+  type ChannelWithKids = ChannelWithConns & {
+    children: ChannelWithConns[] | null;
+  };
+
   const { data: channelRow } = await client
     .from("channels")
-    .select("id, slug, title, description, cover_url, parent_id, created_at")
+    .select(
+      "*, connections(position, items(*)), children:channels!parent_id(*, connections(position, items(*)))"
+    )
     .eq("slug", slug)
     .maybeSingle();
 
   if (!channelRow) notFound();
-  const channel = channelRow as Channel;
+  const parent = channelRow as unknown as ChannelWithKids;
+  const { connections: parentConns, children, ...channelBase } = parent;
+  const channel = channelBase as Channel;
 
-  const [{ data: rows }, { data: childRows }] = await Promise.all([
-    client
-      .from("connections")
-      .select("position, items(*)")
-      .eq("channel_id", channel.id)
-      .order("position", { ascending: true }),
-    client
-      .from("channels")
-      .select("*")
-      .eq("parent_id", channel.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  function blocksFromConns(
+    conns: { position: number; items: unknown }[] | null
+  ): Item[] {
+    return (conns ?? [])
+      .map((row) => {
+        const it = row.items;
+        const item = Array.isArray(it) ? it[0] : it;
+        return { position: row.position, item: item as Item | undefined };
+      })
+      .filter((r): r is { position: number; item: Item } => !!r.item)
+      .sort((a, b) => a.position - b.position)
+      .map((r) => r.item);
+  }
 
-  const blocks: Item[] = (rows ?? [])
-    .map((row: { items: unknown }) => {
-      const it = row.items;
-      if (Array.isArray(it)) return it[0] as Item | undefined;
-      return it as Item | undefined;
-    })
-    .filter((b): b is Item => !!b);
+  const blocks: Item[] = blocksFromConns(parentConns);
 
-  const childChannels = (childRows ?? []) as Channel[];
-
-  // Enrich each child channel with its first ~25 thumbs + total count, so the
-  // nested ChannelCard renders correctly.
-  const childrenWithBlocks: ChannelWithBlocks[] = await Promise.all(
-    childChannels.map(async (c) => {
-      const [{ data: conns }, { count }] = await Promise.all([
-        client
-          .from("connections")
-          .select("position, items(*)")
-          .eq("channel_id", c.id)
-          .order("position", { ascending: true })
-          .limit(8),
-        client
-          .from("connections")
-          .select("block_id", { count: "exact", head: true })
-          .eq("channel_id", c.id),
-      ]);
-      const innerBlocks: Item[] = (conns ?? [])
-        .map((row: { items: unknown }) => {
-          const it = row.items;
-          if (Array.isArray(it)) return it[0] as Item | undefined;
-          return it as Item | undefined;
-        })
-        .filter((b): b is Item => !!b);
+  const childrenWithBlocks: ChannelWithBlocks[] = (children ?? [])
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    .map((c) => {
+      const childBlocks = blocksFromConns(c.connections);
       return {
-        ...c,
-        blocks: innerBlocks,
-        block_count: count ?? innerBlocks.length,
+        ...(c as Channel),
+        blocks: childBlocks.slice(0, 8),
+        block_count: childBlocks.length,
       } satisfies ChannelWithBlocks;
-    })
-  );
+    });
 
   return (
     <>

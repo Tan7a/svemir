@@ -119,14 +119,22 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
   return <BlocksView blocks={(data ?? []) as Item[]} />;
 }
 
-/** Server component fetching channels + their first ~5 blocks each. */
+/**
+ * Server component fetching channels + their connected blocks.
+ *
+ * Previously this fanned out N×2 queries (8 blocks + exact count) per
+ * channel — at ~50 channels that's 100 Supabase round-trips through a
+ * single HTTPS pool. Collapsing into one nested select trades bandwidth
+ * (we transfer every connection row instead of 8) for latency. At
+ * personal scale (~1k blocks across ~50 channels) the payload is small.
+ */
 async function ChannelsRoute() {
   if (!supabase) return null;
   const client = supabase;
 
   const { data: chData, error: chErr } = await client
     .from("channels")
-    .select("*")
+    .select("*, connections(position, items(*))")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -138,42 +146,27 @@ async function ChannelsRoute() {
     );
   }
 
-  const channels = (chData ?? []) as Channel[];
-  if (channels.length === 0) {
-    return <ChannelsView channels={[]} />;
-  }
+  type ChannelWithConns = Channel & {
+    connections: { position: number; items: unknown }[] | null;
+  };
 
-  // For each channel, fetch its first ~5 blocks + a count, in parallel.
-  // ~50 parallel queries at personal scale; Supabase handles fine.
-  const enriched = await Promise.all(
-    channels.map(async (c) => {
-      const [{ data: conns }, { count }] = await Promise.all([
-        client
-          .from("connections")
-          .select("position, items(*)")
-          .eq("channel_id", c.id)
-          .order("position", { ascending: true })
-          .limit(8),
-        client
-          .from("connections")
-          .select("block_id", { count: "exact", head: true })
-          .eq("channel_id", c.id),
-      ]);
-
-      const blocks: Item[] = (conns ?? [])
-        .map((row: { items: unknown }) => {
+  const enriched: ChannelWithBlocks[] = ((chData ?? []) as ChannelWithConns[]).map(
+    (c) => {
+      const { connections, ...rest } = c;
+      const all = (connections ?? [])
+        .map((row) => {
           const it = row.items;
-          if (Array.isArray(it)) return it[0] as Item | undefined;
-          return it as Item | undefined;
+          const item = Array.isArray(it) ? it[0] : it;
+          return { position: row.position, item: item as Item | undefined };
         })
-        .filter((b): b is Item => !!b);
-
+        .filter((row): row is { position: number; item: Item } => !!row.item)
+        .sort((a, b) => a.position - b.position);
       return {
-        ...c,
-        blocks,
-        block_count: count ?? blocks.length,
+        ...rest,
+        blocks: all.slice(0, 8).map((r) => r.item),
+        block_count: all.length,
       } satisfies ChannelWithBlocks;
-    })
+    }
   );
 
   return <ChannelsView channels={enriched} />;

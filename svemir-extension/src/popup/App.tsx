@@ -55,6 +55,17 @@ export default function App() {
         return;
       }
 
+      // Channel fetches are independent of the asset extraction + snapshot,
+      // so we start them immediately and let them resolve into state
+      // whenever they're ready. The picker renders with empty recents until
+      // they land — much less janky than waiting for snapshot+upload first.
+      listRecentChannels(s)
+        .then(setRecents)
+        .catch((e) => console.warn("recents fetch failed:", e));
+      listChannels(s)
+        .then((all) => setAllChannels(all.map((c) => c.title)))
+        .catch((e) => console.warn("all channels fetch failed:", e));
+
       const tabs = await chrome.tabs.query({
         active: true,
         currentWindow: true,
@@ -70,69 +81,54 @@ export default function App() {
       if (pending) {
         setAsset(pending);
         await clearPendingAsset(tab.id);
-      } else {
-        // Inject extractor on demand.
-        let extracted: ExtractedAsset | null = null;
-        try {
-          const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: extractAsset,
-          });
-          extracted = (results[0]?.result as ExtractedAsset | undefined) ?? null;
-        } catch (e) {
-          console.warn("svemir extractor failed:", e);
-        }
-        if (!extracted) {
-          extracted = {
-            kind: "link",
-            url: tab.url ?? "",
-            title: tab.title ?? "",
-            description: "",
-            image_url: "",
-            source_name: tab.url ? new URL(tab.url).hostname : "",
-            body_text: "",
-          };
-        }
-        setAsset(extracted);
-
-        // Capture the visible viewport as the block's image — this is what
-        // arena does. Overrides any OG image. Best-effort: failures keep
-        // the extracted (OG) image_url as fallback.
-        setPhase({ kind: "snapshotting" });
-        try {
-          const dataUrl = await chrome.tabs.captureVisibleTab(
-            tab.windowId ?? chrome.windows.WINDOW_ID_CURRENT,
-            { format: "jpeg", quality: 80 }
-          );
-          if (dataUrl) {
-            const blob = await dataUrlToBlob(dataUrl);
-            const { url } = await uploadImage(s, blob, "page.jpg");
-            setAsset((prev) => (prev ? { ...prev, image_url: url } : prev));
-          }
-        } catch (e) {
-          console.warn("svemir snapshot failed:", e);
-        }
+        setPhase({ kind: "ready" });
+        return;
       }
 
-      // Recents power the visible "Recent channels" list; the full channel
-      // list is fetched in the background so the picker can detect when a
-      // typed query already exists (so "Create new" only appears for
-      // genuinely new names).
+      // Inject extractor on demand.
+      let extracted: ExtractedAsset | null = null;
       try {
-        const [r, all] = await Promise.all([
-          listRecentChannels(s),
-          listChannels(s).catch((e) => {
-            console.warn("all channels fetch failed:", e);
-            return [] as { id: string; slug: string; title: string }[];
-          }),
-        ]);
-        setRecents(r);
-        setAllChannels(all.map((c) => c.title));
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: extractAsset,
+        });
+        extracted = (results[0]?.result as ExtractedAsset | undefined) ?? null;
       } catch (e) {
-        console.warn("channel fetches failed:", e);
+        console.warn("svemir extractor failed:", e);
       }
-
+      if (!extracted) {
+        extracted = {
+          kind: "link",
+          url: tab.url ?? "",
+          title: tab.title ?? "",
+          description: "",
+          image_url: "",
+          source_name: tab.url ? new URL(tab.url).hostname : "",
+          body_text: "",
+        };
+      }
+      setAsset(extracted);
+      // Picker becomes interactive immediately; snapshot upload finishes
+      // in the background and updates image_url when it lands.
       setPhase({ kind: "ready" });
+
+      // Capture the visible viewport as the block's image — this is what
+      // arena does. Overrides any OG image. Best-effort: failures keep
+      // the extracted (OG) image_url as fallback. Runs without blocking
+      // the picker so the user can pick channels while the upload races.
+      try {
+        const dataUrl = await chrome.tabs.captureVisibleTab(
+          tab.windowId ?? chrome.windows.WINDOW_ID_CURRENT,
+          { format: "jpeg", quality: 80 }
+        );
+        if (dataUrl) {
+          const blob = await dataUrlToBlob(dataUrl);
+          const { url } = await uploadImage(s, blob, "page.jpg");
+          setAsset((prev) => (prev ? { ...prev, image_url: url } : prev));
+        }
+      } catch (e) {
+        console.warn("svemir snapshot failed:", e);
+      }
     })();
   }, []);
 
@@ -307,22 +303,14 @@ export default function App() {
       <button
         type="button"
         onClick={handleSave}
-        disabled={
-          selected.length === 0 ||
-          phase.kind === "saving" ||
-          phase.kind === "snapshotting"
-        }
+        disabled={selected.length === 0 || phase.kind === "saving"}
         className={`mt-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
-          selected.length === 0 ||
-          phase.kind === "saving" ||
-          phase.kind === "snapshotting"
+          selected.length === 0 || phase.kind === "saving"
             ? "bg-neutral-800 text-neutral-500"
             : "bg-indigo-600 text-white hover:bg-indigo-500"
         }`}
       >
-        {phase.kind === "snapshotting"
-          ? "Capturing page…"
-          : phase.kind === "saving"
+        {phase.kind === "saving"
           ? "Saving…"
           : phase.kind === "saved"
           ? "Saved ✓"
