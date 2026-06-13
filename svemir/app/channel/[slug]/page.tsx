@@ -121,8 +121,8 @@ export default async function ChannelPage({ params }: { params: Params }) {
             >
               svemir
             </Link>
-            <span className="text-neutral-700">/</span>
-            <span className="text-3xl font-light text-neutral-100">
+            <span className="text-3xl text-neutral-700">/</span>
+            <span className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-100">
               {channel.title}
             </span>
           </h1>

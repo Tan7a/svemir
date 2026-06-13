@@ -71,28 +71,8 @@ function ExternalIcon() {
 export default function BlockDetail({ block, inModal = false }: Props) {
   return (
     <div className="relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]">
-      {/* Left column — URL bar, image (clickable), and body text */}
+      {/* Left column — image (clickable), URL bar, and body text */}
       <div className="flex flex-col gap-4">
-        {block.url && (
-          <a
-            href={block.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2 self-start rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
-            title="Open source in new tab"
-          >
-            <span className="text-neutral-500">
-              <GlobeIcon />
-            </span>
-            <span className="max-w-[42rem] truncate font-mono">
-              {block.url}
-            </span>
-            <span className="text-neutral-600 opacity-0 transition-opacity group-hover:opacity-100">
-              <ExternalIcon />
-            </span>
-          </a>
-        )}
-
         <div className="flex flex-1 items-start justify-center">
           {block.image_url ? (
             block.url ? (
@@ -135,6 +115,26 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           )}
         </div>
 
+        {block.url && (
+          <a
+            href={block.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 self-start rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
+            title="Open source in new tab"
+          >
+            <span className="text-neutral-500">
+              <GlobeIcon />
+            </span>
+            <span className="max-w-[42rem] truncate font-mono">
+              {block.url}
+            </span>
+            <span className="text-neutral-600 opacity-0 transition-opacity group-hover:opacity-100">
+              <ExternalIcon />
+            </span>
+          </a>
+        )}
+
         {block.body_text && (
           <details className="mt-2 rounded-md border border-neutral-800 bg-neutral-950/60">
             <summary className="cursor-pointer select-none px-4 py-2 text-xs text-neutral-400 hover:text-neutral-200">
@@ -147,8 +147,13 @@ export default function BlockDetail({ block, inModal = false }: Props) {
         )}
       </div>
 
-      {/* Right — metadata sidebar */}
-      <aside className="flex flex-col gap-4 text-sm text-neutral-300">
+      {/* Right — metadata sidebar. In the modal, add top padding so the
+          headline clears the absolutely-positioned ← → × arrow row. */}
+      <aside
+        className={`flex flex-col gap-4 text-sm text-neutral-300 ${
+          inModal ? "pt-8" : ""
+        }`}
+      >
         <header>
           <h1 className="text-2xl font-light leading-tight text-neutral-100">
             {block.title || "Untitled"}

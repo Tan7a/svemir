@@ -55,6 +55,40 @@ export async function ensureChannelId(
 }
 
 /**
+ * Newest `connected_at` across a channel's connection rows, or null when the
+ * channel has no connections. Used to order channels by when a block was most
+ * recently saved into them.
+ */
+export function lastConnectedAt(
+  conns: { connected_at: string | null }[] | null
+): string | null {
+  let last: string | null = null;
+  for (const x of conns ?? []) {
+    if (x.connected_at && (last === null || x.connected_at > last)) {
+      last = x.connected_at;
+    }
+  }
+  return last;
+}
+
+/**
+ * Comparator: most-recently-connected first, channels with no connections
+ * (null) last, alphabetical by title as the tie-break. Shared by the home
+ * Channels view and `recentChannels` so both order identically.
+ */
+export function compareChannelRecency(
+  a: { last_connected_at: string | null; title: string },
+  b: { last_connected_at: string | null; title: string }
+): number {
+  if (a.last_connected_at && b.last_connected_at) {
+    return b.last_connected_at.localeCompare(a.last_connected_at);
+  }
+  if (a.last_connected_at) return -1;
+  if (b.last_connected_at) return 1;
+  return a.title.localeCompare(b.title);
+}
+
+/**
  * Channels ordered by most-recently-connected. Channels with no connections
  * fall to the bottom (last_connected_at IS NULL). Aggregation in JS keeps
  * the Supabase query simple — fine at personal scale (<1000 channels).
@@ -79,29 +113,16 @@ export async function recentChannels(
 
   const enriched: RecentChannel[] = (data as Row[]).map((c) => {
     const conns = c.connections ?? [];
-    let last: string | null = null;
-    for (const x of conns) {
-      if (x.connected_at && (last === null || x.connected_at > last)) {
-        last = x.connected_at;
-      }
-    }
     return {
       id: c.id,
       slug: c.slug,
       title: c.title,
       block_count: conns.length,
-      last_connected_at: last,
+      last_connected_at: lastConnectedAt(conns),
     };
   });
 
-  enriched.sort((a, b) => {
-    if (a.last_connected_at && b.last_connected_at) {
-      return b.last_connected_at.localeCompare(a.last_connected_at);
-    }
-    if (a.last_connected_at) return -1;
-    if (b.last_connected_at) return 1;
-    return a.title.localeCompare(b.title);
-  });
+  enriched.sort(compareChannelRecency);
 
   return enriched.slice(0, limit);
 }

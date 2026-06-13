@@ -1,5 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import TopBarSearch from "./TopBarSearch";
+import ViewNav from "./ViewNav";
+import OrderDropdown from "./OrderDropdown";
 
 /**
  * Persistent top bar across every page of svemir. Brand mark on the left,
@@ -23,22 +27,22 @@ export default function TopBar() {
             className="h-auto w-10"
           />
         </Link>
-        <div className="hidden items-center text-sm text-neutral-500 md:flex">
-          <span aria-hidden className="mr-2">⌕</span>
-          <input
-            type="text"
-            placeholder="Search svemir"
-            className="w-56 bg-transparent text-neutral-300 placeholder:text-neutral-500 focus:outline-none"
-          />
-        </div>
-      </div>
-      <nav className="flex items-center gap-2 text-sm">
-        <Link
-          href="/graph"
-          className="rounded-md px-2.5 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+        <Suspense
+          fallback={<div className="hidden h-6 w-64 md:block" aria-hidden />}
         >
-          Graph
-        </Link>
+          <TopBarSearch />
+        </Suspense>
+      </div>
+
+      {/* Center — view switcher (home only), absolutely centered in the bar */}
+      <Suspense fallback={null}>
+        <ViewNav />
+      </Suspense>
+
+      <nav className="flex items-center gap-2 text-sm">
+        <Suspense fallback={null}>
+          <OrderDropdown />
+        </Suspense>
         <Link
           href="/admin"
           className="flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-900"

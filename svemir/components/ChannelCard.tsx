@@ -38,16 +38,17 @@ export default function ChannelCard({ channel }: Props) {
   const count = channel.block_count;
 
   return (
-    <div className="group relative grid grid-cols-1 border border-neutral-800 transition-colors hover:border-white md:grid-cols-[1fr_2fr]">
-      {/* Left — centred title + meta */}
+    <div className="group relative grid grid-cols-1 border border-neutral-800 transition-colors hover:border-white md:grid-cols-[320px_1fr]">
+      {/* Left — title + meta in a fixed-width column so every channel's thumbnail
+          strip lines up on the same vertical line. The after:inset-0 overlay
+          makes the whole card a link to the channel (stretched-link). */}
       <Link
         href={`/channel/${channel.slug}`}
-        className="flex flex-col items-center justify-center gap-1.5 px-8 py-16 text-center"
+        className="flex flex-col items-start justify-center gap-1.5 pl-[60px] pr-6 py-16 text-left after:absolute after:inset-0 after:content-['']"
       >
         <span className="text-2xl font-light text-neutral-100">
           {channel.title}
         </span>
-        <span className="text-xs text-neutral-500">by Tanja Radovanovic</span>
         <span className="text-xs text-neutral-500">
           {count} block{count === 1 ? "" : "s"}
         </span>
@@ -56,10 +57,13 @@ export default function ChannelCard({ channel }: Props) {
         </span>
       </Link>
 
-      {/* Right — horizontal strip of real thumbnails, no placeholders */}
-      <div className="flex items-center gap-3 overflow-hidden px-6 py-6">
+      {/* Right — horizontal strip of real thumbnails, starting 60px from the
+          title. pointer-events-none lets clicks on empty strip space fall
+          through to the channel overlay; each thumbnail re-enables clicks and
+          sits above the overlay (z-10). */}
+      <div className="pointer-events-none flex items-center gap-3 overflow-hidden py-10 pl-5 pr-5 md:min-w-0 md:pl-0 md:pr-6">
         {thumbs.length === 0 ? (
-          <div className="flex h-32 w-full items-center justify-center text-xs text-neutral-600">
+          <div className="flex h-[340px] w-full items-center justify-center text-xs text-neutral-600">
             No blocks yet
           </div>
         ) : (
@@ -67,14 +71,15 @@ export default function ChannelCard({ channel }: Props) {
             <Link
               key={b.id}
               href={`/block/${b.id}`}
-              className="relative aspect-square h-32 w-32 shrink-0 overflow-hidden bg-neutral-900"
+              className="pointer-events-auto relative z-10 aspect-square h-[340px] w-[340px] shrink-0 overflow-hidden bg-neutral-900"
             >
               {b.image_url ? (
                 <Image
                   src={b.image_url}
                   alt={b.title}
                   fill
-                  sizes="128px"
+                  sizes="(min-width: 768px) 400px, 50vw"
+                  quality={100}
                   className="object-cover transition-opacity hover:opacity-90"
                 />
               ) : b.kind === "text" && b.description ? (
@@ -91,8 +96,8 @@ export default function ChannelCard({ channel }: Props) {
         )}
       </div>
 
-      {/* Hover-revealed actions menu */}
-      <div className="pointer-events-none absolute right-3 top-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      {/* Hover-revealed actions menu — z-20 keeps it above the card overlay */}
+      <div className="pointer-events-none absolute right-3 top-3 z-20 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <div className="pointer-events-auto">
           <ChannelActions
             channelId={channel.id}
