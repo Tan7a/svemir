@@ -18,18 +18,19 @@ export default function BlockCard({ block }: Props) {
   return (
     <Link
       href={`/block/${block.id}`}
-      className="group flex flex-col gap-2 text-neutral-300 hover:text-neutral-100"
+      className="group relative flex flex-col gap-2 text-neutral-300 transition-transform duration-300 ease-[cubic-bezier(0.37,0,0.63,1)] will-change-transform hover:z-10 hover:scale-[1.3] hover:text-neutral-100"
       // Soft client-side navigation triggers the @modal interceptor; a
       // shareable / refreshable full-page URL still works for direct nav.
     >
-      <div className="relative aspect-square w-full overflow-hidden border border-neutral-800 bg-neutral-900">
+      <div className="relative aspect-square w-full overflow-hidden border border-neutral-800 bg-neutral-900 transition-all duration-300 ease-[cubic-bezier(0.37,0,0.63,1)] group-hover:border-white group-hover:shadow-[0_16px_70px_rgba(0,0,0,0.7)]">
         {block.image_url ? (
           <Image
             src={block.image_url}
             alt={block.title}
             fill
             sizes="(min-width: 1280px) 19vw, (min-width: 768px) 30vw, 48vw"
-            className="object-cover transition-opacity group-hover:opacity-90"
+            quality={100}
+            className="object-cover"
           />
         ) : block.kind === "text" && block.description ? (
           <div className="flex h-full w-full items-center justify-center bg-neutral-900 p-3 text-[10px] leading-snug text-neutral-400">
@@ -49,7 +50,7 @@ export default function BlockCard({ block }: Props) {
           </span>
         )}
       </div>
-      <div className="line-clamp-2 px-0.5 text-xs leading-tight text-neutral-400 group-hover:text-neutral-200">
+      <div className="line-clamp-2 px-0.5 text-sm leading-tight text-neutral-400 group-hover:text-neutral-200">
         {block.title || "Untitled"}
       </div>
     </Link>

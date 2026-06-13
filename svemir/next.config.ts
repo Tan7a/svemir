@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
     ],
+    // Next 16 defaults images.qualities to [75]; whitelist 100 so the
+    // text-dense screenshot thumbnails can render crisp instead of mushy.
+    qualities: [75, 100],
   },
   experimental: {
     // Hold dynamic and static segments in the client router cache longer so
