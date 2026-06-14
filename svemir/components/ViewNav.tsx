@@ -15,15 +15,19 @@ export default function ViewNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Visible on the home view and the graph page — both are "the main view".
-  if (pathname !== "/" && pathname !== "/graph") return null;
+  // Visible on the home view, the graph page, and the concepts page — all "the
+  // main view".
+  if (pathname !== "/" && pathname !== "/graph" && pathname !== "/concepts")
+    return null;
   const onGraph = pathname === "/graph";
+  const onConcepts = pathname === "/concepts";
 
-  const activeView: ViewKind | null = onGraph
-    ? null
-    : searchParams.get("view") === "blocks"
-      ? "blocks"
-      : "channels";
+  const activeView: ViewKind | null =
+    onGraph || onConcepts
+      ? null
+      : searchParams.get("view") === "blocks"
+        ? "blocks"
+        : "channels";
 
   function setView(v: ViewKind) {
     // From the graph page start fresh; on home preserve order / q.
@@ -60,6 +64,16 @@ export default function ViewNav() {
         }
       >
         Graph
+      </Link>
+      <Link
+        href="/concepts"
+        className={
+          onConcepts
+            ? "text-neutral-100"
+            : "text-neutral-400 hover:text-neutral-100"
+        }
+      >
+        Concepts
       </Link>
     </nav>
   );

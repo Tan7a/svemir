@@ -1,4 +1,5 @@
 import type { ChannelStat } from "./channels";
+import { STOPWORDS } from "./stopwords";
 
 export type SuggestionInput = {
   title: string;
@@ -11,70 +12,6 @@ export type Suggestion = {
   score: number;
   autoSelect: boolean;
 };
-
-const STOPWORDS = new Set([
-  "the",
-  "and",
-  "a",
-  "an",
-  "of",
-  "to",
-  "in",
-  "for",
-  "on",
-  "with",
-  "is",
-  "it",
-  "this",
-  "that",
-  "you",
-  "are",
-  "be",
-  "as",
-  "at",
-  "by",
-  "or",
-  "if",
-  "but",
-  "not",
-  "from",
-  "into",
-  "your",
-  "our",
-  "his",
-  "her",
-  "their",
-  "they",
-  "we",
-  "i",
-  "me",
-  "my",
-  "so",
-  "do",
-  "does",
-  "did",
-  "was",
-  "were",
-  "been",
-  "have",
-  "has",
-  "had",
-  "will",
-  "would",
-  "can",
-  "could",
-  "should",
-  "about",
-  "than",
-  "then",
-  "more",
-  "most",
-  "some",
-  "any",
-  "all",
-  "no",
-  "yes",
-]);
 
 function tokenize(s: string): Set<string> {
   const tokens = s

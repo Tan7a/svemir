@@ -76,6 +76,19 @@ export function colorForTag(id: string): { bg: string; text: string } {
 }
 
 /**
+ * Deterministic hue (0–359) from any id string. Same id → same hue every time,
+ * so a concept/channel keeps its colour across renders. Shared by the knowledge
+ * graph (concept colours) and the idea-garden (per-channel plant tint).
+ */
+export function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(h, 31) + id.charCodeAt(i)) >>> 0;
+  }
+  return h % 360;
+}
+
+/**
  * Slug a free-form channel title into a URL-safe identifier.
  * Matches the SQL-side generation in 0001_channels_and_connections.sql.
  */

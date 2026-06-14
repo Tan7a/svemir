@@ -19,6 +19,7 @@ import {
   type Suggestion,
   type SuggestionInput,
 } from "@/lib/suggest";
+import { reconcileBlockConcepts } from "@/lib/concepts";
 
 export type AddItemInput = {
   kind: "link" | "image" | "text";
@@ -99,8 +100,23 @@ export async function addItem(
     }
   }
 
+  // Extract concepts from the block's text. Done synchronously (a serverless
+  // function may be frozen after it returns, so "fire-and-forget" is unsafe),
+  // but soft-failed: a concept hiccup must never lose the user's save. Skipped
+  // silently if migration 0006 hasn't been applied yet.
+  try {
+    await reconcileBlockConcepts(client, blockId, {
+      title: data.title,
+      description: data.description,
+      body_text: cleanBodyText ?? null,
+    });
+  } catch {
+    // non-fatal — the block is saved; concepts can be backfilled later
+  }
+
   revalidatePath("/");
   revalidatePath("/graph");
+  revalidatePath("/concepts");
   revalidatePath(`/block/${blockId}`);
   return { success: true, id: blockId };
 }
@@ -246,6 +262,7 @@ export async function deleteItem(
   if (error) return { success: false, error: error.message };
   revalidatePath("/");
   revalidatePath("/graph");
+  revalidatePath("/concepts");
   revalidatePath("/admin/manage");
   return { success: true };
 }
@@ -264,6 +281,7 @@ export async function bulkDeleteItems(
   if (error) return { success: false, error: error.message };
   revalidatePath("/");
   revalidatePath("/graph");
+  revalidatePath("/concepts");
   revalidatePath("/admin/manage");
   return { success: true, count: count ?? ids.length };
 }
@@ -530,6 +548,84 @@ export async function scrapeMissingMetadata(
     lastId,
     remaining: count ?? 0,
   };
+}
+
+/**
+ * Batch concept extraction for blocks that haven't been indexed yet. Pages
+ * through `items where concepts_indexed_at is null` by id (keyset pagination),
+ * mirroring scrapeMissingMetadata. The client calls this repeatedly, advancing
+ * the cursor, until `remaining` hits 0. Prevalence counts are recomputed once,
+ * on the final batch.
+ */
+export async function backfillBlockConcepts(
+  limit: number = 10,
+  cursorId?: string,
+  force: boolean = false
+): Promise<
+  | {
+      success: true;
+      processed: number;
+      failed: number;
+      lastId: string | null;
+      remaining: number;
+    }
+  | { success: false; error: string }
+> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+
+  // Default: only blocks not yet indexed. force=true re-extracts every block
+  // (used after tuning stopwords/extraction so existing concepts get rebuilt).
+  let query = client
+    .from("items")
+    .select("id, title, description, body_text")
+    .order("id")
+    .limit(limit);
+  if (!force) query = query.is("concepts_indexed_at", null);
+  if (cursorId) query = query.gt("id", cursorId);
+
+  const { data: targets, error: selectErr } = await query;
+  if (selectErr) return { success: false, error: selectErr.message };
+  if (!targets || targets.length === 0) {
+    return { success: true, processed: 0, failed: 0, lastId: null, remaining: 0 };
+  }
+
+  // reconcileBlockConcepts refreshes prevalence counts per block, so no separate
+  // recompute step is needed.
+  const results = await Promise.allSettled(
+    targets.map((t) =>
+      reconcileBlockConcepts(client, t.id as string, {
+        title: (t.title as string) ?? "",
+        description: t.description as string | null,
+        body_text: t.body_text as string | null,
+      })
+    )
+  );
+
+  let processed = 0;
+  let failed = 0;
+  for (const r of results) {
+    if (r.status === "fulfilled") processed++;
+    else failed++;
+  }
+
+  const lastId = (targets[targets.length - 1] as { id: string }).id;
+
+  let countQuery = client
+    .from("items")
+    .select("*", { count: "exact", head: true })
+    .gt("id", lastId);
+  if (!force) countQuery = countQuery.is("concepts_indexed_at", null);
+  const { count } = await countQuery;
+  const remaining = count ?? 0;
+
+  revalidatePath("/concepts");
+  revalidatePath("/graph");
+  revalidatePath("/admin/manage");
+
+  return { success: true, processed, failed, lastId, remaining };
 }
 
 export async function scrapeAndUpdateItem(

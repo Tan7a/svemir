@@ -282,10 +282,15 @@ function sortChannels(
 
 /**
  * Server component for the live search view — runs when `?q=` is present and
- * fills the main view with matches (channels first, then a block grid). Uses
- * case-insensitive `ilike` across the obvious text fields, the same approach as
- * /admin/manage. `q` is sanitised of the characters that would break a
- * PostgREST `.or()` filter string (`% , ( )`) before interpolation.
+ * fills the main view with matches (concepts, then channels, then a block grid).
+ *
+ * Blocks are matched with Postgres full-text search via the `search_blocks` RPC
+ * (ranked + stemmed, so "graphs" finds "graph"). If the RPC is unavailable
+ * (migration 0006 not yet applied) or returns nothing, we fall back to the
+ * legacy `ilike` substring scan so partial-token search still works. Concepts
+ * and channels are matched with a simple `ilike` (small tables). `q` is
+ * sanitised of the characters that would break a PostgREST `.or()` filter
+ * string (`% , ( )`) before interpolation into those fallback queries.
  */
 async function SearchRoute({ q }: { q: string }) {
   if (!supabase) return null;
@@ -295,21 +300,37 @@ async function SearchRoute({ q }: { q: string }) {
   if (!safe) {
     return (
       <div className="px-5 py-16 text-sm text-neutral-500">
-        Type to search your blocks and channels.
+        Type to search your blocks, concepts and channels.
       </div>
     );
   }
   const pattern = `%${safe}%`;
 
-  const [blocksRes, channelsRes] = await Promise.all([
-    client
+  // Full-text block search first; fall back to ilike when empty/unavailable.
+  let blocks: Item[] = [];
+  const ftsRes = await client.rpc("search_blocks", { q: q.trim(), lim: 100 });
+  if (!ftsRes.error && Array.isArray(ftsRes.data)) {
+    blocks = ftsRes.data as Item[];
+  }
+  if (blocks.length === 0) {
+    const { data } = await client
       .from("items")
       .select("*")
       .or(
         `title.ilike.${pattern},description.ilike.${pattern},url.ilike.${pattern},source_name.ilike.${pattern},body_text.ilike.${pattern}`
       )
       .order("created_at", { ascending: false })
-      .limit(100),
+      .limit(100);
+    blocks = (data ?? []) as Item[];
+  }
+
+  const [conceptsRes, channelsRes] = await Promise.all([
+    client
+      .from("concepts")
+      .select("id, slug, term, block_count")
+      .ilike("term", pattern)
+      .order("block_count", { ascending: false })
+      .limit(12),
     client
       .from("channels")
       .select("id, slug, title, description")
@@ -318,12 +339,13 @@ async function SearchRoute({ q }: { q: string }) {
       .limit(50),
   ]);
 
-  const blocks = (blocksRes.data ?? []) as Item[];
+  type ConceptHit = { id: string; slug: string; term: string; block_count: number };
+  const concepts = (conceptsRes.data ?? []) as ConceptHit[];
   const channels = (channelsRes.data ?? []) as Pick<
     Channel,
     "id" | "slug" | "title" | "description"
   >[];
-  const total = blocks.length + channels.length;
+  const total = blocks.length + channels.length + concepts.length;
 
   return (
     <>
@@ -333,6 +355,29 @@ async function SearchRoute({ q }: { q: string }) {
           : `${total} result${total === 1 ? "" : "s"}`}{" "}
         for <span className="text-neutral-200">“{q}”</span>
       </p>
+
+      {concepts.length > 0 && (
+        <section className="px-5 pb-8 pt-4">
+          <h2 className="mb-3 text-xs uppercase tracking-wide text-neutral-500">
+            Concepts
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {concepts.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/concept/${c.slug}`}
+                  className="inline-flex items-baseline gap-1.5 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-600 hover:text-white"
+                >
+                  {c.term}
+                  <span className="text-xs text-neutral-500">
+                    {c.block_count}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {channels.length > 0 && (
         <section className="px-5 pb-8 pt-4">
