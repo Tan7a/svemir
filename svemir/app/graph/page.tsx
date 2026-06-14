@@ -150,7 +150,7 @@ export default async function GraphPage() {
           (a, b) =>
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
-        .map((it) => ({ id: it.id, title: it.title }));
+        .map((it) => ({ id: it.id, title: it.title, createdAt: it.created_at }));
       return {
         id: row.id,
         slug: row.slug,

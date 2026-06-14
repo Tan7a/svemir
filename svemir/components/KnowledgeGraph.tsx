@@ -61,7 +61,21 @@ type GraphNode = {
   slug?: string;
   prevalence?: number;
   hue?: number; // concept nodes only
+  // Phase 2 topologies: precomputed layout target + link degree (centrality).
+  tx?: number;
+  ty?: number;
+  deg?: number;
 };
+
+// The three no-AI network topologies (arrangement only — same nodes/edges).
+type Layout = "centralized" | "decentralized" | "distributed";
+const LAYOUTS: { id: Layout; label: string }[] = [
+  { id: "centralized", label: "Centralized" },
+  { id: "decentralized", label: "Decentralized" },
+  { id: "distributed", label: "Distributed" },
+];
+// 2D golden angle — even, non-overlapping phyllotaxis fill for layout targets.
+const GOLDEN_2D = Math.PI * (3 - Math.sqrt(5));
 
 type GraphLink = {
   source: string;
@@ -72,7 +86,7 @@ type GraphLink = {
   hue?: number; // concept links: the colour of the concept they lead to
 };
 
-const LABEL_ZOOM_THRESHOLD = 0.9;
+const LABEL_ZOOM_THRESHOLD = 1.2;
 
 // Blocks render as pale "tips"; concepts glow in their own colour.
 const BLOCK_HEX = "#e8e8ea";
@@ -110,6 +124,7 @@ export default function KnowledgeGraph({
     zoomToFit?: (ms?: number, padding?: number) => void;
   } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [layout, setLayout] = useState<Layout>("centralized");
   // The node whose detail card is open, plus where (within the container) to
   // anchor the card. Cleared by clicking empty space.
   const [selected, setSelected] = useState<{
@@ -184,7 +199,18 @@ export default function KnowledgeGraph({
       });
     }
 
-    return { nodes, links: Array.from(byKey.values()) };
+    const links = Array.from(byKey.values());
+
+    // Degree centrality — how many edges each node has. Drives which node becomes
+    // the hub in the Centralized / Decentralized layouts.
+    const deg = new Map<string, number>();
+    for (const l of links) {
+      deg.set(l.source, (deg.get(l.source) ?? 0) + 1);
+      deg.set(l.target, (deg.get(l.target) ?? 0) + 1);
+    }
+    for (const n of nodes) n.deg = deg.get(n.id) ?? 0;
+
+    return { nodes, links };
   }, [items, concepts, blockConceptLinks, manualEdges]);
 
   // Cross-reference maps for the click card: which concepts a block mentions,
@@ -206,42 +232,135 @@ export default function KnowledgeGraph({
     return { blockToConcepts: b2c, conceptToBlocks: c2b };
   }, [items, concepts, blockConceptLinks]);
 
-  // Tune the force simulation for a neuron-like layout.
+  // Topology layout: precompute a target (tx,ty) per node for the chosen shape,
+  // then ease nodes toward those targets with forceX/forceY. Collision keeps dots
+  // from overlapping; charge + link are weakened so the precomputed shape wins.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || size.w === 0) return;
 
-    // Repulsion fans bundles apart; links keep each block close to its concept.
-    const charge = fg.d3Force("charge");
-    if (charge?.strength) charge.strength(-120);
-    const link = fg.d3Force("link");
-    if (link?.distance) link.distance(34);
+    const nodes = data.nodes;
 
-    // Collision: no two dots overlap (radius matches what's painted, + padding).
+    if (layout === "centralized") {
+      // One hub (highest degree) at the centre; everyone else spirals out, the
+      // best-connected nearest the core.
+      const ordered = [...nodes].sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
+      ordered.forEach((n, rank) => {
+        if (rank === 0) {
+          n.tx = 0;
+          n.ty = 0;
+          return;
+        }
+        const r = 26 * Math.sqrt(rank);
+        const a = rank * GOLDEN_2D;
+        n.tx = Math.cos(a) * r;
+        n.ty = Math.sin(a) * r;
+      });
+    } else if (layout === "distributed") {
+      // No hub — an even mesh; every node spreads across one phyllotaxis disc.
+      nodes.forEach((n, rank) => {
+        const r = 24 * Math.sqrt(rank + 0.5);
+        const a = rank * GOLDEN_2D;
+        n.tx = Math.cos(a) * r;
+        n.ty = Math.sin(a) * r;
+      });
+    } else {
+      // Decentralized — one cluster per channel, arranged on a ring; each
+      // cluster's best-connected block sits at its local hub. Concepts settle at
+      // the centroid of the blocks that mention them.
+      const groups = new Map<string, GraphNode[]>();
+      for (const n of nodes) {
+        if (n.type !== "block") continue;
+        const key = n.tags[0] ?? "·none";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(n);
+      }
+      const keys = [...groups.keys()];
+      const ring = Math.max(70, keys.length * 18);
+      keys.forEach((k, gi) => {
+        const ga = (gi / Math.max(1, keys.length)) * Math.PI * 2;
+        const cx = Math.cos(ga) * ring;
+        const cy = Math.sin(ga) * ring;
+        const arr = groups.get(k)!.sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
+        arr.forEach((n, rank) => {
+          if (rank === 0) {
+            n.tx = cx;
+            n.ty = cy;
+            return;
+          }
+          const r = 14 * Math.sqrt(rank);
+          const a = rank * GOLDEN_2D;
+          n.tx = cx + Math.cos(a) * r;
+          n.ty = cy + Math.sin(a) * r;
+        });
+      });
+      const conceptBlocks = new Map<string, string[]>();
+      for (const l of blockConceptLinks) {
+        const cn = conceptNodeId(l.conceptId);
+        if (!conceptBlocks.has(cn)) conceptBlocks.set(cn, []);
+        conceptBlocks.get(cn)!.push(l.blockId);
+      }
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      for (const n of nodes) {
+        if (n.type !== "concept") continue;
+        let sx = 0;
+        let sy = 0;
+        let c = 0;
+        for (const bid of conceptBlocks.get(n.id) ?? []) {
+          const bn = byId.get(bid);
+          if (bn && bn.tx !== undefined) {
+            sx += bn.tx;
+            sy += bn.ty ?? 0;
+            c++;
+          }
+        }
+        n.tx = c > 0 ? sx / c : 0;
+        n.ty = c > 0 ? sy / c : 0;
+      }
+    }
+
+    // Weakened charge/link so the precomputed shape dominates; collision still
+    // prevents overlap; forceX/forceY pull each node to its target.
+    const charge = fg.d3Force("charge");
+    if (charge?.strength) charge.strength(-30);
+    const link = fg.d3Force("link");
+    if (link?.distance) link.distance(28);
+    if (link?.strength) link.strength(0.08);
     fg.d3Force(
       "collide",
       forceCollide()
         .radius((n: { type: NodeKind; prevalence?: number }) => nodeRadius(n) + 3)
         .strength(0.9)
     );
-
-    // Gentle pull toward the centre so disconnected blocks stay in a tidy field
-    // instead of being flung to the far corners.
-    fg.d3Force("x", forceX(0).strength(0.06));
-    fg.d3Force("y", forceY(0).strength(0.06));
+    const pull = layout === "distributed" ? 0.32 : 0.5;
+    fg.d3Force("x", forceX((n: GraphNode) => n.tx ?? 0).strength(pull));
+    fg.d3Force("y", forceY((n: GraphNode) => n.ty ?? 0).strength(pull));
 
     fg.d3ReheatSimulation?.();
-    // Re-fit after the simulation has had time to settle.
-    const t = setTimeout(() => fg.zoomToFit?.(500, 60), 1800);
+    const t = setTimeout(() => fg.zoomToFit?.(600, 70), 1400);
     return () => clearTimeout(t);
-  }, [data, size.w]);
+  }, [data, size.w, layout, blockConceptLinks]);
 
   return (
     <div ref={containerRef} className="relative h-[calc(100vh-3rem)] w-full">
-      <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-neutral-800 bg-neutral-950/85 px-4 py-2 text-xs text-neutral-300 backdrop-blur-md">
-          <span className="text-neutral-500">
-            {data.nodes.length} nodes · {data.links.length} edges
+      <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center">
+        <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-neutral-800 bg-neutral-950/85 p-0.5 text-xs backdrop-blur-md">
+          {LAYOUTS.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => setLayout(l.id)}
+              className={`rounded-full px-3 py-1 transition-colors ${
+                layout === l.id
+                  ? "bg-neutral-200 text-neutral-900"
+                  : "text-neutral-400 hover:text-neutral-100"
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+          <span className="px-2 text-neutral-600">
+            {data.nodes.length}·{data.links.length}
           </span>
         </div>
       </div>
@@ -335,7 +454,7 @@ export default function KnowledgeGraph({
             // zoomed in, to avoid a wall of overlapping text.
             const showLabel = isConcept || globalScale >= LABEL_ZOOM_THRESHOLD;
             if (showLabel) {
-              const fontSize = (isConcept ? 13 : 11) / globalScale;
+              const fontSize = (isConcept ? 9 : 7.5) / globalScale;
               ctx.font = `${
                 isConcept ? "600 " : ""
               }${fontSize}px Inter, system-ui, sans-serif`;

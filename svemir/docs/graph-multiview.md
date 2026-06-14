@@ -1,13 +1,18 @@
 # Graph multi-view + concept layer — handoff
 
-Status as of this commit: **Phase 1 (Garden + switcher) shipped and build-green.** Next: **Phase 1.5 —
-make the Garden look like the reference**, then Phase 2 (Topologies layouts).
+Status as of this commit: **Phases 1, 1.5, and 2 shipped and build-green.** The Garden matches the
+reference's wireframe line-art look; Topologies has the three no-AI layouts. Possible next work: tune
+topology spacing/strengths, an optional 3D Topologies, or further Garden polish.
 
 ## View mapping (`/graph` switcher, `?view=`)
 - **Garden** — 3D L-system plants, one per channel; blocks are leaves (oldest = base, newest = tip).
-  `components/IdeaGarden.tsx` + `lib/lsystem.ts`.
-- **Topologies** — the block/concept force-graph (`components/KnowledgeGraph.tsx`, 2D). Phase 2 adds
-  Centralized / Decentralized / Distributed layouts (no-AI: channels = clusters, degree-centrality = center).
+  `components/IdeaGarden.tsx` + `lib/lsystem.ts`. **Shipped (Phase 1.5):** flat **wireframe** line-art
+  (no gradient, no shading), orthographic low-angle camera with gentle auto-rotate (click empty space to
+  toggle), per-channel L-system variety, channel-name **"balloons"** floating above each plant, animated
+  **"bee"** dashed flight-paths, triangle/sparkle dust, and a `created_at` **timeline scrubber**.
+- **Topologies** — the block/concept force-graph (`components/KnowledgeGraph.tsx`, 2D). **Shipped (Phase 2):**
+  a **Centralized / Decentralized / Distributed** layout switcher (no-AI: channels = clusters,
+  degree-centrality = hub) via precomputed per-node targets eased in with `forceX`/`forceY`.
 - **Concepts** — prevalence word-cloud (`components/ConceptCloud.tsx`), shared with the `/concepts` page.
 
 Switcher: `components/GraphViewSwitcher.tsx`. Data fetched in `app/graph/page.tsx` (server) and passed down.
@@ -20,9 +25,12 @@ Switcher: `components/GraphViewSwitcher.tsx`. Data fetched in `app/graph/page.ts
 - Next 16: `ssr:false` only inside client components; `useSearchParams` needs `<Suspense>`. Strict TS.
 - Three.js scenes must fully dispose on unmount (StrictMode double-mounts in dev) — see IdeaGarden cleanup.
 
-## Phase 1.5 — Garden visual refinement (the next task)
-Make the Garden much closer to the "Idea Garden" reference, staying no-glow. In `lib/lsystem.ts` +
-`components/IdeaGarden.tsx`:
+## Phase 1.5 — Garden visual refinement ✅ DONE
+Shipped. Key deviations from the original list below, driven by the reference screenshots: branches are
+flat **thin lines** (`LineSegments`) with **no gradient**, and leaves are **wireframe** shapes — the
+reference is line-art, not solid/tapered. The side leader-line labels became **floating "balloon" labels
+above each plant**; the dotted ground trails became **animated bee flight-paths** (dashed `Line` +
+travelling dot); dust uses **triangle + sparkle** point sprites. Original target list (kept for reference):
 1. Organic, clearly **tapered trunks**; branch color gradient base→tip.
 2. **Per-plant variety** via the seeded PRNG (pitch, length decay, internodes, trunk wobble, apical
    dominance) so plants differ.
@@ -34,9 +42,18 @@ Make the Garden much closer to the "Idea Garden" reference, staying no-glow. In 
 7. Size-aware plant spacing (no collisions).
 8. *(Optional)* timeline scrubber to grow plants by `created_at`.
 
-## Phase 2 — Topologies (3D), no AI
-Add `3d-force-graph`. Block nodes; edges = manual + shared-concept. Three layouts via precompute-coords +
-eased position-force. Clusters = channels; center = most-connected block.
+## Phase 2 — Topologies ✅ DONE (2D)
+Implemented in `components/KnowledgeGraph.tsx` as a layout switcher on the existing 2D graph — **no new
+dependency** (2D chosen over the doc's original 3D `3d-force-graph` idea to avoid a heavy dep and keep the
+flat aesthetic). Each layout precomputes a per-node target `(tx,ty)` and eases nodes in with `forceX`/
+`forceY`; charge/link are weakened so the shape wins, collision prevents overlap.
+- **Centralized** — single degree-centrality hub at the centre, others on a phyllotaxis spiral (best-
+  connected nearest the core).
+- **Decentralized** — one cluster per channel arranged on a ring (each cluster's top node as its local
+  hub); concepts settle at the centroid of the blocks that mention them.
+- **Distributed** — no hub; an even phyllotaxis mesh.
+
+Future option: a 3D Topologies (custom Three.js to keep the flat look, or the `3d-force-graph` lib).
 
 ## Setup notes
 - Deps already added: `three`, `@types/three`, plus `d3-force-3d` (transitive, ambient-typed via
