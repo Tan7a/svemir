@@ -61,20 +61,11 @@ type GraphNode = {
   slug?: string;
   prevalence?: number;
   hue?: number; // concept nodes only
-  // Phase 2 topologies: precomputed layout target + link degree (centrality).
-  tx?: number;
-  ty?: number;
+  // Link degree (centrality) — orders the local hub within each channel cluster.
   deg?: number;
 };
 
-// The three no-AI network topologies (arrangement only — same nodes/edges).
-type Layout = "centralized" | "decentralized" | "distributed";
-const LAYOUTS: { id: Layout; label: string }[] = [
-  { id: "centralized", label: "Centralized" },
-  { id: "decentralized", label: "Decentralized" },
-  { id: "distributed", label: "Distributed" },
-];
-// 2D golden angle — even, non-overlapping phyllotaxis fill for layout targets.
+// 2D golden angle — even, non-overlapping phyllotaxis fill for cluster targets.
 const GOLDEN_2D = Math.PI * (3 - Math.sqrt(5));
 
 type GraphLink = {
@@ -124,7 +115,6 @@ export default function KnowledgeGraph({
     zoomToFit?: (ms?: number, padding?: number) => void;
   } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [layout, setLayout] = useState<Layout>("centralized");
   // The node whose detail card is open, plus where (within the container) to
   // anchor the card. Cleared by clicking empty space.
   const [selected, setSelected] = useState<{
@@ -232,137 +222,94 @@ export default function KnowledgeGraph({
     return { blockToConcepts: b2c, conceptToBlocks: c2b };
   }, [items, concepts, blockConceptLinks]);
 
-  // Topology layout: precompute a target (tx,ty) per node for the chosen shape,
-  // then ease nodes toward those targets with forceX/forceY. Collision keeps dots
-  // from overlapping; charge + link are weakened so the precomputed shape wins.
+  // Information-architecture map: cluster blocks by their channel so groupings
+  // are visible at a glance, while the link force still pulls connected nodes
+  // together. Concepts settle at the centroid of the blocks that mention them,
+  // so a shared concept visibly bridges its clusters. Each node gets a target
+  // (tx,ty); forceX/forceY ease it there, collision prevents overlap.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || size.w === 0) return;
 
     const nodes = data.nodes;
+    // Layout targets live in a side map (keyed by node id) rather than being
+    // written onto the memoized node objects — the force accessors read from it.
+    const targets = new Map<string, { x: number; y: number }>();
 
-    if (layout === "centralized") {
-      // One hub (highest degree) at the centre; everyone else spirals out, the
-      // best-connected nearest the core.
-      const ordered = [...nodes].sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
-      ordered.forEach((n, rank) => {
+    // One cluster per channel on a ring; each cluster's best-connected block
+    // anchors its local hub. Blocks with no channel share a "·none" group.
+    const groups = new Map<string, GraphNode[]>();
+    for (const n of nodes) {
+      if (n.type !== "block") continue;
+      const key = n.tags[0] ?? "·none";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(n);
+    }
+    const keys = [...groups.keys()];
+    const ring = Math.max(70, keys.length * 18);
+    keys.forEach((k, gi) => {
+      const ga = (gi / Math.max(1, keys.length)) * Math.PI * 2;
+      const cx = Math.cos(ga) * ring;
+      const cy = Math.sin(ga) * ring;
+      const arr = groups.get(k)!.sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
+      arr.forEach((n, rank) => {
         if (rank === 0) {
-          n.tx = 0;
-          n.ty = 0;
+          targets.set(n.id, { x: cx, y: cy });
           return;
         }
-        const r = 26 * Math.sqrt(rank);
+        const r = 14 * Math.sqrt(rank);
         const a = rank * GOLDEN_2D;
-        n.tx = Math.cos(a) * r;
-        n.ty = Math.sin(a) * r;
+        targets.set(n.id, { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
       });
-    } else if (layout === "distributed") {
-      // No hub — an even mesh; every node spreads across one phyllotaxis disc.
-      nodes.forEach((n, rank) => {
-        const r = 24 * Math.sqrt(rank + 0.5);
-        const a = rank * GOLDEN_2D;
-        n.tx = Math.cos(a) * r;
-        n.ty = Math.sin(a) * r;
-      });
-    } else {
-      // Decentralized — one cluster per channel, arranged on a ring; each
-      // cluster's best-connected block sits at its local hub. Concepts settle at
-      // the centroid of the blocks that mention them.
-      const groups = new Map<string, GraphNode[]>();
-      for (const n of nodes) {
-        if (n.type !== "block") continue;
-        const key = n.tags[0] ?? "·none";
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(n);
-      }
-      const keys = [...groups.keys()];
-      const ring = Math.max(70, keys.length * 18);
-      keys.forEach((k, gi) => {
-        const ga = (gi / Math.max(1, keys.length)) * Math.PI * 2;
-        const cx = Math.cos(ga) * ring;
-        const cy = Math.sin(ga) * ring;
-        const arr = groups.get(k)!.sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
-        arr.forEach((n, rank) => {
-          if (rank === 0) {
-            n.tx = cx;
-            n.ty = cy;
-            return;
-          }
-          const r = 14 * Math.sqrt(rank);
-          const a = rank * GOLDEN_2D;
-          n.tx = cx + Math.cos(a) * r;
-          n.ty = cy + Math.sin(a) * r;
-        });
-      });
-      const conceptBlocks = new Map<string, string[]>();
-      for (const l of blockConceptLinks) {
-        const cn = conceptNodeId(l.conceptId);
-        if (!conceptBlocks.has(cn)) conceptBlocks.set(cn, []);
-        conceptBlocks.get(cn)!.push(l.blockId);
-      }
-      const byId = new Map(nodes.map((n) => [n.id, n]));
-      for (const n of nodes) {
-        if (n.type !== "concept") continue;
-        let sx = 0;
-        let sy = 0;
-        let c = 0;
-        for (const bid of conceptBlocks.get(n.id) ?? []) {
-          const bn = byId.get(bid);
-          if (bn && bn.tx !== undefined) {
-            sx += bn.tx;
-            sy += bn.ty ?? 0;
-            c++;
-          }
+    });
+    // Concepts settle at the centroid of the blocks that mention them.
+    const conceptBlocks = new Map<string, string[]>();
+    for (const l of blockConceptLinks) {
+      const cn = conceptNodeId(l.conceptId);
+      if (!conceptBlocks.has(cn)) conceptBlocks.set(cn, []);
+      conceptBlocks.get(cn)!.push(l.blockId);
+    }
+    for (const n of nodes) {
+      if (n.type !== "concept") continue;
+      let sx = 0;
+      let sy = 0;
+      let c = 0;
+      for (const bid of conceptBlocks.get(n.id) ?? []) {
+        const t = targets.get(bid);
+        if (t) {
+          sx += t.x;
+          sy += t.y;
+          c++;
         }
-        n.tx = c > 0 ? sx / c : 0;
-        n.ty = c > 0 ? sy / c : 0;
       }
+      targets.set(n.id, { x: c > 0 ? sx / c : 0, y: c > 0 ? sy / c : 0 });
     }
 
-    // Weakened charge/link so the precomputed shape dominates; collision still
-    // prevents overlap; forceX/forceY pull each node to its target.
+    // Let connections matter (linked nodes draw together) while the cluster
+    // targets keep each channel's blocks grouped. Collision avoids overlap.
     const charge = fg.d3Force("charge");
-    if (charge?.strength) charge.strength(-30);
+    if (charge?.strength) charge.strength(-40);
     const link = fg.d3Force("link");
-    if (link?.distance) link.distance(28);
-    if (link?.strength) link.strength(0.08);
+    if (link?.distance) link.distance(30);
+    if (link?.strength) link.strength(0.12);
     fg.d3Force(
       "collide",
       forceCollide()
         .radius((n: { type: NodeKind; prevalence?: number }) => nodeRadius(n) + 3)
         .strength(0.9)
     );
-    const pull = layout === "distributed" ? 0.32 : 0.5;
-    fg.d3Force("x", forceX((n: GraphNode) => n.tx ?? 0).strength(pull));
-    fg.d3Force("y", forceY((n: GraphNode) => n.ty ?? 0).strength(pull));
+    fg.d3Force("x", forceX((n: GraphNode) => targets.get(n.id)?.x ?? 0).strength(0.3));
+    fg.d3Force("y", forceY((n: GraphNode) => targets.get(n.id)?.y ?? 0).strength(0.3));
 
     fg.d3ReheatSimulation?.();
     const t = setTimeout(() => fg.zoomToFit?.(600, 70), 1400);
     return () => clearTimeout(t);
-  }, [data, size.w, layout, blockConceptLinks]);
+  }, [data, size.w, blockConceptLinks]);
 
   return (
     <div ref={containerRef} className="relative h-[calc(100vh-3rem)] w-full">
-      <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center">
-        <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-neutral-800 bg-neutral-950/85 p-0.5 text-xs backdrop-blur-md">
-          {LAYOUTS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => setLayout(l.id)}
-              className={`rounded-full px-3 py-1 transition-colors ${
-                layout === l.id
-                  ? "bg-neutral-200 text-neutral-900"
-                  : "text-neutral-400 hover:text-neutral-100"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-          <span className="px-2 text-neutral-600">
-            {data.nodes.length}·{data.links.length}
-          </span>
-        </div>
+      <div className="pointer-events-none absolute bottom-3 left-3 z-10 text-xs text-neutral-600">
+        {data.nodes.length} nodes · {data.links.length} links
       </div>
       {size.w > 0 && size.h > 0 && (
         <ForceGraph2D

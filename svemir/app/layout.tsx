@@ -37,8 +37,22 @@ export default function RootLayout({
   modal: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${bebasNeue.variable} antialiased`}>
-      <body className="min-h-screen bg-[#0a0a0a] font-sans text-neutral-200">
+    <html
+      lang="en"
+      data-theme="dark"
+      suppressHydrationWarning
+      className={`${inter.variable} ${bebasNeue.variable} antialiased`}
+    >
+      <body className="min-h-screen font-sans">
+        {/* No-flash theme: apply the saved theme to <html> before first paint
+            so a light-theme user never sees the dark default flash. Runs
+            synchronously; suppressHydrationWarning on <html> covers the
+            attribute the script mutates. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t){document.documentElement.dataset.theme=t;}}catch(e){}})();`,
+          }}
+        />
         {children}
         {modal}
       </body>

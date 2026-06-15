@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { ItemWithChannels } from "@/lib/types";
 import BlockActions from "./BlockActions";
 import BlockConnections from "./BlockConnections";
+import EditableTitle from "./EditableTitle";
+import { renameBlock } from "@/app/admin/actions";
 
 type Props = {
   block: ItemWithChannels;
@@ -70,7 +72,13 @@ function ExternalIcon() {
 
 export default function BlockDetail({ block, inModal = false }: Props) {
   return (
-    <div className="relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]">
+    <div
+      className={
+        inModal
+          ? "relative flex h-full flex-col gap-6 px-6 py-6"
+          : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]"
+      }
+    >
       {/* Left column — image (clickable), URL bar, and body text */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-1 items-start justify-center">
@@ -147,17 +155,17 @@ export default function BlockDetail({ block, inModal = false }: Props) {
         )}
       </div>
 
-      {/* Right — metadata sidebar. In the modal, add top padding so the
-          headline clears the absolutely-positioned ← → × arrow row. */}
-      <aside
-        className={`flex flex-col gap-4 text-sm text-neutral-300 ${
-          inModal ? "pt-8" : ""
-        }`}
-      >
+      {/* Metadata. In the page layout this is the right column; in the side
+          panel it stacks below the image as a single column. */}
+      <aside className="flex flex-col gap-4 text-sm text-neutral-300">
         <header>
-          <h1 className="text-2xl font-light leading-tight text-neutral-100">
-            {block.title || "Untitled"}
-          </h1>
+          <EditableTitle
+            value={block.title}
+            onRename={renameBlock.bind(null, block.id)}
+            as="h1"
+            className="cursor-text text-2xl font-light leading-tight text-neutral-100"
+            inputClassName="w-full border-b border-neutral-500 bg-transparent text-2xl font-light leading-tight text-neutral-100 outline-none"
+          />
           {block.description && block.kind !== "text" ? (
             <p className="mt-1 text-neutral-400">{block.description}</p>
           ) : !block.description ? (

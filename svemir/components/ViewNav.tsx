@@ -65,16 +65,6 @@ export default function ViewNav() {
       >
         Graph
       </Link>
-      <Link
-        href="/concepts"
-        className={
-          onConcepts
-            ? "text-neutral-100"
-            : "text-neutral-400 hover:text-neutral-100"
-        }
-      >
-        Concepts
-      </Link>
     </nav>
   );
 }

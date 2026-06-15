@@ -7,6 +7,7 @@ import {
   setChannelParent,
   removeChannelParent,
   deleteChannel,
+  renameChannel,
 } from "@/app/admin/actions";
 
 type Props = {
@@ -54,6 +55,14 @@ function IconTrash() {
     </svg>
   );
 }
+function IconPencil() {
+  return (
+    <svg {...stroke}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
 
 export default function ChannelActions({
   channelId,
@@ -63,6 +72,8 @@ export default function ChannelActions({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(channelTitle);
   const [value, setValue] = useState("");
   const [allChannels, setAllChannels] = useState<
     { id: string; title: string }[]
@@ -71,6 +82,14 @@ export default function ChannelActions({
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const renameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renaming) {
+      renameRef.current?.focus();
+      renameRef.current?.select();
+    }
+  }, [renaming]);
 
   useEffect(() => {
     if (!picking) return;
@@ -97,6 +116,7 @@ export default function ChannelActions({
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
         setPicking(false);
+        setRenaming(false);
       }
     }
     window.addEventListener("mousedown", onDocClick);
@@ -123,6 +143,22 @@ export default function ChannelActions({
       setOpen(false);
       setPicking(false);
       setValue("");
+      router.refresh();
+    } else {
+      setError(result.error);
+    }
+  }
+
+  async function handleRename() {
+    const t = renameValue.trim();
+    if (!t || busy) return;
+    setBusy(true);
+    setError(null);
+    const result = await renameChannel(channelId, t);
+    setBusy(false);
+    if (result.success) {
+      setRenaming(false);
+      setOpen(false);
       router.refresh();
     } else {
       setError(result.error);
@@ -183,9 +219,44 @@ export default function ChannelActions({
         <span aria-hidden className="text-lg leading-none">⋯</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-64 overflow-hidden rounded-xl border border-neutral-800 bg-[#0f0f0f] p-1.5 shadow-2xl shadow-black/60">
-          {!picking ? (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-64 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl shadow-black/60">
+          {renaming ? (
+            <div className="p-1.5">
+              <p className="mb-2 text-[10px] uppercase tracking-wide text-neutral-500">
+                Rename channel
+              </p>
+              <input
+                ref={renameRef}
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleRename();
+                  } else if (e.key === "Escape") {
+                    setRenaming(false);
+                  }
+                }}
+                placeholder="Channel name…"
+                className="w-full rounded-sm border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                disabled={busy}
+              />
+              <p className="mt-2 text-[10px] text-neutral-500">
+                Press <kbd className="rounded bg-neutral-800 px-1">Enter</kbd> to
+                save.
+              </p>
+            </div>
+          ) : !picking ? (
             <>
+              <MenuItem
+                icon={<IconPencil />}
+                label="Rename channel"
+                onClick={() => {
+                  setRenameValue(channelTitle);
+                  setRenaming(true);
+                }}
+              />
               <MenuItem
                 icon={<IconConnect />}
                 label="Connect to channel…"

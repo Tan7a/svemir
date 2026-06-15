@@ -50,7 +50,7 @@ export default function BlockCard({ block }: Props) {
           </span>
         )}
       </div>
-      <div className="line-clamp-2 px-0.5 text-sm leading-tight text-neutral-400 group-hover:text-neutral-200">
+      <div className="line-clamp-2 rounded-sm bg-background/85 px-1.5 py-1.5 text-base leading-tight text-neutral-400 backdrop-blur-sm group-hover:text-white">
         {block.title || "Untitled"}
       </div>
     </Link>

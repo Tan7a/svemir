@@ -25,7 +25,7 @@ const IdeaGarden = dynamic(() => import("./IdeaGarden"), {
 type View = "garden" | "topologies" | "concepts";
 const VIEWS: { id: View; label: string }[] = [
   { id: "garden", label: "Garden" },
-  { id: "topologies", label: "Topologies" },
+  { id: "topologies", label: "Map" },
   { id: "concepts", label: "Concepts" },
 ];
 

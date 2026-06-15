@@ -1,12 +1,111 @@
 @import "tailwindcss";
 
-:root {
-  /* svemir dark palette — mirrors are.na */
+/* ----------------------------------------------------------------------------
+   Theme palettes.
+
+   Tailwind v4 compiles every `neutral-*` utility to `var(--color-neutral-*)`
+   (verified), so re-defining that ramp under an `html[data-theme="…"]`
+   selector re-themes the entire app at once — no per-component edits. Each
+   theme also sets --background / --foreground (consumed by the html/body rule
+   and the `bg-background` token) plus selection colours.
+
+   Light themes invert the ramp: the app uses high numbers for dark surfaces
+   and low numbers for bright text, so flipping the ramp preserves every
+   contrast *pair* (e.g. neutral-900 bg + neutral-100 text → light bg + dark
+   text) and only flips light/dark polarity.
+   ---------------------------------------------------------------------------- */
+
+/* Dark (default) — the original svemir palette, mirrors are.na. */
+:root,
+html[data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #e5e5e5;
   --muted: #737373;
   --border: #262626;
   --card-hover: #1a1a1a;
+  --selection-bg: #2a2a2a;
+  --selection-fg: #fafafa;
+
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+}
+
+/* Light white — clean and cool. Inverted ramp. */
+html[data-theme="light-white"] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #737373;
+  --border: #e5e5e5;
+  --card-hover: #f5f5f5;
+  --selection-bg: #d4d4d4;
+  --selection-fg: #0a0a0a;
+
+  --color-neutral-50: #0a0a0a;
+  --color-neutral-100: #171717;
+  --color-neutral-200: #262626;
+  --color-neutral-300: #404040;
+  --color-neutral-400: #525252;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #a3a3a3;
+  --color-neutral-700: #d4d4d4;
+  --color-neutral-800: #e5e5e5;
+  --color-neutral-900: #f5f5f5;
+  --color-neutral-950: #ffffff;
+}
+
+/* Cream — warm off-white. Inverted ramp with a warm hue. */
+html[data-theme="cream"] {
+  --background: #f5efe1;
+  --foreground: #2b2620;
+  --muted: #8a7f6a;
+  --border: #e0d7c2;
+  --card-hover: #efe7d4;
+  --selection-bg: #d8cdb5;
+  --selection-fg: #1c1814;
+
+  --color-neutral-50: #1c1814;
+  --color-neutral-100: #2b2620;
+  --color-neutral-200: #3a342c;
+  --color-neutral-300: #57503f;
+  --color-neutral-400: #6b6150;
+  --color-neutral-500: #8a7f6a;
+  --color-neutral-600: #b3a890;
+  --color-neutral-700: #d8cdb5;
+  --color-neutral-800: #e8dec8;
+  --color-neutral-900: #f3ecdb;
+  --color-neutral-950: #faf5ea;
+}
+
+/* Funky — light blue and airy. Light polarity (inverted ramp) with a blue hue. */
+html[data-theme="funky"] {
+  --background: #e8f1fc;
+  --foreground: #102a43;
+  --muted: #627d98;
+  --border: #cfe0f2;
+  --card-hover: #dcebfb;
+  --selection-bg: #b6d6f5;
+  --selection-fg: #0a1929;
+
+  --color-neutral-50: #0a1929;
+  --color-neutral-100: #102a43;
+  --color-neutral-200: #1c3d5a;
+  --color-neutral-300: #2d5070;
+  --color-neutral-400: #486581;
+  --color-neutral-500: #627d98;
+  --color-neutral-600: #829ab1;
+  --color-neutral-700: #b6cce0;
+  --color-neutral-800: #d3e3f3;
+  --color-neutral-900: #e6f0fb;
+  --color-neutral-950: #f3f8ff;
 }
 
 @theme inline {
@@ -23,6 +122,16 @@ body {
 }
 
 ::selection {
-  background: #2a2a2a;
-  color: #fafafa;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+/* Block side-panel slide-in (components/Modal.tsx). */
+@keyframes panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }

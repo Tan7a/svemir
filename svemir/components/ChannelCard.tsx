@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ChannelWithBlocks } from "@/lib/types";
 import ChannelActions from "./ChannelActions";
+import EditableTitle from "./EditableTitle";
+import { renameChannel } from "@/app/admin/actions";
 
 type Props = {
   channel: ChannelWithBlocks;
@@ -46,9 +48,13 @@ export default function ChannelCard({ channel }: Props) {
         href={`/channel/${channel.slug}`}
         className="flex flex-col items-start justify-center gap-1.5 pl-[60px] pr-6 py-16 text-left after:absolute after:inset-0 after:content-['']"
       >
-        <span className="text-2xl font-light text-neutral-100">
-          {channel.title}
-        </span>
+        <EditableTitle
+          value={channel.title}
+          onRename={renameChannel.bind(null, channel.id)}
+          as="span"
+          className="relative z-10 cursor-text text-2xl font-light text-neutral-100"
+          inputClassName="relative z-10 w-full max-w-[260px] border-b border-neutral-500 bg-transparent text-2xl font-light text-neutral-100 outline-none"
+        />
         <span className="text-xs text-neutral-500">
           {count} block{count === 1 ? "" : "s"}
         </span>

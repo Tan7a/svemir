@@ -362,6 +362,62 @@ export async function updateBlockImage(
 }
 
 /**
+ * Rename a block — update its title only. Used by double-clicking the title in
+ * the block detail panel.
+ */
+export async function renameBlock(
+  blockId: string,
+  title: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return { success: false, error: "Title can't be empty." };
+  }
+  const { error } = await supabaseAdmin
+    .from("items")
+    .update({ title: trimmed })
+    .eq("id", blockId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/graph");
+  revalidatePath(`/block/${blockId}`);
+  revalidatePath("/admin/manage");
+  return { success: true };
+}
+
+/**
+ * Rename a channel — update its title only. The `slug` is intentionally left
+ * unchanged so existing /channel/[slug] links keep resolving. Used by the
+ * "Rename" action in the channel "⋯" menu and by double-clicking a channel name.
+ */
+export async function renameChannel(
+  channelId: string,
+  title: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return { success: false, error: "Title can't be empty." };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("channels")
+    .update({ title: trimmed })
+    .eq("id", channelId)
+    .select("slug")
+    .single();
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/graph");
+  if (data?.slug) revalidatePath(`/channel/${data.slug}`);
+  return { success: true };
+}
+
+/**
  * Append a single channel to an existing block. Resolves the channel by title
  * (creating it if missing), then upserts the (block_id, channel_id) connection.
  * Used by the inline Connect button on the block detail modal.

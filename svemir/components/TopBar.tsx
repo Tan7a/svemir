@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import TopBarSearch from "./TopBarSearch";
 import ViewNav from "./ViewNav";
 import OrderDropdown from "./OrderDropdown";
+import BrandMark from "./BrandMark";
 
 /**
  * Persistent top bar across every page of svemir. Brand mark on the left,
@@ -11,22 +11,9 @@ import OrderDropdown from "./OrderDropdown";
  */
 export default function TopBar() {
   return (
-    <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-neutral-800 bg-[#0a0a0a]/95 px-5 backdrop-blur">
+    <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-neutral-800 bg-background/95 px-5 backdrop-blur">
       <div className="flex items-center gap-5">
-        <Link
-          href="/"
-          aria-label="svemir home"
-          className="flex items-center"
-        >
-          <Image
-            src="/svemir.svg"
-            alt="svemir"
-            width={40}
-            height={13}
-            priority
-            className="h-auto w-10"
-          />
-        </Link>
+        <BrandMark />
         <Suspense
           fallback={<div className="hidden h-6 w-64 md:block" aria-hidden />}
         >

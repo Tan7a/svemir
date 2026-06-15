@@ -94,7 +94,7 @@ export default function OrderDropdown() {
         </span>
       </button>
       {open && (
-        <ul className="absolute right-0 z-40 mt-1 min-w-[12rem] rounded-md border border-neutral-800 bg-[#0a0a0a] py-1 shadow-xl">
+        <ul className="absolute right-0 z-40 mt-1 min-w-[12rem] rounded-md border border-neutral-800 bg-neutral-950 py-1 shadow-xl">
           {options.map((opt) => {
             const active = current === opt.value;
             return (

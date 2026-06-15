@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
 import { type ViewKind, type OrderKind } from "@/components/FilterBar";
 import BlocksView from "@/components/BlocksView";
+import BlocksVibeView from "@/components/BlocksVibeView";
 import ChannelsView from "@/components/ChannelsView";
 import { lastConnectedAt, compareChannelRecency } from "@/lib/channels";
 import type { Channel, ChannelWithBlocks, Item } from "@/lib/types";
@@ -69,9 +70,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <TopBar />
       <div className="border-b border-neutral-900">
         <div className="flex items-baseline justify-between gap-4 px-5 pt-8 pb-4">
-          <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
-            svemir
-          </h1>
+          <Link href="/" aria-label="svemir home">
+            <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
+              svemir
+            </h1>
+          </Link>
           <p className="shrink-0 text-xs text-neutral-500">
             {blockCount ?? 0} blocks · {channelCount ?? 0} channels ·{" "}
             {blockCount ?? 0} nodes
@@ -129,10 +132,11 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
     );
   }
   const blocks = (data ?? []) as Item[];
+  // Vibes is now an interactive scale rather than a one-shot shuffle.
+  if (order === "vibes") return <BlocksVibeView blocks={blocks} />;
   if (order === "random") shuffle(blocks);
   else if (order === "type") orderByType(blocks);
   else if (order === "theme") orderByTheme(blocks);
-  else if (order === "vibes") arrangeByVibes(blocks);
   return <BlocksView blocks={blocks} />;
 }
 
@@ -211,35 +215,11 @@ function orderByType(blocks: Item[]): void {
   blocks.sort((a, b) => (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9));
 }
 
-/** A block's grouping key for theme/vibes: first category → source → kind. */
-function vibeKey(b: Item): string {
-  return (b.categories?.[0] || b.source_name || b.kind || "misc").toLowerCase();
-}
-
 // "By theme" — cluster blocks sharing a first category; uncategorised last.
 function orderByTheme(blocks: Item[]): void {
   const themeOf = (b: Item) =>
     b.categories?.[0] ? b.categories[0].toLowerCase() : "￿";
   blocks.sort((a, b) => themeOf(a).localeCompare(themeOf(b)));
-}
-
-// "Vibes" — serendipitous: random overall, but related blocks (same theme /
-// source) stay loosely grouped. Shuffle the group order and within each group.
-function arrangeByVibes(blocks: Item[]): void {
-  const groups = new Map<string, Item[]>();
-  for (const b of blocks) {
-    const key = vibeKey(b);
-    (groups.get(key) ?? groups.set(key, []).get(key)!).push(b);
-  }
-  const keys = [...groups.keys()];
-  shuffle(keys);
-  const out: Item[] = [];
-  for (const k of keys) {
-    const g = groups.get(k)!;
-    shuffle(g);
-    out.push(...g);
-  }
-  for (let i = 0; i < out.length; i++) blocks[i] = out[i];
 }
 
 /**
