@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { COOKIE_NAME, tokenMatches } from "@/lib/access";
 
-const BASIC_AUTH_PATHS =
+// Paths that require the admin session cookie. Same set the old Basic Auth gate
+// covered: the /admin UI plus the admin-only helper APIs.
+const GATED_PATHS =
   /^\/(admin|api\/(scrape|upload-image|parse-bookmarks))(\/|$)/;
 const CORS_PATHS = /^\/api\/v1\//;
-
-function unauthorized() {
-  return new NextResponse("Auth required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Admin"' },
-  });
-}
-
-function checkBasic(req: NextRequest): boolean {
-  const header = req.headers.get("authorization") ?? "";
-  if (!header.startsWith("Basic ")) return false;
-  try {
-    const [u, p] = atob(header.slice(6)).split(":");
-    return (
-      u === process.env.ADMIN_USERNAME && p === process.env.ADMIN_PASSWORD
-    );
-  } catch {
-    return false;
-  }
-}
 
 function allowedOrigin(origin: string): string {
   if (!origin) return "";
@@ -32,11 +15,22 @@ function allowedOrigin(origin: string): string {
   return "";
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (BASIC_AUTH_PATHS.test(pathname)) {
-    return checkBasic(req) ? NextResponse.next() : unauthorized();
+  if (GATED_PATHS.test(pathname)) {
+    const authed = await tokenMatches(req.cookies.get(COOKIE_NAME)?.value);
+    if (authed) return NextResponse.next();
+    // Admin APIs answer programmatically; pages bounce home with the popup.
+    // No WWW-Authenticate header — that's what triggered the browser-native
+    // Basic Auth dialog we're replacing with our own sign-in popup.
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "signin=1";
+    return NextResponse.redirect(url);
   }
 
   if (CORS_PATHS.test(pathname)) {

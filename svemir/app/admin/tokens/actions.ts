@@ -3,6 +3,7 @@
 import { randomBytes, createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { isAuthed } from "@/lib/access-server";
 
 /**
  * Mint a fresh personal access token. Plaintext is returned to the caller
@@ -16,6 +17,9 @@ export async function createToken(
   | { success: true; id: string; token: string }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured." };
   }
@@ -44,6 +48,9 @@ export async function createToken(
 export async function revokeToken(
   id: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured." };
   }

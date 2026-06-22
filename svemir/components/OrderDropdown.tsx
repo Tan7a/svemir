@@ -45,7 +45,7 @@ export default function OrderDropdown() {
   if (pathname !== "/") return null;
 
   const view: ViewKind =
-    searchParams.get("view") === "blocks" ? "blocks" : "channels";
+    searchParams.get("view") === "channels" ? "channels" : "blocks";
 
   // In Channels view, append the block-centric sorts so they're discoverable
   // (keeping Random last); in Blocks view ORDER_OPTIONS already includes them.

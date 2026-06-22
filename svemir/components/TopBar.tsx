@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import TopBarSearch from "./TopBarSearch";
 import ViewNav from "./ViewNav";
 import OrderDropdown from "./OrderDropdown";
 import BrandMark from "./BrandMark";
+import AddButton from "./AddButton";
 
 /**
  * Persistent top bar across every page of svemir. Brand mark on the left,
@@ -30,12 +30,15 @@ export default function TopBar() {
         <Suspense fallback={null}>
           <OrderDropdown />
         </Suspense>
-        <Link
-          href="/admin"
-          className="flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-900"
+        <Suspense
+          fallback={
+            <span className="flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200">
+              Add <span className="text-neutral-400">+</span>
+            </span>
+          }
         >
-          Add <span className="text-neutral-400">+</span>
-        </Link>
+          <AddButton />
+        </Suspense>
       </nav>
     </header>
   );

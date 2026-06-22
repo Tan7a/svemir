@@ -29,6 +29,12 @@ export type ItemWithChannels = Item & {
   connected_blocks: Item[];
 };
 
+/** Lightweight channel reference for the topic tags shown on block cards. */
+export type ChannelTag = { slug: string; title: string };
+
+/** A block carrying the channels (topics) it belongs to, for the Blocks grid. */
+export type BlockWithChannelTags = Item & { channels: ChannelTag[] };
+
 /**
  * A channel paired with its first N blocks — used by the Channels view to
  * render the horizontal thumb strip.

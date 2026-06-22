@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { isAuthed } from "@/lib/access-server";
 import { revalidatePath } from "next/cache";
 import {
   deriveTagsAndCategories,
@@ -41,6 +42,9 @@ export async function addItem(
   | { success: true; id: string }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return {
       success: false,
@@ -127,6 +131,9 @@ export async function bulkImportBookmarks(
   | { success: true; inserted: number; skipped: number }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return {
       success: false,
@@ -255,6 +262,9 @@ export async function bulkImportBookmarks(
 export async function deleteItem(
   id: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -270,6 +280,9 @@ export async function deleteItem(
 export async function bulkDeleteItems(
   ids: string[]
 ): Promise<{ success: true; count: number } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -295,6 +308,9 @@ export async function setChannelParent(
   childId: string,
   parentTitle: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -322,6 +338,9 @@ export async function setChannelParent(
 export async function removeChannelParent(
   childId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -343,6 +362,9 @@ export async function updateBlockImage(
   blockId: string,
   imageUrl: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -369,6 +391,9 @@ export async function renameBlock(
   blockId: string,
   title: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -397,6 +422,9 @@ export async function renameChannel(
   channelId: string,
   title: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -426,6 +454,9 @@ export async function addChannelToBlock(
   blockId: string,
   channelTitle: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -455,6 +486,9 @@ export async function removeChannelFromBlock(
   blockId: string,
   channelId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -475,6 +509,9 @@ export async function updateItemChannelsAndCategories(
   channelTitles: string[],
   categories: string[]
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -525,6 +562,9 @@ export async function scrapeMissingMetadata(
     }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -627,6 +667,9 @@ export async function backfillBlockConcepts(
     }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -691,6 +734,9 @@ export async function scrapeAndUpdateItem(
   | { success: true; updated: boolean }
   | { success: false; error: string }
 > {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -734,6 +780,9 @@ export async function connectBlocks(
   aId: string,
   bId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -755,6 +804,9 @@ export async function disconnectBlocks(
   aId: string,
   bId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin not configured" };
   }
@@ -774,6 +826,9 @@ export async function disconnectBlocks(
 export async function deleteChannel(
   channelId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin is not configured." };
   }

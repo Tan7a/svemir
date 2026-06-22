@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Item } from "@/lib/types";
+import type { ChannelTag, Item } from "@/lib/types";
 import BlockCard from "./BlockCard";
 import VibeScale from "./VibeScale";
+
+type VibeBlock = Item & { channels?: ChannelTag[] };
 
 /** A block's vibe key: first category → source → kind (matches the old sort). */
 function vibeKey(b: Item): string {
@@ -16,11 +18,11 @@ function vibeKey(b: Item): string {
  * buckets blocks by vibe and lets you scrub the side scale through them — the
  * grid swaps to the selected vibe instantly, client-side.
  */
-export default function BlocksVibeView({ blocks }: { blocks: Item[] }) {
+export default function BlocksVibeView({ blocks }: { blocks: VibeBlock[] }) {
   // Ordered vibe list: most common first, so the scale runs from your biggest
   // themes down to niche ones. byVibe maps each vibe → its blocks.
   const { vibes, byVibe } = useMemo(() => {
-    const map = new Map<string, Item[]>();
+    const map = new Map<string, VibeBlock[]>();
     for (const b of blocks) {
       const k = vibeKey(b);
       const bucket = map.get(k) ?? map.set(k, []).get(k)!;
@@ -46,14 +48,14 @@ export default function BlocksVibeView({ blocks }: { blocks: Item[] }) {
   }
 
   return (
-    <div className="px-5 pb-16 md:pr-24">
+    <div className="px-8 pb-20 md:pr-24">
       <VibeScale
         vibes={vibes}
         index={safeIndex}
         count={shown.length}
         onChange={setIndex}
       />
-      <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
         {shown.map((b) => (
           <BlockCard key={b.id} block={b} />
         ))}

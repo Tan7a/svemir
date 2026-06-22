@@ -6,7 +6,13 @@ import BlocksView from "@/components/BlocksView";
 import BlocksVibeView from "@/components/BlocksVibeView";
 import ChannelsView from "@/components/ChannelsView";
 import { lastConnectedAt, compareChannelRecency } from "@/lib/channels";
-import type { Channel, ChannelWithBlocks, Item } from "@/lib/types";
+import type {
+  Channel,
+  ChannelWithBlocks,
+  ChannelTag,
+  BlockWithChannelTags,
+  Item,
+} from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -38,7 +44,7 @@ type SP = Promise<{
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const view: ViewKind =
-    (sp.view && ALLOWED_VIEWS[sp.view]) || "channels";
+    (sp.view && ALLOWED_VIEWS[sp.view]) || "blocks";
   // Channels default to "updated" (most-recently-saved block first); blocks
   // default to "newest". Both still honour an explicit ?order= in the URL.
   const order: OrderKind =
@@ -100,8 +106,13 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
   if (!supabase) return null;
 
   // Map order kinds to Supabase order spec. Order kinds we don't yet support
-  // fall back to newest-first so the URL is always honoured visually.
-  let query = supabase.from("items").select("*").limit(500);
+  // fall back to newest-first so the URL is always honoured visually. The
+  // embedded connections(channels(...)) gives each block its topic tags in one
+  // round-trip (still one row per item — PostgREST nests the channels).
+  let query = supabase
+    .from("items")
+    .select("*, connections(channels(slug, title))")
+    .limit(500);
   switch (order) {
     case "oldest":
       query = query.order("created_at", { ascending: true });
@@ -131,7 +142,10 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
       </div>
     );
   }
-  const blocks = (data ?? []) as Item[];
+  // Collapse duplicate saves of the same URL into one card (there's no unique
+  // constraint on items.url), merging the topics from each copy so the survivor
+  // still shows every channel it belonged to.
+  const blocks = dedupeBlocks((data ?? []) as BlockRow[]);
   // Vibes is now an interactive scale rather than a one-shot shuffle.
   if (order === "vibes") return <BlocksVibeView blocks={blocks} />;
   if (order === "random") shuffle(blocks);
@@ -198,6 +212,54 @@ async function ChannelsRoute({ order }: { order: OrderKind }) {
   sortChannels(enriched, order);
 
   return <ChannelsView channels={enriched} />;
+}
+
+/** A raw items row with the embedded channels join. */
+type BlockRow = Item & { connections: { channels: unknown }[] | null };
+
+/** Flatten a row's embedded connections into a unique list of channel tags. */
+function channelsFromRow(row: BlockRow): ChannelTag[] {
+  const out: ChannelTag[] = [];
+  const seen = new Set<string>();
+  for (const conn of row.connections ?? []) {
+    const raw = conn.channels;
+    const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    for (const ch of list as ChannelTag[]) {
+      if (ch?.slug && !seen.has(ch.slug)) {
+        seen.add(ch.slug);
+        out.push({ slug: ch.slug, title: ch.title });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Collapse duplicate item rows that point at the same content. Keyed by url
+ * (then image_url, then id), keeping the first occurrence in the current sort
+ * order and merging the channel tags of every duplicate onto it.
+ */
+function dedupeBlocks(rows: BlockRow[]): BlockWithChannelTags[] {
+  const byKey = new Map<string, BlockWithChannelTags>();
+  const order: string[] = [];
+  for (const row of rows) {
+    const { connections: _connections, ...item } = row;
+    void _connections;
+    const key = item.url || item.image_url || item.id;
+    const existing = byKey.get(key);
+    const chans = channelsFromRow(row);
+    if (existing) {
+      for (const ch of chans) {
+        if (!existing.channels.some((e) => e.slug === ch.slug)) {
+          existing.channels.push(ch);
+        }
+      }
+    } else {
+      byKey.set(key, { ...(item as Item), channels: chans });
+      order.push(key);
+    }
+  }
+  return order.map((k) => byKey.get(k)!);
 }
 
 /** In-place Fisher-Yates shuffle for the "Random" order. */

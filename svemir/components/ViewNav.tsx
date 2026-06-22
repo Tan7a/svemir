@@ -25,9 +25,9 @@ export default function ViewNav() {
   const activeView: ViewKind | null =
     onGraph || onConcepts
       ? null
-      : searchParams.get("view") === "blocks"
-        ? "blocks"
-        : "channels";
+      : searchParams.get("view") === "channels"
+        ? "channels"
+        : "blocks";
 
   function setView(v: ViewKind) {
     // From the graph page start fresh; on home preserve order / q.

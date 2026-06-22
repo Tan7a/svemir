@@ -19,8 +19,8 @@ export type OrderKind =
   | "random";
 
 export const VIEW_OPTIONS: { value: ViewKind; label: string }[] = [
-  { value: "channels", label: "Channels" },
   { value: "blocks", label: "Blocks" },
+  { value: "channels", label: "Channels" },
 ];
 
 export const ORDER_OPTIONS: { value: OrderKind; label: string }[] = [
