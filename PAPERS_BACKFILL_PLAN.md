@@ -58,8 +58,8 @@ Source root: `~/Desktop/PhD/Markdown library/` (override with a positional arg).
 | Collection (folder = channel) | Files | Status |
 |---|---|---|
 | HCI & Adaptive Interfaces | 26 | ✅ done (21 in DB) |
+| Emotional Design | 78 | ✅ done (68 in DB; 10 skipped — see SKIP_FILES) |
 | **AI Personalization & SLR** | **226** | ⬜ to do |
-| **Emotional Design** | **78** | ⬜ to do |
 
 **Known data-quality traps (already handled by the script, but verify per collection):**
 - **Smart/curly quotes** in YAML frontmatter broke ~61 AI-collection files — handled by

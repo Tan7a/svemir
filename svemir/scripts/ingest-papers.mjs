@@ -41,9 +41,22 @@ const SHARED_CHANNEL = "Research Papers";
 // Source files that aren't research papers (grade forms, a study proposal that
 // rode along in a collection folder). Never ingested. Keyed by exact filename.
 const SKIP_FILES = new Set([
+  // HCI & Adaptive Interfaces (pilot)
   "2022_programme_template-of-the-points-earned-at-the-course-and-grade.md",
   "2022_razvoj_obrazac-za-evidenciju-osvojenih-poena-na-predmetu-i-predlog.md",
   "nd_unknown_study-proposal-potpis.md",
+  // Emotional Design — non-papers (OCR-only stubs, a book, a worksheet, an
+  // annual-review volume's front-matter) + near-duplicate re-exports.
+  "2015_unknown_positive-design-reference-guide.md", // OCR-only stub, no text
+  "nd_unknown_1992-cultural-variations-in-emotion-untitled.md", // OCR-only stub
+  "nd_unknown_ghostscript-wrapper-for-c-documents-and-settings-avm.md", // OCR stub; Norman's "Emotional Design" book
+  "2016_unknown_starter-questions-for-user-research.md", // UX-research worksheet, not a paper
+  "2011_unknown_the-emotions-a-philosophical-introduction.md", // a book (Deonna & Teroni)
+  "2016_wiederhol_annual-review-of-cybertherapy-and-telemedicine-being.md", // annual-review volume front-matter
+  "2010_design_arxiv-2010-03046v1-cs-hc-6-oct-2020-2.md", // dup of the non-"-2" arXiv file
+  "2020_unknown_article-do-products-respond-to-user-desires-a-case-study-2.md", // dup of non-"-2"
+  "2013_mara_unconscious-human-behavior-at-visceral-level-of-emotional-2.md", // dup; keep fuller-titled non-"-2"
+  "2002_project_pleasure-with-products-design-based-on-kansei.md", // dup of 1997_lee (real author) Kansei paper
 ]);
 
 // Agent-curated metadata fixes for papers whose PDF→Markdown conversion lost or
@@ -65,6 +78,22 @@ const OVERRIDES = {
   "2021_c_computer-science-review.md": { authors: ["Maaruf Ali", "Peter S. Excell"] },
   "2021_ye_evaluating-grasping-visualizations-and-control-modes-in-a.md": { authors: ["Yuting Ye"] },
   "2021_lee_towards-augmented-reality-driven-human-city-interaction.md": { authors: ["Lik-Hang Lee"] },
+  // ── Emotional Design — bylines confirmed from each paper's body ──
+  "1985_psychology_patterns-of-cognitive-appraisal-in-emotion.md": { authors: ["Craig A. Smith", "Phoebe C. Ellsworth"] },
+  "1998_vol_human-factors-for-pleasure-in-product-use.md": { authors: ["Patrick W. Jordan"] },
+  "2011_lisbo_personas-and-user-centered-design-how-can-personas-benefit.md": { authors: ["Tomasz Miaskiewicz", "Kenneth A. Kozar"] },
+  "nd_unknown_2003-unknown-keltnerhaidt2003approaching-awepub028.md": { authors: ["Dacher Keltner", "Jonathan Haidt"], title: "Approaching Awe, a Moral, Spiritual, and Aesthetic Emotion" },
+  // Title-only fixes (filename/template titles → the paper's real title from its body).
+  "2010_design_arxiv-2010-03046v1-cs-hc-6-oct-2020.md": { title: "Emotional Design in Human Factors and Ergonomics" },
+  "2018_paper_paper-title-use-style-paper-title.md": { title: "Emotional Design on User Experience-based Development System" },
+  "2019_vallverdu_2019-emotional-machines-paper-pdf.md": { title: "Emotional Machines" },
+  "nd_radovanovic_tanja-radovanovic-emotional-design-in-digital-user.md": { title: "Emotional Design in Digital User Experience" },
+  "2016_harmon-jones1_research-article-the-discrete-emotions-questionnaire-a-new.md": { title: "The Discrete Emotions Questionnaire: A New Tool for Measuring State Self-Reported Emotions" },
+  "2022_copernicus_semantic-scholar-114356271-psychology-of-objects-and-their.md": { title: "Psychology of Objects and Their Interaction with Our Culture and Society" },
+  // Author-clears: the only surviving "author" is an institution/place fragment — show none.
+  "2013_schem_using-a-simulated-environment-to-investigate-experiences.md": { authors: [] },
+  "2017_media_emotional-design-in-web-interfaces.md": { authors: [] },
+  "2021_geodesicas_collaborative-emotional-mapping-as-a-tool-for-urban.md": { authors: [] },
 };
 
 // ── CLI args ──────────────────────────────────────────────────────────────
@@ -135,7 +164,7 @@ const AUTHOR_JUNK = [
   "humanities research", "study programme", "studijski program", "original research",
   "cover feature outlook", "public interest", "social psychology", "computer",
   "exploring virtual reality", "exploring collaboration patterns", "congreso internacional",
-  "type original research", "study proposal",
+  "type original research", "study proposal", "emotional design",
 ];
 function dropJunkAuthors(authors) {
   return authors.filter((a) => {
@@ -143,8 +172,14 @@ function dropJunkAuthors(authors) {
     if (v.length < 3) return false;
     if (/https?:|issn|doi:|@/.test(v)) return false;
     if (AUTHOR_JUNK.includes(v)) return false;
+    // "<Topic> View project" — a ResearchGate PDF-export artifact, never a name.
+    if (/\bview project\b/.test(v)) return false;
+    if (/^hal id/.test(v)) return false;
+    // Institutions, venues, repositories, and indexers misread as author names.
+    // Person names don't contain these tokens, so dropping them is safe.
+    if (/\b(universit|college|institute|school of|faculty|department|scholar works|copernicus|indexing|semantic scholar|researchgate|symposium|proceedings|conference|journal|review|sciences|ergonomics|telemedicine|cybertherapy|cartographic|gesture recognition|human-computer systems|backgrounds|geod[eé]sica|ci[eê]ncia|woctine|user modeling|user-adapted|industrie)/.test(v)) return false;
     // Section-ish single phrases with no capitalized name pattern.
-    if (/^(abstract|introduction|keywords|references|article|review|survey)\b/.test(v)) return false;
+    if (/^(abstract|introduction|keywords|references|article|review|survey|original (paper|research|article)|research article)\b/.test(v)) return false;
     return true;
   });
 }

@@ -1,5 +1,5 @@
 {
-  "_README": "Agent-produced facets (Step B). Keyed by items.paper_full_text_path. Each facet is {v, note}: v = canonical value (recurs to connect papers), note = how THIS paper relates to it. _definitions[dimension::value] = what the tag means. Re-run apply-facets.mjs after editing (idempotent). Pilot: HCI & Adaptive Interfaces.",
+  "_README": "Agent-produced facets (Step B). Keyed by items.paper_full_text_path. Each facet is {v, note}: v = canonical value (recurs to connect papers), note = how THIS paper relates to it. _definitions[dimension::value] = what the tag means. Re-run apply-facets.mjs after editing (idempotent). PROGRESS: HCI & Adaptive Interfaces 21/21 faceted; Emotional Design 68/68 faceted (10 non-papers/dupes skipped). REMAINING: AI Personalization & SLR (226). Vocabulary = 63 canonical values across the 5 dimensions; reuse it before coining new values.",
   "_definitions": {
     "ai_technique::Human-AI interaction": "Designing and studying how people interact with AI systems as collaborators or tools.",
     "ai_technique::Adaptive/intelligent UI": "Interfaces (AUI/IUI) that adjust their layout, content, or behaviour to the user, often using AI.",
@@ -43,7 +43,27 @@
     "ethical_concern::Digital divide": "Unequal access to technology across people and groups.",
     "ethical_concern::Societal impact of AI": "Broader, sometimes harmful, effects of AI on society.",
     "ethical_concern::Inclusion & accessibility": "Ensuring a system works for the widest possible range of people.",
-    "ethical_concern::Behaviour manipulation": "The risk of nudging or persuading users in ways that may not serve them."
+    "ethical_concern::Behaviour manipulation": "The risk of nudging or persuading users in ways that may not serve them.",
+    "ai_technique::Affective computing": "Computing that senses, models, expresses, or responds to human emotion (Picard's term).",
+    "ai_technique::Emotion recognition": "Automatically inferring a person's emotional state from face, voice, text, or physiology.",
+    "ai_technique::Deep learning": "Multi-layer neural networks (e.g. CNNs, LSTMs) that learn representations directly from data.",
+    "ux_effect::Aesthetic pleasure": "Enjoyment arising from the beauty and sensory appeal of a product or interface.",
+    "ux_effect::Satisfaction": "Contentment from a product meeting or exceeding the user's needs and expectations.",
+    "ux_effect::Persuasion": "Shifting a user's attitudes, motivation, or intentions through design.",
+    "ux_effect::Flow": "Total, energized absorption in an activity where challenge meets skill.",
+    "ux_effect::Well-being": "Designing technology to support psychological health and positive functioning.",
+    "ux_effect::Emotional attachment": "A lasting affective bond a person forms with a product, place, or memory.",
+    "challenge::Measuring emotion": "Capturing subjective, fleeting emotional states in valid, comparable ways.",
+    "challenge::Designing for emotion": "Deliberately shaping a design to evoke specific intended emotions.",
+    "challenge::Defining emotion": "The lack of scientific consensus on what an emotion fundamentally is.",
+    "challenge::Bridging theory and practice": "Turning emotion and affect theory into methods designers can actually apply.",
+    "metric::Emotion scales (SAM/PAD)": "Standardized rating instruments for emotion (e.g. SAM, PAD, PrEmo, PANAS, DEQ).",
+    "metric::Facial expression analysis": "Inferring emotion from coded or automatically detected facial expressions.",
+    "metric::Eye tracking": "Gaze, fixation, and pupil measures used to index attention and affect.",
+    "metric::EEG / neural measures": "Brain-activity signals (e.g. EEG) used to study emotional and cognitive states.",
+    "metric::Controlled experiment": "Comparing manipulated conditions to test an emotional or design effect.",
+    "ethical_concern::Emotional manipulation": "Exploiting users' emotions to influence them in ways that may not serve them.",
+    "ethical_concern::Privacy": "Protecting intimate data, especially the emotional and physiological signals affective systems capture."
   },
   "hci-adaptive-interfaces/2011-impagliazzo-utopia-participatory-design-from-scandinavia-to-the-world.md": {
     "uxEffects": [
@@ -137,15 +157,6 @@
     ],
     "ethicalConcerns": [
       { "v": "User autonomy & agency", "note": "Asserts citizen voice in shaping the city." }
-    ]
-  },
-  "hci-adaptive-interfaces/2019-paper-august-in-san-diego-neuroscience-for-architecture-urbanism.md": {
-    "uxEffects": [
-      { "v": "Sense of place", "note": "The neuroscience of how architecture and urban space are experienced." },
-      { "v": "Emotional response", "note": "How built environments affect people neurologically and emotionally." }
-    ],
-    "challenges": [
-      { "v": "Communicating intangible/sensory qualities", "note": "Bridges neuroscience and the felt experience of space." }
     ]
   },
   "hci-adaptive-interfaces/2019-reality-sensory-urbanism-and-placemaking.md": {
@@ -322,10 +333,744 @@
       { "v": "User autonomy & agency", "note": "Centers the distribution and dynamic of human agency." }
     ]
   },
-  "hci-adaptive-interfaces/nd-iovene-of-streets-and-squares.md": {
+  "emotional-design/1985-interest-mapping-the-passions-toward-a-high-dimensional-taxonomy-of.md": {
     "uxEffects": [
-      { "v": "Sense of place", "note": "The character and life of urban streets and squares." },
-      { "v": "Wayfinding & spatial orientation", "note": "Public-space structure and how people move through it." }
+      { "v": "Emotional response", "note": "Maps the structure of human emotional experience and expression." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Argues the 'basic six' is too coarse; proposes a high-dimensional emotion space." },
+      { "v": "Measuring emotion", "note": "Derives emotion dimensions from large-scale ratings of experience and expression." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Builds the taxonomy from people's self-reported emotional experiences." }
+    ]
+  },
+  "emotional-design/1985-psychology-patterns-of-cognitive-appraisal-in-emotion.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Shows distinct emotions arise from patterns along cognitive-appraisal dimensions." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Refines emotion theory via appraisal dimensions that distinguish emotions." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Participants rated recalled emotional experiences on appraisal scales." }
+    ]
+  },
+  "emotional-design/1989-unknown-the-philosophy-of-emotions.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Examines the nature and components of emotional experience." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Surveys the long philosophical struggle over what an emotion really is." }
+    ]
+  },
+  "emotional-design/1990-review-what-s-basic-about-basic-emotions.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Critiques the idea of a small fixed set of biologically basic emotions." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Questions the widespread assumption that discrete 'basic emotions' exist." }
+    ]
+  },
+  "emotional-design/1997-lee-pleasure-with-products-design-based-on-kansei.md": {
+    "uxEffects": [
+      { "v": "Aesthetic pleasure", "note": "Kansei design integrates aesthetic and emotional factors into product form." },
+      { "v": "Emotional response", "note": "Designs products around users' subjective, affective ('Kansei') responses." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Balances technical demands with users' aesthetic and experiential needs." }
+    ]
+  },
+  "emotional-design/1998-vol-human-factors-for-pleasure-in-product-use.md": {
+    "uxEffects": [
+      { "v": "Aesthetic pleasure", "note": "Argues product pleasure must go beyond usability as a differentiator." },
+      { "v": "Usability", "note": "Positions pleasure as the next step once usability is mastered." },
+      { "v": "Emotional response", "note": "Pleasurable products are used more and shape future purchase choices." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Surveys behavioural correlates of pleasure in product use." }
+    ]
+  },
+  "emotional-design/1999-kemp-the-role-of-emotions-in-marketing.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Outlines how emotions, distinct from mood and affect, drive consumer responses." },
+      { "v": "Persuasion", "note": "Examines emotions' role in marketing and goal-directed consumer behaviour." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Reviews measurement issues for emotions in consumer research." },
+      { "v": "Defining emotion", "note": "Differentiates emotion from affect, moods, and attitudes via appraisal theory." }
+    ]
+  },
+  "emotional-design/2002-brave-emotion-in-humancomputer-interaction.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Surveys how systems can recognize and respond to user emotion." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Foundational account of emotion's role across human–computer interaction." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Reviews distinguishing emotion from mood and capturing it in HCI." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Covers self-report alongside autonomic and facial measures of emotion." },
+      { "v": "Facial expression analysis", "note": "Discusses facial expression as a channel for reading emotion." }
+    ]
+  },
+  "emotional-design/2003-project-from-disgust-to-desire-how-products-elicit-emotions.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Analyses how products elicit emotions from disgust to desire." },
+      { "v": "Aesthetic pleasure", "note": "Links product appearance and meaning to evoked positive emotions." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Frames how designers can intentionally elicit product emotions." }
+    ]
+  },
+  "emotional-design/2003-unknown-affective-computing-challenges.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Defends affective computing and maps its open research challenges." },
+      { "v": "Emotion recognition", "note": "Concerns machines that recognize, model, and respond to emotion." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Addresses criticisms about reliably sensing emotional information." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Privacy", "note": "Raises concerns about machines capturing intimate emotional information." }
+    ]
+  },
+  "emotional-design/2004-love-design-and-emotion-time-for-a-new-direction.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Concerns the body of research on designing for emotion." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "Asks why design-and-emotion research has not improved design practice." },
+      { "v": "Fragmented research", "note": "Critiques the scattered, low-impact state of design-and-emotion theory." }
+    ]
+  },
+  "emotional-design/2004-mueller-review-essay-emotional-design-by-donald-a-norman.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Reviews Norman's case that emotion is central to design." },
+      { "v": "Aesthetic pleasure", "note": "Discusses Norman's shift from usability to attractive, pleasurable things." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Engages Norman's visceral/behavioural/reflective design framework." }
+    ]
+  },
+  "emotional-design/2005-project-towards-customized-emotional-design-an-explorative-study-of.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Customizable UI 'skins' matched to user personality and preference." },
+      { "v": "Aesthetic pleasure", "note": "Studies aesthetic skin preferences beyond user-system performance." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Explores how personality differences shape interface-skin choices." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "Two explorative studies relate personality to skin preference." }
+    ]
+  },
+  "emotional-design/2006-han-feelings-and-consumer-decision-making-1.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Shows specific emotions systematically shape consumer decisions." },
+      { "v": "Persuasion", "note": "Appraisal Tendency Framework predicts emotion effects on choice." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Distinguishes specific emotions by their appraisal tendencies." }
+    ]
+  },
+  "emotional-design/2006-paper-emotional-design-application-of-a-research-based-design.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A 'design for wow' approach targeting pleasant-surprise emotions." },
+      { "v": "Aesthetic pleasure", "note": "Defines a product character with high 'wow-impact'." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Uses the eliciting conditions of emotions to drive product character." },
+      { "v": "Measuring emotion", "note": "Proposes a measurable 'wow-index' for the experience." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Combines qualitative and quantitative methods to gauge wow." }
+    ]
+  },
+  "emotional-design/2006-sciences-the-focus-of-ux-research-is-to-design-and-develop-systems.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "UX research targets affective qualities, meaning, and value, not just tasks." },
+      { "v": "Usability", "note": "Frames UX as extending beyond conventional usability models." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "No consensus on defining or validating core UX constructs." },
+      { "v": "Fragmented research", "note": "Many competing UX frameworks and incoherent views complicate the field." }
+    ]
+  },
+  "emotional-design/2007-l-industrie-exploiting-emotions-for-successful-product-design.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Treats 'supra-functional' product emotions as competitive differentiators." },
+      { "v": "Aesthetic pleasure", "note": "Pleasurable emotions beyond function shape product success." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Argues emotion must be designed in once function and usability saturate." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Emotional manipulation", "note": "Frames emotions as something to 'exploit' for commercial product success." }
+    ]
+  },
+  "emotional-design/2007-project-nine-sources-of-product-emotion.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A framework of nine distinct sources of product-evoked emotions." },
+      { "v": "Aesthetic pleasure", "note": "Maps eliciting conditions for pleasurable product affect." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Gives designers eliciting conditions to target specific product emotions." },
+      { "v": "Defining emotion", "note": "Synthesizes three theories of product affect into one structure." }
+    ]
+  },
+  "emotional-design/2007-unknown-framework-of-product-experience.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A general framework spanning all affective responses to products." },
+      { "v": "Aesthetic pleasure", "note": "Distinguishes aesthetic, meaning, and emotional levels of experience." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Organizes product experience to guide designing for affect." }
+    ]
+  },
+  "emotional-design/2010-design-arxiv-2010-03046v1-cs-hc-6-oct-2020.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Surveys emotion's role across human factors and ergonomics design." },
+      { "v": "Aesthetic pleasure", "note": "Reviews Norman's emotional design and Jordan's four pleasures." },
+      { "v": "Flow", "note": "Covers flow and hedonomics as positive-experience goals in HFE." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Maps how HFE shifted from preventing harm to designing positive emotion." },
+      { "v": "Fragmented research", "note": "Consolidates scattered emotion-and-design work in human factors." }
+    ]
+  },
+  "emotional-design/2011-lisbo-personas-and-user-centered-design-how-can-personas-benefit.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personas give designers a vivid representation of the target user." },
+      { "v": "Participation & collaboration", "note": "Personas communicate customer needs across the design team." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Uses personas to represent varied user needs in product design." }
+    ],
+    "metrics": [
+      { "v": "Qualitative interviews", "note": "Delphi method gathers expert consensus on persona benefits." }
+    ]
+  },
+  "emotional-design/2011-project-the-behaviour-change-wheel-a-new-method-for-characterising.md": {
+    "uxEffects": [
+      { "v": "Behaviour change", "note": "The Behaviour Change Wheel: a method for designing behaviour-change interventions." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "Links a behavioural analysis to concrete intervention functions and policies." },
+      { "v": "Fragmented research", "note": "Synthesizes 19 existing frameworks into one coherent method." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Behaviour manipulation", "note": "Concerns the deliberate engineering of changes in people's behaviour." },
+      { "v": "User autonomy & agency", "note": "Raises who decides which behaviours ought to change." }
+    ]
+  },
+  "emotional-design/2012-alexiou-positive-psychology-and-digital-games-the-role-of-emotions.md": {
+    "uxEffects": [
+      { "v": "Flow", "note": "Applies psychological flow to serious-game design." },
+      { "v": "Emotional response", "note": "Uses positive emotions to deeply immerse users in training games." },
+      { "v": "Well-being", "note": "Draws on positive psychology to support players' positive functioning." },
+      { "v": "Experiential learning", "note": "Serious games as immersive training applications." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Translates positive-psychology constructs into game design." }
+    ]
+  },
+  "emotional-design/2012-barrett-emotions-are-real.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Argues emotions are real as part of socially constructed reality." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Theorizes emotions via socially shared conceptual knowledge, not fixed circuits." }
+    ]
+  },
+  "emotional-design/2013-mara-unconscious-human-behavior-at-visceral-level-of-emotional.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Examines unconscious, visceral-level emotional responses to products." },
+      { "v": "Aesthetic pleasure", "note": "Links visceral reactions to product-design innovation and human values." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Targets the visceral level of Norman's emotional-design model." },
+      { "v": "Fragmented research", "note": "Notes limited literature on unconscious behaviour in product design." }
+    ]
+  },
+  "emotional-design/2013-project-cognitive-approaches-to-emotions.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Treats emotions as cognitive processes with communicative and action-readiness functions." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "A cognitive-science account of what emotions are and how they arise." }
+    ]
+  },
+  "emotional-design/2013-schem-using-a-simulated-environment-to-investigate-experiences.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Uses a simulated environment to recreate experiences reported in space travel." },
+      { "v": "Emotional response", "note": "Investigates the felt experiences people report during space travel." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Draws on first-hand reported experiences of space travel." }
+    ]
+  },
+  "emotional-design/2014-backgrounds-emotion-recognition-and-its-applications.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Proposes research scenarios for emotion recognition across four domains." },
+      { "v": "Affective computing", "note": "Applies emotion-recognition methods to software, web, education, and gaming." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Uses recognized emotion to customize websites and adapt experiences." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Assesses feasibility of detecting defined emotional states per domain." }
+    ]
+  },
+  "emotional-design/2014-paper-unconscious-human-behaviour-in-product-design-designers.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Explores the value of unconscious human behaviour in product design." },
+      { "v": "Aesthetic pleasure", "note": "Targets innovative product design via subconscious responses." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "A new design-thinking perimeter built on unconscious behaviour." }
+    ],
+    "metrics": [
+      { "v": "Qualitative interviews", "note": "Uses Verbal Protocol Analysis of designers' conceptual sketching." }
+    ]
+  },
+  "emotional-design/2014-serino-smartphone-for-self-management-of-psychological-stress-a.md": {
+    "uxEffects": [
+      { "v": "Well-being", "note": "A 'Positive Technology' app to support stress management and well-being." },
+      { "v": "Behaviour change", "note": "Guides users through stress-management exercises on mobile." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Applies the Positive Technology paradigm to regulate stress and arousal." }
+    ],
+    "metrics": [
+      { "v": "Physiological measures", "note": "Tracks arousal via heart rate and wearable biosensors." }
+    ]
+  },
+  "emotional-design/2014-unknown-emotion-monitoring-verification-of-physiological.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "An emotion-monitoring stand tracking emotion in human–computer interaction." },
+      { "v": "Emotion recognition", "note": "Verifies procedures for recognizing emotion from physiological signals." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Tackles motion artifacts and sensor placement disturbing physiological readings." }
+    ],
+    "metrics": [
+      { "v": "Physiological measures", "note": "Verifies measurement procedures for physiological emotion indicators." }
+    ]
+  },
+  "emotional-design/2015-desmet-emotions-in-design-for-values.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Argues technology's value-ladenness evokes positive and negative emotions." },
+      { "v": "Well-being", "note": "Links emotions to personal and moral values and well-being." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Positions emotions as gateways to designing for human values." }
+    ]
+  },
+  "emotional-design/2015-lerner-emotion-and-decision-making.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Shows emotions are potent, predictable drivers of decisions." },
+      { "v": "Persuasion", "note": "Maps how incidental and integral emotions influence judgment and choice." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Uses the appraisal-tendency framework to specify emotion effects." }
+    ]
+  },
+  "emotional-design/2016-amanth-emotional-design-in-multimedia-learning-how-emotional.md": {
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Tests whether emotionally designed multimedia improves learning outcomes." },
+      { "v": "Emotional response", "note": "Designs learning environments to evoke positive, neutral, or negative emotions." },
+      { "v": "Satisfaction", "note": "Measures perceived satisfaction alongside achievement and motivation." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Manipulates the emotional design of a multimedia learning environment." },
+      { "v": "Adapting to diverse users", "note": "Examines how emotional intelligence moderates the effect." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "Compares positive/neutral/negative designs on achievement and motivation." }
+    ]
+  },
+  "emotional-design/2016-brodny-comparison-of-selected-off-the-shelf-solutions-for.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Compares off-the-shelf emotion-recognition solutions." },
+      { "v": "Affective computing", "note": "Evaluates ready-made tools for affective computing." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Assesses accuracy of recognizing emotion from facial expressions." }
+    ],
+    "metrics": [
+      { "v": "Facial expression analysis", "note": "Benchmarks recognition accuracy from facial expressions." }
+    ]
+  },
+  "emotional-design/2016-esposito-the-potential-of-virtual-reality-for-the-investigation-of.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "VR as an immersive, ecological tool to induce awe." },
+      { "v": "Emotional response", "note": "Targets awe — the perception of vastness and a need for accommodation." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Seeks to elicit particularly intense awe experiences." },
+      { "v": "Measuring emotion", "note": "Weighs ecological validity against control in inducing awe." }
+    ],
+    "metrics": [
+      { "v": "Presence rating", "note": "Uses presence as a key asset of the VR awe-induction approach." }
+    ]
+  },
+  "emotional-design/2016-harmon-jones1-research-article-the-discrete-emotions-questionnaire-a-new.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A new instrument to measure distinct, state self-reported emotions." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Addresses the lack of validated tools for several discrete emotions." }
+    ],
+    "metrics": [
+      { "v": "Emotion scales (SAM/PAD)", "note": "Introduces and validates the Discrete Emotions Questionnaire (DEQ)." },
+      { "v": "Self-report measures", "note": "A self-report scale for state emotional experience." }
+    ]
+  },
+  "emotional-design/2017-article-designing-visceral-behavioural-and-reflective-products.md": {
+    "uxEffects": [
+      { "v": "Emotional attachment", "note": "Seeks lasting attachment to counter disposable consumption." },
+      { "v": "Aesthetic pleasure", "note": "Applies Norman's visceral/behavioural/reflective levels to products." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Uses emotional design to address products' ecological impact." }
+    ]
+  },
+  "emotional-design/2017-gaggioli-positive-technology-computing-and-design-shaping-a-future.md": {
+    "uxEffects": [
+      { "v": "Well-being", "note": "Designs technology to promote psychological well-being." },
+      { "v": "Emotional response", "note": "Shapes technology-mediated experiences toward positive affect." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Sets out the Positive Technology agenda for computing and design." }
+    ]
+  },
+  "emotional-design/2017-media-emotional-design-in-web-interfaces.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Reviews the role of emotional factors in web-interface UX." },
+      { "v": "Aesthetic pleasure", "note": "Treats emotion as central to web user experience and performance." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Surveys how emotional design is applied to web interfaces." }
+    ]
+  },
+  "emotional-design/2017-paper-emotion-detection-a-technology-review.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Reviews emotion-detection technologies and their applications." },
+      { "v": "Affective computing", "note": "Surveys emotion detection as core to affective-computing projects." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Maps the most important aspects of detecting emotion." },
+      { "v": "Fragmented research", "note": "Consolidates emotion-detection technologies across a new discipline." }
+    ]
+  },
+  "emotional-design/2017-project-designing-products-with-added-emotional-value-development.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A research-through-design approach to add emotional value to products." },
+      { "v": "Aesthetic pleasure", "note": "Targets richer emotional responses to products like mobile phones." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Builds a theoretical framework plus a non-verbal emotion instrument." }
+    ],
+    "metrics": [
+      { "v": "Emotion scales (SAM/PAD)", "note": "Uses a non-verbal instrument to measure emotional responses." }
+    ]
+  },
+  "emotional-design/2017-rapp-developing-emotional-design-emotions-as-cognitive-processes.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Frames emotions as cognitive processes shaping interaction design." },
+      { "v": "Aesthetic pleasure", "note": "Builds on Norman's and Jordan's positive-emotion approaches." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Proposes 'applied emotional design' for interactive technologies." },
+      { "v": "Defining emotion", "note": "Treats emotions via appraisal and complex-emotion theory." }
+    ]
+  },
+  "emotional-design/2017-symposium-drivers-of-consumers-emotional-engagement-with-everyday.md": {
+    "uxEffects": [
+      { "v": "User engagement", "note": "Conceptualizes consumers' emotional engagement with everyday products." },
+      { "v": "Emotional response", "note": "Examines consumer–product interactions within the emotional-design process." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "An intensive literature review synthesizing scattered work." },
+      { "v": "Designing for emotion", "note": "Frames emotional engagement inside the emotional-design process." }
+    ]
+  },
+  "emotional-design/2018-hal-designing-user-interfaces-in-emotionally-sensitive.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Designs affective, agent-based user interfaces." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Analyses emotion and motivation to design affective UIs." },
+      { "v": "Persuasion", "note": "Plans UI features for persuasive-technology applications." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "A scenario-based method to plan emotion-aware UI features." }
+    ]
+  },
+  "emotional-design/2018-paper-paper-title-use-style-paper-title.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Centers user emotion in UX-based system development." },
+      { "v": "Usability", "note": "Treats the user as the center of the development process." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Compares two measurement methods for UX." },
+      { "v": "Designing for emotion", "note": "Builds emotional design into a development system." }
+    ]
+  },
+  "emotional-design/2018-perspectives-emotional-maps-participatory-crowdsourcing-of-citizens.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Crowdsources citizens' perceptions of their urban environment." },
+      { "v": "Emotional response", "note": "Maps citizens' emotions about places in the city." },
+      { "v": "Sense of place", "note": "Captures how urban environments are felt by residents." }
+    ],
+    "challenges": [
+      { "v": "Stakeholder collaboration", "note": "Brings public participation into the urban-planning process." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Gives citizens voice in shaping their environment after decades without it." }
+    ]
+  },
+  "emotional-design/2019-vallverdu-2019-emotional-machines-paper-pdf.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Considers giving machines emotions in the 'algorithmic society'." },
+      { "v": "Emotion recognition", "note": "Frames AI machines that process and express emotion." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Explores emotion as central to an AI-driven information society." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Societal impact of AI", "note": "Examines deep societal changes from AI and emotional machines." }
+    ]
+  },
+  "emotional-design/2019-woctine-emotional-design-the-development-of-a-process-to-envision.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A process to envision emotion-centric new product ideas." },
+      { "v": "Aesthetic pleasure", "note": "Aims for products with richer, significant emotional features." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Develops a method to generate products around specific emotions." }
+    ]
+  },
+  "emotional-design/2019-works-using-emotional-design-to-make-memories-and-enhance-using.md": {
+    "uxEffects": [
+      { "v": "Emotional attachment", "note": "Uses emotional design to forge happy memories and bonds with things." },
+      { "v": "Emotional response", "note": "Reminders of happy memories evoke positive emotion." },
+      { "v": "Well-being", "note": "Links recalled positive emotion to better well-being." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Designs products to trigger and preserve happy memories." }
+    ]
+  },
+  "emotional-design/2020-article-can-emotional-design-really-evoke-emotion-in-multimedia.md": {
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Tests emotional design's effect on learners' performance in multimedia learning." },
+      { "v": "Emotional response", "note": "Investigates whether emotional design actually evokes student emotion." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Probes which dimensions of emotional design account for any effects." },
+      { "v": "Measuring emotion", "note": "Relates emotion to retention and transfer test performance." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "Two groups compared on emotion and learning performance." }
+    ]
+  },
+  "emotional-design/2020-checa-a-review-of-immersive-virtual-reality-serious-games-to.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Reviews immersive VR serious games for learning and training." },
+      { "v": "Experiential learning", "note": "Game-based VR environments to enhance learning methodologies." },
+      { "v": "User engagement", "note": "Game-based approaches to engage learners." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Synthesizes VR serious-games work amid fast-moving hardware and software." }
+    ]
+  },
+  "emotional-design/2020-paper-neurodesign-making-decisions-and-solving-problems-through.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Collects designers' physiological and psychological data to inform design." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Combines neuroscience and design to understand the brain in design." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "An emerging 'NeuroDesign' field bridging psychology, neuroscience, and design." }
+    ],
+    "metrics": [
+      { "v": "Physiological measures", "note": "Uses physiological data collection in design research." }
+    ]
+  },
+  "emotional-design/2020-unknown-article-do-products-respond-to-user-desires-a-case-study.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Evaluates industrial products' emotional value via Norman's dimensions." },
+      { "v": "Aesthetic pleasure", "note": "Assesses how products meet user desires through emotional design." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "A methodological approach to evaluate products under Norman's framework." },
+      { "v": "Measuring user experience", "note": "Studies errors and successes in the design process via a case study." }
+    ]
+  },
+  "emotional-design/2021-geodesicas-collaborative-emotional-mapping-as-a-tool-for-urban.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Collaborative mapping of people's emotions for urban-mobility planning." },
+      { "v": "Emotional response", "note": "Collects and represents people's emotions using emojis as a language." },
+      { "v": "Sense of place", "note": "Captures the emotional experience of intermodal urban journeys." }
+    ],
+    "challenges": [
+      { "v": "Communicating intangible/sensory qualities", "note": "Uses graphic emoji symbols to express felt emotional data." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "Interviews individuals during an intermodal mobility challenge." }
+    ]
+  },
+  "emotional-design/2021-higuera-trujillo-review-the-cognitive-emotional-design-and-study-of.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Humans respond cognitively and emotionally to the built environment." },
+      { "v": "Sense of place", "note": "Studies the cognitive-emotional design of architectural space." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A scoping review of neuroarchitecture and its precursor approaches." }
+    ],
+    "metrics": [
+      { "v": "EEG / neural measures", "note": "Records neural activity during exposure to space, often with VR." }
+    ]
+  },
+  "emotional-design/2021-research-a-novel-user-emotional-interaction-design-model-using-long.md": {
+    "aiTechniques": [
+      { "v": "Deep learning", "note": "Uses LSTM networks with a self-attention mechanism for the model." },
+      { "v": "Emotion recognition", "note": "Recognizes emotion from speech signals to drive interaction design." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Aims to induce user emotional resonance in interaction design." },
+      { "v": "Personalization & adaptation", "note": "Adapts interaction to the user's recognized emotional state." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Treats emotional design as a key trend in interaction design." }
+    ]
+  },
+  "emotional-design/2021-research-research-on-the-influence-of-visual-factors-on-emotion.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Studies how visual factors relate to multi-dimensional emotions." },
+      { "v": "Well-being", "note": "Guides design of products that improve users' positive emotions." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Derives design direction for emotion-regulation products." },
+      { "v": "Measuring emotion", "note": "Extends a product-emotion measurement method for visual factors." }
+    ]
+  },
+  "emotional-design/2021-tag-making-sense-of-emotion-sensing-workshop-on-quantifying.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "A workshop on quantifying human emotions via ubiquitous sensing." },
+      { "v": "Emotion recognition", "note": "Concerns emotion detection and sensing in everyday life." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Tackles how to quantify human emotions in the wild." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Privacy", "note": "Pervasive emotion-sensing of mental health raises privacy concerns." }
+    ]
+  },
+  "emotional-design/2022-copernicus-semantic-scholar-114356271-psychology-of-objects-and-their.md": {
+    "uxEffects": [
+      { "v": "Emotional attachment", "note": "Examines the emotional connections we form with objects." },
+      { "v": "Emotional response", "note": "How an object's interface shapes our relationship with it." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Argues objects' interfaces carry emotional and cultural meaning." }
+    ]
+  },
+  "emotional-design/2022-kuhar-library-and-information-science-research.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Studies emotions, impressions, and stimulation in digital-library use." },
+      { "v": "User engagement", "note": "Assesses user experience across two digital libraries." },
+      { "v": "Satisfaction", "note": "Assesses user satisfaction with the digital-library experience." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Combines many methods to assess sparse digital-library UX." }
+    ],
+    "metrics": [
+      { "v": "Eye tracking", "note": "Includes an eye-tracking study of one digital library." },
+      { "v": "Survey responses", "note": "Uses two questionnaires across the digital libraries." }
+    ]
+  },
+  "emotional-design/2022-wadley-the-future-of-emotion-in-human-computer-interaction.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Surveys sensing, modelling, and adapting to emotion in HCI." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Reviews two decades of emotion in HCI and its possible futures." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Spans sensing, expressing, regulating, and manipulating emotion." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Emotional manipulation", "note": "Flags manipulating and regulating emotion as a future concern." }
+    ]
+  },
+  "emotional-design/2023-modeling-persuasive-strategies-and-emotional-states-towards.md": {
+    "aiTechniques": [
+      { "v": "User modeling", "note": "Models emotional state to personalize persuasive systems." }
+    ],
+    "uxEffects": [
+      { "v": "Persuasion", "note": "Designs personalized, emotion-adaptive persuasive systems." },
+      { "v": "Behaviour change", "note": "Persuasive strategies to motivate behaviour change." },
+      { "v": "Personalization & adaptation", "note": "Adapts persuasion to users' distinct emotional states and stages." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Emotional manipulation", "note": "Adapting persuasion to emotion raises manipulation concerns." }
+    ]
+  },
+  "emotional-design/2024-fg-classifying-emotional-states-through-eeg-derived.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Classifies emotional states for affective computing and HCI." },
+      { "v": "Deep learning", "note": "Classifies emotion from EEG-derived spectrogram images." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Identifies emotional state for mental-health and UX applications." }
+    ],
+    "metrics": [
+      { "v": "EEG / neural measures", "note": "Derives spectrograms from EEG signals to classify emotion." }
+    ]
+  },
+  "emotional-design/nd-radovanovic-tanja-radovanovic-emotional-design-in-digital-user.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Examines emotional design in the digital user experience." },
+      { "v": "Aesthetic pleasure", "note": "Links emotional design to successful digital product design." }
+    ],
+    "challenges": [
+      { "v": "Designing for emotion", "note": "Applies emotional design as digital products become a daily norm." }
+    ]
+  },
+  "emotional-design/nd-skaramagkas-review-of-eye-tracking-metrics-involved-in-emotional-and.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Reviews eye behaviour as a window onto emotional and cognitive state." }
+    ],
+    "challenges": [
+      { "v": "Measuring emotion", "note": "Surveys eye-tracking metrics for detecting emotion and cognition." },
+      { "v": "Fragmented research", "note": "Consolidates eye-tracking metrics for emotional and cognitive processes." }
+    ],
+    "metrics": [
+      { "v": "Eye tracking", "note": "Catalogs gaze, fixation, and pupil metrics of emotion and workload." }
+    ]
+  },
+  "emotional-design/nd-unknown-1-fear-emotion-and-science.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Computers beginning to express, recognize, and 'have' emotions." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Argues emotion is essential to human cognition and perception." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Examines the role and nature of emotion for affective computers." }
+    ]
+  },
+  "emotional-design/nd-unknown-2003-unknown-keltnerhaidt2003approaching-awepub028.md": {
+    "uxEffects": [
+      { "v": "Emotional response", "note": "A prototype approach to awe as a distinct emotion." }
+    ],
+    "challenges": [
+      { "v": "Defining emotion", "note": "Defines awe via perceived vastness and a need for accommodation." }
     ]
   }
 }
