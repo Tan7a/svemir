@@ -44,6 +44,12 @@ export type ExtractOptions = {
 
 const WORD_MIN_LEN = 3;
 
+// A block's title + description are curated and far more topical than its scraped
+// body (which carries nav chrome, captions, boilerplate). Counting head terms
+// this many times over makes genuinely on-topic terms win the top-N, instead of
+// whatever recurs most in the page body.
+const HEAD_WEIGHT = 3;
+
 /**
  * Conservative singularization for the dedup key. Deliberately NOT a Porter
  * stemmer — we want human-readable concepts, so we only fold obvious plurals
@@ -73,27 +79,18 @@ function canonicalize(phrase: string): string {
   return phrase.split(" ").map(singularizeWord).join(" ");
 }
 
-export function extractTerms(
-  doc: RawTermDoc,
-  opts: ExtractOptions = {}
-): ExtractedTerm[] {
-  const maxTerms = opts.maxTerms ?? 12;
-  const maxNgram = opts.maxNgram ?? 3;
-  const bodyLimit = opts.bodyCharLimit ?? 20000;
-
-  const body = (doc.body_text ?? "").slice(0, bodyLimit);
-  const raw = `${doc.title ?? ""}. ${doc.description ?? ""}. ${body}`;
-
-  // Lowercase; keep letters, digits, spaces and intra-word hyphens. Any other
-  // character becomes a hard phrase boundary (marked with a lone "|").
+/**
+ * Tokenize one text segment into RAKE-style phrase runs. Lowercases; keeps
+ * letters, digits, spaces and intra-word hyphens; every other character (and
+ * every stopword, too-short word, or pure number) ends the current run.
+ */
+function toPhrases(raw: string): { phrases: string[][]; tokenCount: number } {
   const normalized = raw
     .toLowerCase()
     .replace(/[^a-z0-9\s-]+/g, " | ")
     .replace(/\s+/g, " ")
     .trim();
 
-  // Walk the tokens, accumulating runs of meaningful words. A stopword,
-  // boundary marker, too-short word, or pure number ends the current run.
   const tokens = normalized.split(" ");
   const phrases: string[][] = [];
   let current: string[] = [];
@@ -123,29 +120,47 @@ export function extractTerms(
     tokenCount++;
   }
   flush();
+  return { phrases, tokenCount };
+}
 
-  // Emit unigrams + n-grams from every run, counting occurrences.
+export function extractTerms(
+  doc: RawTermDoc,
+  opts: ExtractOptions = {}
+): ExtractedTerm[] {
+  const maxTerms = opts.maxTerms ?? 12;
+  const maxNgram = opts.maxNgram ?? 3;
+  const bodyLimit = opts.bodyCharLimit ?? 20000;
+
+  // Head (title + description) and body are tokenized separately so head terms
+  // can be counted HEAD_WEIGHT times over — the core of the on-topic fix.
+  const head = toPhrases(`${doc.title ?? ""}. ${doc.description ?? ""}`);
+  const body = toPhrases((doc.body_text ?? "").slice(0, bodyLimit));
+
+  // Emit unigrams + n-grams from every run, counting (weighted) occurrences.
   const counts = new Map<string, { count: number; ngram: 1 | 2 | 3 }>();
-  const bump = (parts: string[], n: 1 | 2 | 3) => {
+  const bump = (parts: string[], n: 1 | 2 | 3, weight: number) => {
     const term = parts.join(" ");
     const ex = counts.get(term);
-    if (ex) ex.count++;
-    else counts.set(term, { count: 1, ngram: n });
+    if (ex) ex.count += weight;
+    else counts.set(term, { count: weight, ngram: n });
   };
-
-  for (const phrase of phrases) {
-    for (let i = 0; i < phrase.length; i++) {
-      bump([phrase[i]], 1);
-      if (maxNgram >= 2 && i + 1 < phrase.length) {
-        bump([phrase[i], phrase[i + 1]], 2);
-      }
-      if (maxNgram >= 3 && i + 2 < phrase.length) {
-        bump([phrase[i], phrase[i + 1], phrase[i + 2]], 3);
+  const emit = (phrases: string[][], weight: number) => {
+    for (const phrase of phrases) {
+      for (let i = 0; i < phrase.length; i++) {
+        bump([phrase[i]], 1, weight);
+        if (maxNgram >= 2 && i + 1 < phrase.length) {
+          bump([phrase[i], phrase[i + 1]], 2, weight);
+        }
+        if (maxNgram >= 3 && i + 2 < phrase.length) {
+          bump([phrase[i], phrase[i + 1], phrase[i + 2]], 3, weight);
+        }
       }
     }
-  }
+  };
+  emit(head.phrases, HEAD_WEIGHT);
+  emit(body.phrases, 1);
 
-  const denom = Math.max(tokenCount, 1);
+  const denom = Math.max(head.tokenCount * HEAD_WEIGHT + body.tokenCount, 1);
 
   // Fold surface variants that share a dedup key (graph + graphs), keeping the
   // most frequent surface form as the display term.

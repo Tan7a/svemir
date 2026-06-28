@@ -34,50 +34,21 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   return res.blob();
 }
 
-// Hard cap on capture height — extremely tall pages would otherwise exhaust
-// memory or hit CDP image limits.
-const MAX_CAPTURE_HEIGHT = 30000;
-
 /**
- * Capture the FULL page (entire scroll height) via the Chrome debugger
- * protocol. Page.captureScreenshot with captureBeyondViewport renders the whole
- * document in one clean image — no scroll-and-stitch seams. Requires the
- * "debugger" permission, so Chrome shows a "being debugged" banner while it
- * runs. Always detaches. Returns a JPEG data URL, or null on failure.
+ * Capture the visible viewport (above-the-fold) of a tab as a JPEG data URL.
+ * Uses chrome.tabs.captureVisibleTab — no "debugger" permission, no banner — and
+ * is a fallback only: we prefer the page's own og:image when it has one. A clean
+ * viewport shot crops to the square card far better than a tall full-page image.
  */
-async function captureFullPage(tabId: number): Promise<string | null> {
-  const target = { tabId };
-  await chrome.debugger.attach(target, "1.3");
+async function captureViewport(windowId: number): Promise<string | null> {
   try {
-    await chrome.debugger.sendCommand(target, "Page.enable");
-    const metrics = (await chrome.debugger.sendCommand(
-      target,
-      "Page.getLayoutMetrics"
-    )) as {
-      cssContentSize?: { width: number; height: number };
-      contentSize?: { width: number; height: number };
-    };
-    const size = metrics.cssContentSize ?? metrics.contentSize;
-    if (!size) return null;
-    const width = Math.ceil(size.width);
-    const height = Math.min(Math.ceil(size.height), MAX_CAPTURE_HEIGHT);
-    const shot = (await chrome.debugger.sendCommand(
-      target,
-      "Page.captureScreenshot",
-      {
-        format: "jpeg",
-        quality: 80,
-        captureBeyondViewport: true,
-        clip: { x: 0, y: 0, width, height, scale: 1 },
-      }
-    )) as { data?: string };
-    return shot?.data ? `data:image/jpeg;base64,${shot.data}` : null;
-  } finally {
-    try {
-      await chrome.debugger.detach(target);
-    } catch {
-      /* tab closed / already detached */
-    }
+    return await chrome.tabs.captureVisibleTab(windowId, {
+      format: "jpeg",
+      quality: 80,
+    });
+  } catch (e) {
+    console.warn("svemir viewport capture failed:", e);
+    return null;
   }
 }
 
@@ -160,22 +131,24 @@ export default function App() {
       // in the background and updates image_url when it lands.
       setPhase({ kind: "ready" });
 
-      // Capture the FULL page (entire scroll height) as the block's image.
-      // Overrides any OG image. Best-effort: failures keep the extracted (OG)
-      // image_url as fallback. Runs without blocking the picker so the user can
-      // pick channels while the capture + upload race in the background.
-      try {
-        setSnapshotting(true);
-        const dataUrl = await captureFullPage(tab.id);
-        if (dataUrl) {
-          const blob = await dataUrlToBlob(dataUrl);
-          const { url } = await uploadImage(s, blob, "page.jpg");
-          setAsset((prev) => (prev ? { ...prev, image_url: url } : prev));
+      // Cover image: prefer the page's own preview (og:image / host image),
+      // which the extractor already pulled — that's what Are.na/Notion show. Only
+      // when the page has none do we fall back to a clean viewport screenshot,
+      // uploaded in the background so the picker stays interactive.
+      if (!extracted.image_url) {
+        try {
+          setSnapshotting(true);
+          const dataUrl = await captureViewport(tab.windowId);
+          if (dataUrl) {
+            const blob = await dataUrlToBlob(dataUrl);
+            const { url } = await uploadImage(s, blob, "preview.jpg");
+            setAsset((prev) => (prev ? { ...prev, image_url: url } : prev));
+          }
+        } catch (e) {
+          console.warn("svemir preview capture failed:", e);
+        } finally {
+          setSnapshotting(false);
         }
-      } catch (e) {
-        console.warn("svemir snapshot failed:", e);
-      } finally {
-        setSnapshotting(false);
       }
     })();
   }, []);
@@ -318,7 +291,7 @@ export default function App() {
         {snapshotting && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-neutral-500">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400" />
-            Capturing full page…
+            Capturing preview…
           </div>
         )}
 

@@ -30,6 +30,16 @@ export const STOPWORDS = new Set<string>([
   "view", "views", "image", "images", "full", "size", "press", "enter",
   "scroll", "load", "loading", "clicking", "close", "copy", "download",
   "upload", "button", "tab", "tabs", "toggle", "sign", "login", "signup",
+  // social / app navigation chrome (X, Instagram, Medium, SaaS marketing, …).
+  // Deliberately excludes design-vocabulary words (product, features, …) so
+  // topical phrases like "product design" survive.
+  "explore", "notifications", "notification", "messages", "message", "chat",
+  "grok", "bookmarks", "bookmark", "premium", "profile", "following",
+  "followers", "follow", "feed", "trending", "trends", "happening", "relevant",
+  "reply", "replies", "repost", "retweet", "likes", "settings", "account",
+  "logout", "join", "verified", "show", "showing", "see", "trial", "pricing",
+  "started", "contact", "support", "help", "docs", "careers", "resources",
+  "back", "next", "previous", "skip", "continue",
   // filler, determiners, vague nouns and time words
   "every", "one", "two", "three", "ago", "year", "years", "day", "days",
   "week", "weeks", "month", "months", "time", "times", "thing", "things",

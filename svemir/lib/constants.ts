@@ -76,6 +76,36 @@ export function colorForTag(id: string): { bg: string; text: string } {
 }
 
 /**
+ * Curated raw-hex palette for the knowledge graph canvas (where Tailwind classes
+ * can't reach). Muted-but-distinct tones tuned to read well on a near-black
+ * background — each channel gets one stable colour so its cluster is legible at a
+ * glance, Obsidian-style, instead of a per-id rainbow.
+ */
+export const GRAPH_CHANNEL_PALETTE = [
+  "#7aa2f7", // blue
+  "#7dcfff", // cyan
+  "#9ece6a", // green
+  "#e0af68", // amber
+  "#f7768e", // rose
+  "#bb9af7", // purple
+  "#2ac3de", // teal
+  "#ff9e64", // orange
+  "#73daca", // mint
+  "#d291e4", // magenta
+  "#e5c07b", // gold
+  "#c0caf5", // lavender
+] as const;
+
+/** Deterministic graph colour for a channel id (same hash scheme as colorForTag). */
+export function channelColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  return GRAPH_CHANNEL_PALETTE[Math.abs(hash) % GRAPH_CHANNEL_PALETTE.length];
+}
+
+/**
  * Deterministic hue (0–359) from any id string. Same id → same hue every time,
  * so a concept/channel keeps its colour across renders. Shared by the knowledge
  * graph (concept colours) and the idea-garden (per-channel plant tint).

@@ -9,11 +9,20 @@ import {
   deleteChannel,
   renameChannel,
 } from "@/app/admin/actions";
+import ChannelInfoModal from "./ChannelInfoModal";
 
 type Props = {
   channelId: string;
   channelTitle: string;
   hasParent: boolean;
+  /** When provided, a "Channel info" item opens a detail popup. */
+  info?: {
+    description: string | null;
+    blockCount: number;
+    createdAt: string;
+    lastUpdated: string | null;
+    topics: string[];
+  };
 };
 
 const stroke = {
@@ -63,14 +72,25 @@ function IconPencil() {
     </svg>
   );
 }
+function IconInfo() {
+  return (
+    <svg {...stroke}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </svg>
+  );
+}
 
 export default function ChannelActions({
   channelId,
   channelTitle,
   hasParent,
+  info,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(channelTitle);
@@ -219,7 +239,7 @@ export default function ChannelActions({
         <span aria-hidden className="text-lg leading-none">⋯</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-64 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl shadow-black/60">
+        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-max min-w-[11rem] max-w-xs overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl shadow-black/60">
           {renaming ? (
             <div className="p-1.5">
               <p className="mb-2 text-[10px] uppercase tracking-wide text-neutral-500">
@@ -268,6 +288,16 @@ export default function ChannelActions({
                   label="Remove from parent"
                   onClick={detach}
                   disabled={busy}
+                />
+              )}
+              {info && (
+                <MenuItem
+                  icon={<IconInfo />}
+                  label="Channel info"
+                  onClick={() => {
+                    setInfoOpen(true);
+                    setOpen(false);
+                  }}
                 />
               )}
               <div className="my-1 border-t border-neutral-800" />
@@ -328,6 +358,18 @@ export default function ChannelActions({
             <p className="px-3 py-2 text-xs text-red-400">{error}</p>
           )}
         </div>
+      )}
+      {info && (
+        <ChannelInfoModal
+          open={infoOpen}
+          onClose={() => setInfoOpen(false)}
+          title={channelTitle}
+          description={info.description}
+          blockCount={info.blockCount}
+          createdAt={info.createdAt}
+          lastUpdated={info.lastUpdated}
+          topics={info.topics}
+        />
       )}
     </div>
   );

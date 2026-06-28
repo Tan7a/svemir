@@ -13,6 +13,6 @@ export default defineManifest({
     service_worker: "src/background/service-worker.ts",
     type: "module",
   },
-  permissions: ["storage", "contextMenus", "activeTab", "scripting", "debugger"],
+  permissions: ["storage", "contextMenus", "activeTab", "scripting"],
   host_permissions: ["https://svemir.space/*", "http://localhost:3000/*"],
 });

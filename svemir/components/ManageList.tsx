@@ -10,6 +10,7 @@ import {
   backfillBlockConcepts,
   bulkDeleteItems,
   deleteItem,
+  refetchScreenshotCovers,
   scrapeAndUpdateItem,
   scrapeMissingMetadata,
   updateItemChannelsAndCategories,
@@ -42,6 +43,12 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
   const [indexing, setIndexing] = useState(false);
   const [indexProgress, setIndexProgress] = useState<{
     processed: number;
+    failed: number;
+    remaining: number | null;
+  } | null>(null);
+  const [refetching, setRefetching] = useState(false);
+  const [refetchProgress, setRefetchProgress] = useState<{
+    scraped: number;
     failed: number;
     remaining: number | null;
   } | null>(null);
@@ -187,6 +194,43 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     router.refresh();
   }
 
+  async function handleRefetchCovers() {
+    if (
+      !confirm(
+        "Replace old auto-captured screenshots with each page's own preview image (og:image)? This re-scrapes every link block that still has a screenshot cover and may take a few minutes."
+      )
+    )
+      return;
+    setRefetching(true);
+    setRefetchProgress({ scraped: 0, failed: 0, remaining: null });
+    setError(null);
+
+    let cursor: string | undefined;
+    let totalScraped = 0;
+    let totalFailed = 0;
+    const MAX_BATCHES = 200;
+
+    for (let i = 0; i < MAX_BATCHES; i++) {
+      const r = await refetchScreenshotCovers(8, cursor);
+      if (!r.success) {
+        setError(r.error);
+        break;
+      }
+      totalScraped += r.scraped;
+      totalFailed += r.failed;
+      setRefetchProgress({
+        scraped: totalScraped,
+        failed: totalFailed,
+        remaining: r.remaining,
+      });
+      if (!r.lastId || r.remaining === 0) break;
+      cursor = r.lastId;
+    }
+
+    setRefetching(false);
+    router.refresh();
+  }
+
   async function handleExtractConcepts(force = false) {
     const message = force
       ? "Re-extract concepts for EVERY block? Use this after tuning — it rebuilds all concepts from scratch (locally, no AI) and may take a few minutes."
@@ -298,7 +342,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         <button
           type="button"
           onClick={handleScrapeMissing}
-          disabled={scraping || backfilling}
+          disabled={scraping || backfilling || refetching}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
           title="Fetch missing image/description for up to 10 items on this page"
         >
@@ -307,7 +351,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         <button
           type="button"
           onClick={handleBackfillAll}
-          disabled={scraping || backfilling || indexing}
+          disabled={scraping || backfilling || indexing || refetching}
           className="rounded-md border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 hover:bg-white disabled:opacity-50"
           title="Scrape image/description for ALL items in the archive that are missing them"
         >
@@ -321,8 +365,23 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         </button>
         <button
           type="button"
+          onClick={handleRefetchCovers}
+          disabled={scraping || backfilling || indexing || refetching}
+          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
+          title="Replace old screenshot covers with each page's own og:image"
+        >
+          {refetching
+            ? `Re-fetching… ${refetchProgress?.scraped ?? 0} done${
+                refetchProgress?.remaining != null
+                  ? ` · ${refetchProgress.remaining} left`
+                  : ""
+              }`
+            : "Re-fetch covers"}
+        </button>
+        <button
+          type="button"
           onClick={() => handleExtractConcepts(false)}
-          disabled={scraping || backfilling || indexing}
+          disabled={scraping || backfilling || indexing || refetching}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
           title="Extract concepts/terms (locally, no AI) for every block not yet indexed"
         >
@@ -337,7 +396,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         <button
           type="button"
           onClick={() => handleExtractConcepts(true)}
-          disabled={scraping || backfilling || indexing}
+          disabled={scraping || backfilling || indexing || refetching}
           className="text-sm text-neutral-500 hover:text-neutral-200 disabled:opacity-50"
           title="Rebuild concepts for every block (use after tuning extraction)"
         >
@@ -348,6 +407,13 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
         <p className="text-xs text-neutral-500">
           Backfill complete · {backfillProgress.scraped} scraped ·{" "}
           {backfillProgress.failed} failed
+        </p>
+      )}
+      {refetchProgress && !refetching && (
+        <p className="text-xs text-neutral-500">
+          {refetchProgress.scraped === 0 && refetchProgress.failed === 0
+            ? "No screenshot covers to replace — nothing to do."
+            : `Cover re-fetch complete · ${refetchProgress.scraped} replaced · ${refetchProgress.failed} skipped`}
         </p>
       )}
       {indexProgress && !indexing && (

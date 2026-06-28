@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import { forceCollide, forceX, forceY } from "d3-force-3d";
-import { hueFromId } from "@/lib/constants";
+import { channelColor } from "@/lib/constants";
 
 // react-force-graph-2d's TypeScript generics don't survive next/dynamic, so
 // we treat it as a permissive component and rely on our own GraphNode/GraphLink
@@ -56,17 +56,15 @@ type GraphNode = {
   id: string;
   name: string;
   category: string | null;
-  tags: string[];
+  tags: string[]; // channel names (for the detail card / tooltip)
+  tagIds: string[]; // channel ids (for stable colour)
   type: NodeKind;
+  color: string;
   slug?: string;
   prevalence?: number;
-  hue?: number; // concept nodes only
-  // Link degree (centrality) — orders the local hub within each channel cluster.
+  // Link degree (centrality) — drives node size, Obsidian-style.
   deg?: number;
 };
-
-// 2D golden angle — even, non-overlapping phyllotaxis fill for cluster targets.
-const GOLDEN_2D = Math.PI * (3 - Math.sqrt(5));
 
 type GraphLink = {
   source: string;
@@ -74,24 +72,29 @@ type GraphLink = {
   value: number;
   manual: boolean;
   kind: LinkKind;
-  hue?: number; // concept links: the colour of the concept they lead to
 };
 
-const LABEL_ZOOM_THRESHOLD = 1.2;
-
-// Blocks render as pale "tips"; concepts glow in their own colour.
-const BLOCK_HEX = "#e8e8ea";
-const CONCEPT_HEX = "#f59e0b"; // fallback only
+// Obsidian-ish layers: channel-less blocks are a neutral grey, concepts share a
+// single warm accent so they read as a distinct layer over the channel colours.
+const BLOCK_NEUTRAL = "#8b8b9a";
+const CONCEPT_COLOR = "#e8b563";
+const CONCEPT_HEX = "#f59e0b"; // detail-card accent
 
 const conceptNodeId = (id: string) => `concept:${id}`;
 
-// World-space radius of a node's dot. Concept hubs scale with prevalence. Shared
-// by the painter, the click hit-area, and the collision force so spacing matches
-// what's drawn.
-function nodeRadius(node: { type: NodeKind; prevalence?: number }): number {
-  return node.type === "concept"
-    ? 3 + Math.sqrt(node.prevalence ?? 1) * 1.3
-    : 2.2;
+// Normalise a link endpoint to its id — force-graph mutates source/target from
+// id strings into node objects once the simulation runs.
+function linkEndId(end: unknown): string {
+  return typeof end === "object" && end !== null
+    ? String((end as { id: string }).id)
+    : String(end);
+}
+
+// World-space radius of a node's dot — scales with its link count (degree), so
+// well-connected hubs read bigger. Shared by the painter, the click hit-area,
+// and the collision force so spacing matches what's drawn.
+function nodeRadius(node: { deg?: number }): number {
+  return 2 + Math.sqrt(node.deg ?? 0) * 0.9;
 }
 
 export default function KnowledgeGraph({
@@ -115,6 +118,8 @@ export default function KnowledgeGraph({
     zoomToFit?: (ms?: number, padding?: number) => void;
   } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  // The node the cursor is over — drives Obsidian-style neighbour highlighting.
+  const [hoverId, setHoverId] = useState<string | null>(null);
   // The node whose detail card is open, plus where (within the container) to
   // anchor the card. Cleared by clicking empty space.
   const [selected, setSelected] = useState<{
@@ -134,10 +139,10 @@ export default function KnowledgeGraph({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // The graph is concept-driven: blocks cluster around the concepts they share.
-  // Blocks → concept hubs (faint amber), plus manual block↔block edges (bold,
-  // the curatorial gesture). A block with no recurring concept simply floats on
-  // its own until it shares one.
+  // The graph is concept-driven: blocks link to the concept hubs they share,
+  // plus manual block↔block edges (the curatorial gesture). Blocks are coloured
+  // by their primary channel so clusters are legible; concepts share one accent.
+  // A block with no recurring concept simply floats until it shares one.
   const data = useMemo<{ nodes: GraphNode[]; links: GraphLink[] }>(() => {
     const validIds = new Set(items.map((i) => i.id));
     const byKey = new Map<string, GraphLink>();
@@ -147,7 +152,9 @@ export default function KnowledgeGraph({
       name: i.title,
       category: i.category,
       tags: i.tagNames,
+      tagIds: i.tagIds,
       type: "block",
+      color: i.tagIds[0] ? channelColor(i.tagIds[0]) : BLOCK_NEUTRAL,
     }));
 
     for (const c of concepts) {
@@ -156,10 +163,11 @@ export default function KnowledgeGraph({
         name: c.term,
         category: null,
         tags: [],
+        tagIds: [],
         type: "concept",
+        color: CONCEPT_COLOR,
         slug: c.slug,
         prevalence: c.blockCount,
-        hue: hueFromId(c.id),
       });
     }
 
@@ -172,7 +180,6 @@ export default function KnowledgeGraph({
         value: 1,
         manual: false,
         kind: "concept",
-        hue: hueFromId(l.conceptId),
       });
     }
 
@@ -191,8 +198,7 @@ export default function KnowledgeGraph({
 
     const links = Array.from(byKey.values());
 
-    // Degree centrality — how many edges each node has. Drives which node becomes
-    // the hub in the Centralized / Decentralized layouts.
+    // Degree centrality — how many edges each node has. Drives node size.
     const deg = new Map<string, number>();
     for (const l of links) {
       deg.set(l.source, (deg.get(l.source) ?? 0) + 1);
@@ -202,6 +208,21 @@ export default function KnowledgeGraph({
 
     return { nodes, links };
   }, [items, concepts, blockConceptLinks, manualEdges]);
+
+  // Adjacency for hover highlighting: id → set of directly-linked ids. Built from
+  // the raw link endpoints (ids), so it survives the simulation mutating them.
+  const neighbors = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const l of data.links) {
+      const s = linkEndId(l.source);
+      const t = linkEndId(l.target);
+      if (!m.has(s)) m.set(s, new Set());
+      if (!m.has(t)) m.set(t, new Set());
+      m.get(s)!.add(t);
+      m.get(t)!.add(s);
+    }
+    return m;
+  }, [data]);
 
   // Cross-reference maps for the click card: which concepts a block mentions,
   // and which blocks mention a concept.
@@ -222,89 +243,32 @@ export default function KnowledgeGraph({
     return { blockToConcepts: b2c, conceptToBlocks: c2b };
   }, [items, concepts, blockConceptLinks]);
 
-  // Information-architecture map: cluster blocks by their channel so groupings
-  // are visible at a glance, while the link force still pulls connected nodes
-  // together. Concepts settle at the centroid of the blocks that mention them,
-  // so a shared concept visibly bridges its clusters. Each node gets a target
-  // (tx,ty); forceX/forceY ease it there, collision prevents overlap.
+  // Neo4j-style "magnet": strong, short links pull connected nodes into tight
+  // clusters, while only mild repulsion keeps them from overlapping and light
+  // gravity holds the whole map together. The previous strong-repulsion /
+  // weak-link mix strung everything out — this flips that ratio so groups clump.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || size.w === 0) return;
 
-    const nodes = data.nodes;
-    // Layout targets live in a side map (keyed by node id) rather than being
-    // written onto the memoized node objects — the force accessors read from it.
-    const targets = new Map<string, { x: number; y: number }>();
-
-    // One cluster per channel on a ring; each cluster's best-connected block
-    // anchors its local hub. Blocks with no channel share a "·none" group.
-    const groups = new Map<string, GraphNode[]>();
-    for (const n of nodes) {
-      if (n.type !== "block") continue;
-      const key = n.tags[0] ?? "·none";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(n);
-    }
-    const keys = [...groups.keys()];
-    const ring = Math.max(70, keys.length * 18);
-    keys.forEach((k, gi) => {
-      const ga = (gi / Math.max(1, keys.length)) * Math.PI * 2;
-      const cx = Math.cos(ga) * ring;
-      const cy = Math.sin(ga) * ring;
-      const arr = groups.get(k)!.sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0));
-      arr.forEach((n, rank) => {
-        if (rank === 0) {
-          targets.set(n.id, { x: cx, y: cy });
-          return;
-        }
-        const r = 14 * Math.sqrt(rank);
-        const a = rank * GOLDEN_2D;
-        targets.set(n.id, { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
-      });
-    });
-    // Concepts settle at the centroid of the blocks that mention them.
-    const conceptBlocks = new Map<string, string[]>();
-    for (const l of blockConceptLinks) {
-      const cn = conceptNodeId(l.conceptId);
-      if (!conceptBlocks.has(cn)) conceptBlocks.set(cn, []);
-      conceptBlocks.get(cn)!.push(l.blockId);
-    }
-    for (const n of nodes) {
-      if (n.type !== "concept") continue;
-      let sx = 0;
-      let sy = 0;
-      let c = 0;
-      for (const bid of conceptBlocks.get(n.id) ?? []) {
-        const t = targets.get(bid);
-        if (t) {
-          sx += t.x;
-          sy += t.y;
-          c++;
-        }
-      }
-      targets.set(n.id, { x: c > 0 ? sx / c : 0, y: c > 0 ? sy / c : 0 });
-    }
-
-    // Let connections matter (linked nodes draw together) while the cluster
-    // targets keep each channel's blocks grouped. Collision avoids overlap.
     const charge = fg.d3Force("charge");
     if (charge?.strength) charge.strength(-40);
     const link = fg.d3Force("link");
-    if (link?.distance) link.distance(30);
-    if (link?.strength) link.strength(0.12);
+    if (link?.distance) link.distance(22);
+    if (link?.strength) link.strength(0.6);
     fg.d3Force(
       "collide",
       forceCollide()
-        .radius((n: { type: NodeKind; prevalence?: number }) => nodeRadius(n) + 3)
-        .strength(0.9)
+        .radius((n: { deg?: number }) => nodeRadius(n) + 4)
+        .strength(1)
     );
-    fg.d3Force("x", forceX((n: GraphNode) => targets.get(n.id)?.x ?? 0).strength(0.3));
-    fg.d3Force("y", forceY((n: GraphNode) => targets.get(n.id)?.y ?? 0).strength(0.3));
+    fg.d3Force("x", forceX(0).strength(0.06));
+    fg.d3Force("y", forceY(0).strength(0.06));
 
     fg.d3ReheatSimulation?.();
     const t = setTimeout(() => fg.zoomToFit?.(600, 70), 1400);
     return () => clearTimeout(t);
-  }, [data, size.w, blockConceptLinks]);
+  }, [data, size.w]);
 
   return (
     <div ref={containerRef} className="relative h-[calc(100vh-3rem)] w-full">
@@ -317,7 +281,7 @@ export default function KnowledgeGraph({
           graphData={data}
           width={size.w}
           height={size.h}
-          backgroundColor="#060606"
+          backgroundColor="#101014"
           minZoom={0.2}
           maxZoom={8}
           warmupTicks={20}
@@ -336,37 +300,38 @@ export default function KnowledgeGraph({
             n.fx = n.x;
             n.fy = n.y;
           }}
-          nodeLabel={(raw: unknown) => {
-            const node = raw as GraphNode;
-            if (node.type === "concept") {
-              const c = `hsl(${node.hue ?? 40},85%,66%)`;
-              return `<div style="background:#111;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:280px;line-height:1.4"><div style="font-weight:600;color:${c}">${escapeHtml(node.name)}</div><div style="opacity:.7;font-size:11px">${node.prevalence ?? 0} block${node.prevalence === 1 ? "" : "s"}</div></div>`;
-            }
-            const tagsToShow = node.tags.slice(0, 12);
-            return `<div style="background:#111;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:280px;line-height:1.4"><div style="font-weight:600;margin-bottom:4px">${escapeHtml(node.name)}</div>${tagsToShow.length > 0 ? `<div style="opacity:.7;font-size:11px">${tagsToShow.map((t) => "#" + escapeHtml(t)).join(" ")}${node.tags.length > tagsToShow.length ? " …" : ""}</div>` : ""}</div>`;
+          onNodeHover={(raw: unknown) => {
+            const n = raw as GraphNode | null;
+            setHoverId(n ? n.id : null);
           }}
           linkColor={(raw: unknown) => {
             const l = raw as GraphLink;
-            if (l.kind === "manual") return "rgba(232,232,232,0.5)";
-            return `hsla(${l.hue ?? 40}, 80%, 62%, 0.4)`;
+            if (hoverId) {
+              const touches =
+                linkEndId(l.source) === hoverId ||
+                linkEndId(l.target) === hoverId;
+              if (!touches) return "rgba(255,255,255,0.025)";
+              return l.kind === "manual"
+                ? "rgba(255,255,255,0.55)"
+                : "rgba(255,255,255,0.32)";
+            }
+            return l.kind === "manual"
+              ? "rgba(255,255,255,0.3)"
+              : "rgba(255,255,255,0.14)";
           }}
           linkWidth={(raw: unknown) => {
             const l = raw as GraphLink;
-            return l.kind === "manual" ? 1.6 : 0.7;
+            const base = l.kind === "manual" ? 1.2 : 0.6;
+            if (
+              hoverId &&
+              (linkEndId(l.source) === hoverId ||
+                linkEndId(l.target) === hoverId)
+            ) {
+              return base + 0.8;
+            }
+            return base;
           }}
-          linkCurvature={(raw: unknown) => {
-            // Curved fibres read as organic / axon-like rather than wiry.
-            const l = raw as GraphLink;
-            return l.kind === "manual" ? 0.12 : 0.3;
-          }}
-          linkDirectionalParticles={(raw: unknown) =>
-            (raw as GraphLink).kind === "concept" ? 2 : 0
-          }
-          linkDirectionalParticleWidth={1.4}
-          linkDirectionalParticleSpeed={0.004}
-          linkDirectionalParticleColor={(raw: unknown) =>
-            `hsla(${(raw as GraphLink).hue ?? 40}, 90%, 70%, 0.9)`
-          }
+          linkCurvature={0}
           onNodeClick={(raw: unknown, event: unknown) => {
             const node = raw as GraphNode;
             const ev = event as MouseEvent;
@@ -389,33 +354,54 @@ export default function KnowledgeGraph({
             const isConcept = node.type === "concept";
             const r = nodeRadius(node);
 
-            // Flat dot — no glow. Concepts in their own colour, blocks pale.
+            // Hover dimming: when a node is hovered, fade everything that isn't
+            // it or one of its direct neighbours.
+            const dim =
+              hoverId !== null &&
+              node.id !== hoverId &&
+              !neighbors.get(hoverId)?.has(node.id);
+            ctx.globalAlpha = dim ? 0.12 : 1;
+
+            // Flat dot — no glow. Blocks in their channel colour, concepts amber.
             ctx.beginPath();
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-            ctx.fillStyle = isConcept ? `hsl(${node.hue ?? 40},80%,62%)` : BLOCK_HEX;
+            ctx.fillStyle = node.color;
             ctx.fill();
 
-            // Labels at a constant ON-SCREEN size (divide the world font by the
-            // zoom), so names stay readable when zoomed out instead of shrinking.
-            // Concepts are always labelled; block labels appear once somewhat
-            // zoomed in, to avoid a wall of overlapping text.
-            const showLabel = isConcept || globalScale >= LABEL_ZOOM_THRESHOLD;
-            if (showLabel) {
-              const fontSize = (isConcept ? 9 : 7.5) / globalScale;
-              ctx.font = `${
-                isConcept ? "600 " : ""
-              }${fontSize}px Inter, system-ui, sans-serif`;
-              ctx.fillStyle = isConcept
-                ? `hsl(${node.hue ?? 40},80%,72%)`
-                : "#cfcfd2";
-              ctx.textAlign = "center";
-              ctx.textBaseline = "top";
-              const label =
-                node.name.length > 36
-                  ? node.name.slice(0, 34) + "…"
-                  : node.name;
-              ctx.fillText(label, node.x, node.y + r + 2 / globalScale);
+            // Labels are white and fade in gradually as you zoom — opacity ramps
+            // from 0 to 1 across a per-type zoom window (concepts appear earlier
+            // than blocks). Font is kept at a constant on-screen size (world font
+            // ÷ zoom). A hovered node and its neighbours are always fully legible.
+            const highlighted = hoverId !== null && !dim;
+            if (!dim) {
+              const fadeStart = isConcept ? 0.4 : 1.1;
+              const fadeEnd = isConcept ? 1.1 : 2.0;
+              const alpha = highlighted
+                ? 1
+                : Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      (globalScale - fadeStart) / (fadeEnd - fadeStart)
+                    )
+                  );
+              if (alpha > 0.02) {
+                const fontSize = (isConcept ? 9 : 7.5) / globalScale;
+                ctx.font = `${
+                  isConcept ? "600 " : ""
+                }${fontSize}px Inter, system-ui, sans-serif`;
+                ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                const label =
+                  node.name.length > 36
+                    ? node.name.slice(0, 34) + "…"
+                    : node.name;
+                ctx.fillText(label, node.x, node.y + r + 2 / globalScale);
+              }
             }
+
+            ctx.globalAlpha = 1;
           }}
           nodePointerAreaPaint={(
             raw: unknown,
@@ -567,12 +553,4 @@ export default function KnowledgeGraph({
         })()}
     </div>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

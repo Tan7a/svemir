@@ -42,7 +42,7 @@ export default function BlockCard({ block }: Props) {
       // Soft client-side navigation triggers the @modal interceptor; a
       // shareable / refreshable full-page URL still works for direct nav.
     >
-      <div className="relative aspect-square w-full overflow-hidden border border-neutral-800 bg-neutral-900 transition-colors duration-300 group-hover:border-neutral-600">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 transition-colors duration-300 group-hover:border-white">
         {block.image_url ? (
           <Image
             src={block.image_url}

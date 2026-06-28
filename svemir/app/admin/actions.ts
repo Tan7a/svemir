@@ -647,6 +647,107 @@ export async function scrapeMissingMetadata(
 }
 
 /**
+ * Backfill: replace old auto-captured screenshots with the page's own og:image.
+ * Targets only blocks whose image_url points at our own Supabase "screenshots"
+ * bucket (a past capture) AND that have a source url to re-scrape — never
+ * external og covers or user-uploaded images. Keyset-paginates by id like
+ * scrapeMissingMetadata; the client calls it repeatedly until remaining is 0.
+ */
+const SCREENSHOT_URL_MATCH = "%/object/public/screenshots/%";
+
+export async function refetchScreenshotCovers(
+  limit: number = 8,
+  cursorId?: string
+): Promise<
+  | {
+      success: true;
+      scraped: number;
+      failed: number;
+      lastId: string | null;
+      remaining: number;
+    }
+  | { success: false; error: string }
+> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+
+  let query = client
+    .from("items")
+    .select("id, url")
+    .like("image_url", SCREENSHOT_URL_MATCH)
+    .not("url", "is", null)
+    .neq("url", "")
+    .order("id")
+    .limit(limit);
+  if (cursorId) query = query.gt("id", cursorId);
+
+  const { data: targets, error: selectErr } = await query;
+  if (selectErr) return { success: false, error: selectErr.message };
+  if (!targets || targets.length === 0) {
+    return { success: true, scraped: 0, failed: 0, lastId: null, remaining: 0 };
+  }
+
+  const results = await Promise.allSettled(
+    targets.map(async (t) => {
+      const id = t.id as string;
+      const url = t.url as string;
+      try {
+        const meta = await scrapeOpenGraph(url);
+        // Only swap when the page offers a usable https image — next/image needs
+        // https, and we won't wipe a working cover in exchange for nothing.
+        if (!meta.image || !meta.image.startsWith("https://")) {
+          return { id, scraped: false } as const;
+        }
+        const { error: updateErr } = await client
+          .from("items")
+          .update({ image_url: meta.image })
+          .eq("id", id);
+        if (updateErr) return { id, scraped: false } as const;
+        return { id, scraped: true } as const;
+      } catch {
+        return { id, scraped: false } as const;
+      }
+    })
+  );
+
+  let scraped = 0;
+  let failed = 0;
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value.scraped) scraped++;
+    else failed++;
+  }
+
+  const lastId = (targets[targets.length - 1] as { id: string }).id;
+
+  const { count } = await client
+    .from("items")
+    .select("*", { count: "exact", head: true })
+    .like("image_url", SCREENSHOT_URL_MATCH)
+    .not("url", "is", null)
+    .neq("url", "")
+    .gt("id", lastId);
+
+  if (scraped > 0) {
+    revalidatePath("/");
+    revalidatePath("/graph");
+    revalidatePath("/admin/manage");
+  }
+
+  return {
+    success: true,
+    scraped,
+    failed,
+    lastId,
+    remaining: count ?? 0,
+  };
+}
+
+/**
  * Batch concept extraction for blocks that haven't been indexed yet. Pages
  * through `items where concepts_indexed_at is null` by id (keyset pagination),
  * mirroring scrapeMissingMetadata. The client calls this repeatedly, advancing

@@ -48,14 +48,14 @@ export default function BlocksVibeView({ blocks }: { blocks: VibeBlock[] }) {
   }
 
   return (
-    <div className="px-8 pb-20 md:pr-24">
+    <div className="px-3 pb-20 sm:px-8 md:pr-24">
       <VibeScale
         vibes={vibes}
         index={safeIndex}
         count={shown.length}
         onChange={setIndex}
       />
-      <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 xl:grid-cols-5">
         {shown.map((b) => (
           <BlockCard key={b.id} block={b} />
         ))}

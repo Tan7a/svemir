@@ -6,47 +6,40 @@ import EditableTitle from "./EditableTitle";
 import { renameChannel } from "@/app/admin/actions";
 
 type Props = {
-  channel: ChannelWithBlocks;
+  channel: ChannelWithBlocks & { last_connected_at?: string | null };
 };
-
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  const diff = Math.max(0, now - then);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "just now";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} day${day === 1 ? "" : "s"} ago`;
-  const mo = Math.floor(day / 30);
-  if (mo < 12) return `${mo} month${mo === 1 ? "" : "s"} ago`;
-  const yr = Math.floor(mo / 12);
-  return `${yr} year${yr === 1 ? "" : "s"} ago`;
-}
 
 const MAX_THUMBS = 8;
 
 /**
- * Wide horizontal channel card in the home Channels view, matching the are.na
- * pattern. Left half: centred title + meta. Right half: a horizontal strip of
- * real block thumbnails (no empty placeholder cells). The "…" actions menu
- * appears in the top-right on hover.
+ * Channel card for the home Channels view. Title + meta sit top-left, and a
+ * full-width strip of real block thumbnails fills the space below (no empty
+ * placeholder cells). The "…" actions menu appears in the top-right on hover.
  */
 export default function ChannelCard({ channel }: Props) {
   const thumbs = channel.blocks.slice(0, MAX_THUMBS);
   const count = channel.block_count;
 
+  // Most common categories across the channel's (sampled) blocks — a lightweight
+  // "what's in here" summary for the info popup.
+  const topicCounts = new Map<string, number>();
+  for (const b of channel.blocks) {
+    for (const c of b.categories ?? []) {
+      topicCounts.set(c, (topicCounts.get(c) ?? 0) + 1);
+    }
+  }
+  const topics = [...topicCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([c]) => c);
+
   return (
-    <div className="group relative grid grid-cols-1 border border-neutral-800 transition-colors hover:border-white md:grid-cols-[320px_1fr]">
-      {/* Left — title + meta in a fixed-width column so every channel's thumbnail
-          strip lines up on the same vertical line. The after:inset-0 overlay
-          makes the whole card a link to the channel (stretched-link). */}
+    <div className="group relative flex flex-col rounded-2xl border border-neutral-800 transition-colors hover:border-white">
+      {/* Top-left — title + meta. The after:inset-0 overlay makes the whole card
+          a link to the channel (stretched-link). */}
       <Link
         href={`/channel/${channel.slug}`}
-        className="flex flex-col items-start justify-center gap-1.5 pl-[60px] pr-6 py-16 text-left after:absolute after:inset-0 after:content-['']"
+        className="flex flex-col items-start gap-1 px-6 pb-4 pt-6 text-left after:absolute after:inset-0 after:content-['']"
       >
         <EditableTitle
           value={channel.title}
@@ -58,18 +51,14 @@ export default function ChannelCard({ channel }: Props) {
         <span className="text-xs text-neutral-500">
           {count} block{count === 1 ? "" : "s"}
         </span>
-        <span className="text-xs text-neutral-500">
-          {relativeTime(channel.created_at)}
-        </span>
       </Link>
 
-      {/* Right — horizontal strip of real thumbnails, starting 60px from the
-          title. pointer-events-none lets clicks on empty strip space fall
-          through to the channel overlay; each thumbnail re-enables clicks and
-          sits above the overlay (z-10). */}
-      <div className="pointer-events-none flex items-center gap-3 overflow-hidden py-10 pl-5 pr-5 md:min-w-0 md:pl-0 md:pr-6">
+      {/* Below — full-width strip of real thumbnails. pointer-events-none lets
+          clicks on empty strip space fall through to the channel overlay; each
+          thumbnail re-enables clicks and sits above the overlay (z-10). */}
+      <div className="pointer-events-none flex gap-3 overflow-hidden px-6 pb-6">
         {thumbs.length === 0 ? (
-          <div className="flex h-[340px] w-full items-center justify-center text-xs text-neutral-600">
+          <div className="flex h-[240px] w-full items-center justify-center text-xs text-neutral-600">
             No blocks yet
           </div>
         ) : (
@@ -77,14 +66,14 @@ export default function ChannelCard({ channel }: Props) {
             <Link
               key={b.id}
               href={`/block/${b.id}`}
-              className="pointer-events-auto relative z-10 aspect-square h-[340px] w-[340px] shrink-0 overflow-hidden bg-neutral-900"
+              className="pointer-events-auto relative z-10 aspect-square h-[240px] w-[240px] shrink-0 overflow-hidden rounded-2xl bg-neutral-900"
             >
               {b.image_url ? (
                 <Image
                   src={b.image_url}
                   alt={b.title}
                   fill
-                  sizes="(min-width: 768px) 400px, 50vw"
+                  sizes="(min-width: 768px) 280px, 50vw"
                   quality={100}
                   className="object-cover transition-opacity hover:opacity-90"
                 />
@@ -109,6 +98,13 @@ export default function ChannelCard({ channel }: Props) {
             channelId={channel.id}
             channelTitle={channel.title}
             hasParent={channel.parent_id !== null}
+            info={{
+              description: channel.description,
+              blockCount: count,
+              createdAt: channel.created_at,
+              lastUpdated: channel.last_connected_at ?? null,
+              topics,
+            }}
           />
         </div>
       </div>
