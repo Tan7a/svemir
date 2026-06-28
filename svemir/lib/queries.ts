@@ -1,5 +1,12 @@
 import { supabase } from "./supabase-client";
-import type { Channel, Item, ItemWithChannels } from "./types";
+import type {
+  Channel,
+  Item,
+  ItemWithChannels,
+  PaperFacet,
+  FacetPaper,
+  FacetWithPapers,
+} from "./types";
 
 type BlockRow = Item & {
   connections: { channels: unknown }[] | null;
@@ -65,4 +72,75 @@ export async function getBlockWithChannels(
   }
 
   return { ...rest, channels, connected_blocks };
+}
+
+/** All facets (anon/public), ordered by prevalence — for the /facets index. */
+export async function listFacets(): Promise<PaperFacet[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("paper_facets")
+    .select("id, dimension, value, slug, definition, paper_count")
+    .order("paper_count", { ascending: false })
+    .order("value", { ascending: true });
+  return (data ?? []) as PaperFacet[];
+}
+
+/**
+ * A facet by slug with the papers that carry it and each paper's note (how that
+ * paper relates to the facet). Anon/public — facets are select-using(true).
+ */
+export async function getFacetWithPapers(
+  slug: string
+): Promise<FacetWithPapers | null> {
+  if (!supabase) return null;
+  const { data: facet } = await supabase
+    .from("paper_facets")
+    .select("id, dimension, value, slug, definition, paper_count")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!facet) return null;
+
+  const { data: links } = await supabase
+    .from("paper_facet_links")
+    .select("note, items(id, title, paper_authors, paper_year)")
+    .eq("facet_id", (facet as PaperFacet).id);
+
+  const papers: FacetPaper[] = (links ?? [])
+    .map((l) => {
+      const raw = (l as { items: unknown }).items;
+      const it = (Array.isArray(raw) ? raw[0] : raw) as
+        | { id: string; title: string; paper_authors: string[] | null; paper_year: number | null }
+        | null;
+      if (!it) return null;
+      return {
+        id: it.id,
+        title: it.title,
+        paper_authors: it.paper_authors,
+        paper_year: it.paper_year,
+        note: (l as { note: string | null }).note,
+      };
+    })
+    .filter((p): p is FacetPaper => p !== null)
+    .sort(
+      (a, b) =>
+        (b.paper_year ?? 0) - (a.paper_year ?? 0) || a.title.localeCompare(b.title)
+    );
+
+  return { ...(facet as PaperFacet), papers };
+}
+
+/** Paper ids carrying a facet (by slug) — for filtering the grid by ?facet=. */
+export async function paperIdsForFacet(slug: string): Promise<string[]> {
+  if (!supabase) return [];
+  const { data: facet } = await supabase
+    .from("paper_facets")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!facet) return [];
+  const { data: links } = await supabase
+    .from("paper_facet_links")
+    .select("paper_id")
+    .eq("facet_id", (facet as { id: string }).id);
+  return (links ?? []).map((l) => (l as { paper_id: string }).paper_id);
 }

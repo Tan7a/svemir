@@ -128,3 +128,29 @@ export function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/**
+ * The five paper-facet dimensions, in display order, each with a human label,
+ * Tailwind classes for its tag, and a raw hex (for the graph canvas). Kept in
+ * sync with the CHECK constraint on paper_facets.dimension (0007). Shared by the
+ * facet tags, the facet panel, the facets index, and the Research graph.
+ */
+export const FACET_DIMENSIONS = [
+  { key: 'ai_technique',    label: 'AI technique',     text: 'text-cyan-300',    border: 'border-cyan-500/40',    hex: '#7dcfff' },
+  { key: 'ux_effect',       label: 'UX effect',        text: 'text-emerald-300', border: 'border-emerald-500/40', hex: '#9ece6a' },
+  { key: 'challenge',       label: 'Challenge',        text: 'text-amber-300',   border: 'border-amber-500/40',   hex: '#e0af68' },
+  { key: 'metric',          label: 'Metric',           text: 'text-violet-300',  border: 'border-violet-500/40',  hex: '#bb9af7' },
+  { key: 'ethical_concern', label: 'Ethical concern',  text: 'text-rose-300',    border: 'border-rose-500/40',    hex: '#f7768e' },
+] as const;
+
+export type FacetDimension = (typeof FACET_DIMENSIONS)[number]['key'];
+
+export const FACET_DIMENSION_BY_KEY: Record<
+  string,
+  (typeof FACET_DIMENSIONS)[number]
+> = Object.fromEntries(FACET_DIMENSIONS.map((d) => [d.key, d]));
+
+/** Curated graph colour for a facet dimension (parallels channelColor). */
+export function facetColor(dimension: string): string {
+  return FACET_DIMENSION_BY_KEY[dimension]?.hex ?? '#c0caf5';
+}

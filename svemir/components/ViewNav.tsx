@@ -15,15 +15,21 @@ export default function ViewNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Visible on the home view, the graph page, and the concepts page — all "the
-  // main view".
-  if (pathname !== "/" && pathname !== "/graph" && pathname !== "/concepts")
+  // Visible on the home view, the graph page, the concepts page, and the facets
+  // index — all "the main view".
+  if (
+    pathname !== "/" &&
+    pathname !== "/graph" &&
+    pathname !== "/concepts" &&
+    pathname !== "/facets"
+  )
     return null;
   const onGraph = pathname === "/graph";
   const onConcepts = pathname === "/concepts";
+  const onFacets = pathname === "/facets";
 
   const activeView: ViewKind | null =
-    onGraph || onConcepts
+    onGraph || onConcepts || onFacets
       ? null
       : searchParams.get("view") === "channels"
         ? "channels"
@@ -37,7 +43,7 @@ export default function ViewNav() {
   }
 
   return (
-    <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm lg:flex">
+    <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm min-[900px]:flex">
       {VIEW_OPTIONS.map((opt) => {
         const active = activeView === opt.value;
         return (
@@ -64,6 +70,16 @@ export default function ViewNav() {
         }
       >
         Graph
+      </Link>
+      <Link
+        href="/facets"
+        className={
+          onFacets
+            ? "text-neutral-100"
+            : "text-neutral-400 hover:text-neutral-100"
+        }
+      >
+        Facets
       </Link>
     </nav>
   );

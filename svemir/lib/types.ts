@@ -9,9 +9,15 @@ export type Item = {
   source_type: string;
   categories: string[];
   notes: string | null;
-  kind: "link" | "image" | "text";
+  kind: "link" | "image" | "text" | "paper";
   body_text: string | null;
   created_at: string;
+  // Paper-only (kind === "paper"); see migration 0007. Optional so every other
+  // item shape is unaffected. Full text is NEVER here — it lives in the private
+  // `papers` bucket, referenced by paper_full_text_path.
+  paper_authors?: string[] | null;
+  paper_year?: number | null;
+  paper_full_text_path?: string | null;
 };
 
 export type Channel = {
@@ -43,3 +49,25 @@ export type ChannelWithBlocks = Channel & {
   blocks: Item[];
   block_count: number;
 };
+
+/** A paper facet (one of the 5 dimensions). definition = what the tag means. */
+export type PaperFacet = {
+  id: string;
+  dimension: string;
+  value: string;
+  slug: string;
+  definition: string | null;
+  paper_count: number;
+};
+
+/** A paper as it appears under a facet, with the per-paper note (how it relates). */
+export type FacetPaper = {
+  id: string;
+  title: string;
+  paper_authors: string[] | null;
+  paper_year: number | null;
+  note: string | null;
+};
+
+/** A facet with the papers carrying it — the facet panel's data shape. */
+export type FacetWithPapers = PaperFacet & { papers: FacetPaper[] };

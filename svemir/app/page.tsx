@@ -6,6 +6,8 @@ import BlocksView from "@/components/BlocksView";
 import BlocksVibeView from "@/components/BlocksVibeView";
 import ChannelsView from "@/components/ChannelsView";
 import { lastConnectedAt, compareChannelRecency } from "@/lib/channels";
+import { paperIdsForFacet } from "@/lib/queries";
+import { FACET_DIMENSION_BY_KEY } from "@/lib/constants";
 import type {
   Channel,
   ChannelWithBlocks,
@@ -39,6 +41,7 @@ type SP = Promise<{
   view?: string;
   order?: string;
   q?: string;
+  facet?: string;
 }>;
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
@@ -51,6 +54,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     (sp.order && ALLOWED_ORDERS[sp.order]) ||
     (view === "channels" ? "updated" : "newest");
   const q = (sp.q ?? "").trim();
+  const facetSlug = (sp.facet ?? "").trim();
 
   if (!supabase) {
     return (
@@ -91,6 +95,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <main>
         {q ? (
           <SearchRoute q={q} />
+        ) : facetSlug ? (
+          <BlocksRoute order={order} facetSlug={facetSlug} />
         ) : view === "blocks" ? (
           <BlocksRoute order={order} />
         ) : (
@@ -101,9 +107,28 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   );
 }
 
-/** Server component fetching items for the Blocks view. */
-async function BlocksRoute({ order }: { order: OrderKind }) {
+/** Server component fetching items for the Blocks view (optionally facet-filtered). */
+async function BlocksRoute({
+  order,
+  facetSlug,
+}: {
+  order: OrderKind;
+  facetSlug?: string;
+}) {
   if (!supabase) return null;
+
+  // When a ?facet= is set, narrow the grid to the papers carrying that facet.
+  let filterFacet: { value: string; dimension: string } | null = null;
+  let facetIds: string[] | null = null;
+  if (facetSlug) {
+    const { data: f } = await supabase
+      .from("paper_facets")
+      .select("value, dimension")
+      .eq("slug", facetSlug)
+      .maybeSingle();
+    filterFacet = (f as { value: string; dimension: string } | null) ?? null;
+    facetIds = await paperIdsForFacet(facetSlug);
+  }
 
   // Map order kinds to Supabase order spec. Order kinds we don't yet support
   // fall back to newest-first so the URL is always honoured visually. The
@@ -113,6 +138,12 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
     .from("items")
     .select("*, connections(channels(slug, title))")
     .limit(500);
+  if (facetIds) {
+    // Empty list → match nothing (sentinel id) rather than everything.
+    query = query.in("id", facetIds.length ? facetIds : [
+      "00000000-0000-0000-0000-000000000000",
+    ]);
+  }
   switch (order) {
     case "oldest":
       query = query.order("created_at", { ascending: true });
@@ -151,6 +182,27 @@ async function BlocksRoute({ order }: { order: OrderKind }) {
   if (order === "random") shuffle(blocks);
   else if (order === "type") orderByType(blocks);
   else if (order === "theme") orderByTheme(blocks);
+
+  if (filterFacet) {
+    const dim = FACET_DIMENSION_BY_KEY[filterFacet.dimension];
+    return (
+      <>
+        <div className="flex flex-wrap items-center gap-3 border-b border-neutral-900 px-5 py-3 text-sm">
+          <span className="text-neutral-500">Filtered by facet</span>
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-xs ${dim?.border ?? "border-neutral-700"} ${dim?.text ?? "text-neutral-200"}`}
+          >
+            {filterFacet.value}
+          </span>
+          <span className="text-neutral-500">{blocks.length} paper{blocks.length === 1 ? "" : "s"}</span>
+          <Link href="/" className="ml-auto text-xs text-neutral-400 hover:text-neutral-100">
+            clear ✕
+          </Link>
+        </div>
+        <BlocksView blocks={blocks} />
+      </>
+    );
+  }
   return <BlocksView blocks={blocks} />;
 }
 

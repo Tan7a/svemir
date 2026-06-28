@@ -8,7 +8,7 @@ export type PickableBlock = {
   id: string;
   title: string;
   image_url: string | null;
-  kind: "link" | "image" | "text";
+  kind: "link" | "image" | "text" | "paper";
 };
 
 type Props = {

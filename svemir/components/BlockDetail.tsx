@@ -4,6 +4,7 @@ import type { ItemWithChannels } from "@/lib/types";
 import BlockActions from "./BlockActions";
 import BlockConnections from "./BlockConnections";
 import EditableTitle from "./EditableTitle";
+import PaperDetail from "./PaperDetail";
 import { renameBlock } from "@/app/admin/actions";
 
 type Props = {
@@ -71,6 +72,11 @@ function ExternalIcon() {
 }
 
 export default function BlockDetail({ block, inModal = false }: Props) {
+  // Papers get their own detail view (title-first, abstract + owner-only full
+  // text, explicit edit mode) — see PaperDetail.
+  if (block.kind === "paper") {
+    return <PaperDetail block={block} inModal={inModal} />;
+  }
   return (
     <div
       className={
@@ -180,10 +186,6 @@ export default function BlockDetail({ block, inModal = false }: Props) {
               {relativeTime(block.created_at)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-neutral-500">By</dt>
-            <dd className="text-neutral-300">Tanja Radovanovic</dd>
-          </div>
           {(block.source_name || block.url) && (
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500">Source</dt>
@@ -238,16 +240,13 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           ) : (
             <ul className="space-y-1.5">
               {block.channels.map((c) => (
-                <li key={c.id} className="flex items-baseline justify-between">
+                <li key={c.id}>
                   <Link
                     href={`/channel/${c.slug}`}
                     className="text-neutral-200 hover:underline"
                   >
                     {c.title}
                   </Link>
-                  <span className="text-neutral-500">
-                    Tanja Radovanovic
-                  </span>
                 </li>
               ))}
             </ul>

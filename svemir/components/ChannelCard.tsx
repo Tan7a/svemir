@@ -68,7 +68,21 @@ export default function ChannelCard({ channel }: Props) {
               href={`/block/${b.id}`}
               className="pointer-events-auto relative z-10 aspect-square h-[240px] w-[240px] shrink-0 overflow-hidden rounded-2xl bg-neutral-900"
             >
-              {b.image_url ? (
+              {b.kind === "paper" ? (
+                <div className="flex h-full w-full flex-col gap-1.5 p-3">
+                  <span className="line-clamp-3 text-[11px] font-medium leading-snug text-neutral-100">
+                    {b.title || "Untitled"}
+                  </span>
+                  {b.paper_year && (
+                    <span className="text-[9px] text-neutral-500">{b.paper_year}</span>
+                  )}
+                  {b.description && (
+                    <span className="line-clamp-4 text-[9px] leading-snug text-neutral-400">
+                      {b.description}
+                    </span>
+                  )}
+                </div>
+              ) : b.image_url ? (
                 <Image
                   src={b.image_url}
                   alt={b.title}

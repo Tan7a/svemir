@@ -55,6 +55,15 @@ export default function RootLayout({
         />
         {children}
         {modal}
+        {/* Site-wide maker credit, tucked in the bottom-left corner. */}
+        <a
+          href="https://www.linkedin.com/in/tanjaradovanovic/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-3 left-4 z-40 text-[11px] text-neutral-600 transition-colors hover:text-neutral-300"
+        >
+          made by Tanja Radovanovic
+        </a>
       </body>
     </html>
   );

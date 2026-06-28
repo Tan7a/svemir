@@ -23,6 +23,14 @@ function sourceLabel(block: Item): string | null {
   return null;
 }
 
+/** "First Author et al." from a paper's author list, or null when empty. */
+function authorLine(block: Item): string | null {
+  const authors = block.paper_authors ?? [];
+  if (authors.length === 0) return null;
+  const shown = authors.slice(0, 2).join(", ");
+  return authors.length > 2 ? `${shown} et al.` : shown;
+}
+
 /**
  * Block card for the dense Blocks grid.
  *
@@ -34,6 +42,8 @@ function sourceLabel(block: Item): string | null {
 export default function BlockCard({ block }: Props) {
   const source = sourceLabel(block);
   const channels = block.channels ?? [];
+  const isPaper = block.kind === "paper";
+  const authors = authorLine(block);
 
   return (
     <Link
@@ -43,7 +53,26 @@ export default function BlockCard({ block }: Props) {
       // shareable / refreshable full-page URL still works for direct nav.
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 transition-colors duration-300 group-hover:border-white">
-        {block.image_url ? (
+        {isPaper ? (
+          // Papers have no image: show the metadata at rest, document-style.
+          // No "Paper" pill — the shared "Research Papers" channel tag below the
+          // card carries that signal and keeps papers filterable.
+          <div className="flex h-full w-full flex-col gap-2 p-4">
+            <span className="line-clamp-3 text-sm font-medium leading-snug text-neutral-100">
+              {block.title || "Untitled"}
+            </span>
+            {(authors || block.paper_year) && (
+              <span className="line-clamp-1 text-[10px] text-neutral-500">
+                {[authors, block.paper_year].filter(Boolean).join(" · ")}
+              </span>
+            )}
+            {block.description && (
+              <span className="line-clamp-5 text-[11px] leading-snug text-neutral-400">
+                {block.description}
+              </span>
+            )}
+          </div>
+        ) : block.image_url ? (
           <Image
             src={block.image_url}
             alt={block.title}
@@ -62,18 +91,21 @@ export default function BlockCard({ block }: Props) {
           </div>
         )}
 
-        {/* Hover caption — title + source fade up over a gradient scrim. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-10 opacity-0 transition duration-300 ease-out group-hover:opacity-100">
-          <span className="line-clamp-2 text-sm font-medium leading-snug text-white">
-            {block.title || "Untitled"}
-          </span>
-          {source && (
-            <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/65">
-              <span className="truncate">{source}</span>
-              {block.kind === "link" && <span aria-hidden>↗</span>}
+        {/* Hover caption — title + source fade up over a gradient scrim. Papers
+            already show their title at rest, so the scrim is skipped for them. */}
+        {!isPaper && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-10 opacity-0 transition duration-300 ease-out group-hover:opacity-100">
+            <span className="line-clamp-2 text-sm font-medium leading-snug text-white">
+              {block.title || "Untitled"}
             </span>
-          )}
-        </div>
+            {source && (
+              <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/65">
+                <span className="truncate">{source}</span>
+                {block.kind === "link" && <span aria-hidden>↗</span>}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Topic tags — always visible below the thumbnail. */}

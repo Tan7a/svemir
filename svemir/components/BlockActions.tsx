@@ -15,6 +15,8 @@ type Props = {
   url: string | null;
   imageUrl: string | null;
   inModal: boolean;
+  /** Extra control(s) rendered in the button row, after "Actions" (e.g. Edit/Save). */
+  extra?: React.ReactNode;
 };
 
 // Small inline Lucide-style icons. Inline so we don't add a dep.
@@ -112,6 +114,7 @@ export default function BlockActions({
   url,
   imageUrl,
   inModal,
+  extra,
 }: Props) {
   const router = useRouter();
   const [picking, setPicking] = useState(false);
@@ -165,7 +168,10 @@ export default function BlockActions({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === "e") {
         e.preventDefault();
-        window.location.href = "/admin/manage";
+        setToast({
+          kind: "ok",
+          message: "Double-click the title or abstract to edit. Use “Change image” to replace the image.",
+        });
       } else if (e.key.toLowerCase() === "d") {
         e.preventDefault();
         handleDownload();
@@ -367,7 +373,10 @@ export default function BlockActions({
                 shortcut="E"
                 onClick={() => {
                   setActionsOpen(false);
-                  window.location.href = "/admin/manage";
+                  setToast({
+                    kind: "ok",
+                    message: "Double-click the title or abstract to edit. Use “Change image” to replace the image.",
+                  });
                 }}
               />
               <MenuItem
@@ -403,6 +412,7 @@ export default function BlockActions({
             </div>
           )}
         </div>
+        {extra}
       </div>
 
       {picking && (

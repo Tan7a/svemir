@@ -414,6 +414,32 @@ export async function renameBlock(
 }
 
 /**
+ * Update a block's description (for papers, the abstract). Used by the inline
+ * editable text in the block detail panel. Empty string clears it to null.
+ */
+export async function updateBlockDescription(
+  blockId: string,
+  description: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const trimmed = description.trim();
+  const { error } = await supabaseAdmin
+    .from("items")
+    .update({ description: trimmed || null })
+    .eq("id", blockId);
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath(`/block/${blockId}`);
+  revalidatePath("/admin/manage");
+  return { success: true };
+}
+
+/**
  * Rename a channel — update its title only. The `slug` is intentionally left
  * unchanged so existing /channel/[slug] links keep resolving. Used by the
  * "Rename" action in the channel "⋯" menu and by double-clicking a channel name.

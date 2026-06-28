@@ -1,0 +1,331 @@
+{
+  "_README": "Agent-produced facets (Step B). Keyed by items.paper_full_text_path. Each facet is {v, note}: v = canonical value (recurs to connect papers), note = how THIS paper relates to it. _definitions[dimension::value] = what the tag means. Re-run apply-facets.mjs after editing (idempotent). Pilot: HCI & Adaptive Interfaces.",
+  "_definitions": {
+    "ai_technique::Human-AI interaction": "Designing and studying how people interact with AI systems as collaborators or tools.",
+    "ai_technique::Adaptive/intelligent UI": "Interfaces (AUI/IUI) that adjust their layout, content, or behaviour to the user, often using AI.",
+    "ai_technique::User modeling": "Building a representation of a user's preferences, abilities, or context to drive personalization.",
+    "ai_technique::Machine learning": "Algorithms that learn patterns from data to power prediction or adaptation.",
+    "ai_technique::Autonomous agents & automation": "Systems that act on the user's behalf with varying degrees of independence.",
+    "ai_technique::Human-AI co-creation": "People and generative AI producing content or designs together, sharing agency.",
+    "ai_technique::Generative AI": "AI that produces new content (text, images, designs) as an active creative collaborator.",
+    "ux_effect::Participation & collaboration": "Designing with and among users and stakeholders rather than only for them.",
+    "ux_effect::User engagement": "How strongly an experience draws users in and sustains their attention and interest.",
+    "ux_effect::Wayfinding & spatial orientation": "How people locate themselves and navigate within physical or virtual space.",
+    "ux_effect::Sense of place": "The felt, qualitative character and meaning a person attaches to a space.",
+    "ux_effect::Personalization & adaptation": "Tailoring the experience to an individual user's needs, context, or behaviour.",
+    "ux_effect::Usability": "How easily and effectively users can accomplish their tasks with a system.",
+    "ux_effect::Immersion & presence": "The degree to which a (often virtual) environment makes the user feel 'really there'.",
+    "ux_effect::Emotional response": "The feelings a design or place evokes in the user.",
+    "ux_effect::Experiential learning": "Learning through direct, often immersive, first-hand experience.",
+    "ux_effect::Behaviour change": "Designing technology to shift users' habits or actions over time.",
+    "ux_effect::Trust": "A user's willingness to rely on a system under uncertainty.",
+    "challenge::Stakeholder collaboration": "Coordinating the differing needs of users, communities, and decision-makers.",
+    "challenge::Adapting to diverse users": "Serving users who differ in ability, culture, context, or expertise.",
+    "challenge::Measuring user experience": "Capturing subjective, multi-faceted experience in valid, comparable ways.",
+    "challenge::Disorientation": "Users losing their sense of position or direction in a space or interface.",
+    "challenge::Communicating intangible/sensory qualities": "Conveying the felt, sensory, or qualitative aspects of a place or experience.",
+    "challenge::Fragmented research": "A scattered, under-consolidated body of work that is hard to synthesize.",
+    "challenge::AI unpredictability": "AI systems making unexpected or hard-to-anticipate errors.",
+    "challenge::Designing for uncertainty": "Designing when a system's capabilities or outputs are not fully predictable.",
+    "challenge::Motion sickness": "Discomfort (nausea, disorientation) induced by immersive VR/AR.",
+    "metric::Qualitative interviews": "Insights gathered from semi-structured interviews or open feedback.",
+    "metric::Survey responses": "Data collected from questionnaires across many respondents.",
+    "metric::Wayfinding performance": "Objective measures of navigation success (time, errors, route).",
+    "metric::Behavioural measures": "Observed actions and behaviour used as evidence, rather than self-report.",
+    "metric::Usability evaluation": "Assessing ease-of-use via tasks, heuristics, or usability testing.",
+    "metric::Presence rating": "Self-reported sense of 'being there' in a virtual environment.",
+    "metric::Ownership & realism": "Felt body-ownership and perceived realism of a virtual experience.",
+    "metric::Engagement metrics": "Indicators of enjoyment, attention, or sustained involvement.",
+    "metric::Self-report measures": "Data from users reporting their own attitudes or states (e.g. questionnaires).",
+    "metric::Physiological measures": "Bodily signals (e.g. heart rate, gaze) used as objective indicators.",
+    "ethical_concern::User empowerment": "Giving users genuine voice, control, and benefit in the system.",
+    "ethical_concern::User autonomy & agency": "Preserving the user's capacity to decide and act for themselves.",
+    "ethical_concern::Digital divide": "Unequal access to technology across people and groups.",
+    "ethical_concern::Societal impact of AI": "Broader, sometimes harmful, effects of AI on society.",
+    "ethical_concern::Inclusion & accessibility": "Ensuring a system works for the widest possible range of people.",
+    "ethical_concern::Behaviour manipulation": "The risk of nudging or persuading users in ways that may not serve them."
+  },
+  "hci-adaptive-interfaces/2011-impagliazzo-utopia-participatory-design-from-scandinavia-to-the-world.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "The seminal UTOPIA project — workers, unions, and researchers co-designing workplace IT." },
+      { "v": "User engagement", "note": "Sustained, active involvement of workplace users throughout development." }
+    ],
+    "challenges": [
+      { "v": "Stakeholder collaboration", "note": "Aligns workers, trade unions, and researchers in the Scandinavian tradition." },
+      { "v": "Adapting to diverse users", "note": "Confronts broadening use contexts beyond the original workplace." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Centers worker voice and control over the technology shaping their work." }
+    ]
+  },
+  "hci-adaptive-interfaces/2014-gumerman-inspiring-engagement-through-the-user-experience.md": {
+    "uxEffects": [
+      { "v": "User engagement", "note": "A museum web app designed explicitly to grow audience engagement." },
+      { "v": "Usability", "note": "Human-centred design framework aimed at an easy, useful museum site." },
+      { "v": "Participation & collaboration", "note": "Stakeholder interviews and personas shape a co-designed plan." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Gauges the experience through observation sessions and testing." }
+    ],
+    "metrics": [
+      { "v": "Qualitative interviews", "note": "Five stakeholder interviews and four observation sessions." }
+    ]
+  },
+  "hci-adaptive-interfaces/2015-jasarovi-orientational-reaction-as-a-way-of-adjusting-to-space.md": {
+    "uxEffects": [
+      { "v": "Wayfinding & spatial orientation", "note": "How residents vs. strangers orient using reference points." },
+      { "v": "Sense of place", "note": "Reference points give a city legibility and meaning." }
+    ],
+    "challenges": [
+      { "v": "Disorientation", "note": "Poor visual readability leaves people unable to orient." }
+    ]
+  },
+  "hci-adaptive-interfaces/2015-parsaee-interactive-architectural-approach-interactive-architecture.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "'Interactive architecture' adapts the design to all factors and parameters." },
+      { "v": "Participation & collaboration", "note": "A multi-relational process engaging many aspects of design." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Seeks optimum adaption across many competing design factors." }
+    ]
+  },
+  "hci-adaptive-interfaces/2016-kulig-evaluating-user-experience-and-wayfinding-behaviour-in.md": {
+    "uxEffects": [
+      { "v": "Wayfinding & spatial orientation", "note": "Evaluates wayfinding behaviour in complex buildings." },
+      { "v": "Usability", "note": "A user-centred approach to building usability." }
+    ],
+    "challenges": [
+      { "v": "Disorientation", "note": "Tackles the feeling of being 'lost' in unfamiliar buildings." },
+      { "v": "Measuring user experience", "note": "Empirically evaluates UX alongside wayfinding behaviour." }
+    ],
+    "metrics": [
+      { "v": "Wayfinding performance", "note": "Measures navigation behaviour in architectural environments." },
+      { "v": "Behavioural measures", "note": "Observes how people actually move and find their way." }
+    ]
+  },
+  "hci-adaptive-interfaces/2017-hal-virtual-and-augmented-reality-in-architectural-design-and.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Surveys VR/AR systems that immerse designers in the design." },
+      { "v": "Experiential learning", "note": "Proposes CORAULIS for hands-on, pedagogical design." },
+      { "v": "Participation & collaboration", "note": "Supports collaborative design among designers, laymen, and decision-makers." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Weighs device advantages and limits for varied users." }
+    ]
+  },
+  "hci-adaptive-interfaces/2018-terms-mapping-citizens-emotions-participatory-planning-support.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Participatory urban planning via community emotional mapping." },
+      { "v": "Emotional response", "note": "Maps citizens' emotions about urban space." },
+      { "v": "Sense of place", "note": "Captures how places feel — attractiveness, safety." }
+    ],
+    "challenges": [
+      { "v": "Stakeholder collaboration", "note": "Feeds 2,117 residents' input into the city's strategic plan." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "2,117 respondents marked 25,760 points and 4,801 comments." }
+    ]
+  },
+  "hci-adaptive-interfaces/2019-internacional-barcelona-a-de.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Uses VR to visualize urban transformation." },
+      { "v": "Participation & collaboration", "note": "Brings citizen input and feedback to the forefront." },
+      { "v": "Sense of place", "note": "Debates future visions of the livable city." }
+    ],
+    "challenges": [
+      { "v": "Communicating intangible/sensory qualities", "note": "Visualizing urbanism's transformation for stakeholders." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User autonomy & agency", "note": "Asserts citizen voice in shaping the city." }
+    ]
+  },
+  "hci-adaptive-interfaces/2019-paper-august-in-san-diego-neuroscience-for-architecture-urbanism.md": {
+    "uxEffects": [
+      { "v": "Sense of place", "note": "The neuroscience of how architecture and urban space are experienced." },
+      { "v": "Emotional response", "note": "How built environments affect people neurologically and emotionally." }
+    ],
+    "challenges": [
+      { "v": "Communicating intangible/sensory qualities", "note": "Bridges neuroscience and the felt experience of space." }
+    ]
+  },
+  "hci-adaptive-interfaces/2019-reality-sensory-urbanism-and-placemaking.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "An immersive VR prototype for experiencing urban places." },
+      { "v": "Sense of place", "note": "Foregrounds the sensory, intangible aspects of place." },
+      { "v": "Emotional response", "note": "Multi-sensory soundscapes evoke the feel of a place." }
+    ],
+    "challenges": [
+      { "v": "Communicating intangible/sensory qualities", "note": "Conveys sensory/qualitative place aspects that resist text or graphs." },
+      { "v": "Measuring user experience", "note": "Seeks valid evaluation of the immersive approach." }
+    ],
+    "metrics": [
+      { "v": "Qualitative interviews", "note": "Feedback gathered from participants and observers." }
+    ]
+  },
+  "hci-adaptive-interfaces/2019-torres-kompen-article-methodologies-of-learning-served-by-virtual-reality.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "VR places students inside urban-design scenarios." },
+      { "v": "Experiential learning", "note": "VR as an active, participative educational methodology." },
+      { "v": "Participation & collaboration", "note": "Architecture students and professionals take part." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Fits tech-savvy learners across varied subjects." }
+    ]
+  },
+  "hci-adaptive-interfaces/2020-mariani-design-research-in-the-digital-era.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "A series for sharing ideas across design fields." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Attempts to map a varied, scattered design-research landscape." }
+    ]
+  },
+  "hci-adaptive-interfaces/2020-planning-digital-city-as-a-metaphor-for-new.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Cyberspace as a new, transposed virtual experience of the city." },
+      { "v": "Sense of place", "note": "The 'digital city' reframes the lived experience of space." }
+    ],
+    "challenges": [
+      { "v": "Communicating intangible/sensory qualities", "note": "Digitalizes experience beyond physical and sensory interaction." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Digital divide", "note": "Notes its use is not available to everyone." },
+      { "v": "User autonomy & agency", "note": "Raises the ethics of mediated, digitalized experience." }
+    ]
+  },
+  "hci-adaptive-interfaces/2020-yang-re-examining-whether-why-and-how-human-ai-interaction-is.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Examines why human-AI interaction is uniquely hard to design." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "AI's adaptive, complex output shapes the user experience." }
+    ],
+    "challenges": [
+      { "v": "AI unpredictability", "note": "AI makes unpredictable errors that damage UX." },
+      { "v": "Designing for uncertainty", "note": "Uncertainty around AI's capabilities and output complexity." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Societal impact of AI", "note": "AI errors can lead to undesired societal impact." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-c-computer-science-review.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Lays out the foundations of adaptive/intelligent UIs (AUI/IUI)." },
+      { "v": "User modeling", "note": "Building an accurate user preference model is key." },
+      { "v": "Machine learning", "note": "ML training and convergence underpin adaptive interfaces." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Reviews universal usability across 165 papers." },
+      { "v": "Personalization & adaptation", "note": "Plasticity — interfaces that adapt to users and contexts." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Interfaces must serve users of varied abilities and cultures." },
+      { "v": "Fragmented research", "note": "Synthesizes 55 years of scattered work into a taxonomy." }
+    ],
+    "metrics": [
+      { "v": "Usability evaluation", "note": "Assesses the plasticity and usability of adaptive UIs." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Inclusion & accessibility", "note": "'Universal usability' — interfaces that work for everyone." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-lee-towards-augmented-reality-driven-human-city-interaction.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "AR overlays immersive interaction onto the city." },
+      { "v": "Sense of place", "note": "Human-city interaction within connected smart cities." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Reviews 260 articles and flags under-explored issues." },
+      { "v": "Adapting to diverse users", "note": "Constrained interfaces and input across many contexts." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-paper-behavioural-intervention-technology-in-ux-design-conceptual.md": {
+    "uxEffects": [
+      { "v": "Behaviour change", "note": "Behavioural Intervention Technologies (BITs) to shift user behaviour." },
+      { "v": "Personalization & adaptation", "note": "Human-centred BITs tailored to behaviour-change processes." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Consolidates 28 scattered publications into a synthesis." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Behaviour manipulation", "note": "Designing technology to deliberately change behaviour." },
+      { "v": "User autonomy & agency", "note": "Raises who controls the intended behaviour change." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-schott-full-immersion-virtual-reality-for-experiential-education.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Full-immersion VR for situated experiential education." },
+      { "v": "Experiential learning", "note": "VR stands in for declining residential fieldtrips." }
+    ],
+    "challenges": [
+      { "v": "Motion sickness", "note": "Motion sickness emerged as a key negative experience." },
+      { "v": "Measuring user experience", "note": "Applies a three-facet UX analytical frame." }
+    ],
+    "metrics": [
+      { "v": "Qualitative interviews", "note": "Semi-structured interviews with staff and students." },
+      { "v": "Presence rating", "note": "Assesses the felt sense of the VR experience." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-states-measurement-of-trust-in-automation-a-narrative-review-and.md": {
+    "aiTechniques": [
+      { "v": "Autonomous agents & automation", "note": "Concerns trust in automated and autonomous agents." }
+    ],
+    "uxEffects": [
+      { "v": "Trust", "note": "A comprehensive review of Trust in Automation (TiA)." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "How to validly capture the complex trust construct." }
+    ],
+    "metrics": [
+      { "v": "Self-report measures", "note": "Catalogs self-report measures of trust." },
+      { "v": "Behavioural measures", "note": "Catalogs behavioural indices of trust." },
+      { "v": "Physiological measures", "note": "Catalogs physiological indices of trust." }
+    ]
+  },
+  "hci-adaptive-interfaces/2021-ye-evaluating-grasping-visualizations-and-control-modes-in-a.md": {
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Hand-tracking and grasping visualizations for immersive VR." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Tests whether lab effects hold in a real game." }
+    ],
+    "metrics": [
+      { "v": "Presence rating", "note": "Measures presence in a VR escape-room game." },
+      { "v": "Ownership & realism", "note": "Measures body-ownership and perceived realism." },
+      { "v": "Engagement metrics", "note": "Measures enjoyment and efficiency." }
+    ]
+  },
+  "hci-adaptive-interfaces/2022-research-design-research-on-maker-office-space-based-on-user.md": {
+    "uxEffects": [
+      { "v": "User engagement", "note": "A UX-driven maker office space designed to engage users." },
+      { "v": "Usability", "note": "Identifies design points for a usable office space." },
+      { "v": "Sense of place", "note": "Atmosphere creation for the office experience." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Analyzes user demand and experience to guide design." }
+    ]
+  },
+  "hci-adaptive-interfaces/2025-patterns-arxiv-2507-06000v2-cs-hc-26-sep-2025.md": {
+    "aiTechniques": [
+      { "v": "Human-AI co-creation", "note": "A scoping review of human-AI co-creation through the lens of agency." },
+      { "v": "Generative AI", "note": "Treats AI as an active creative collaborator." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Maps control mechanisms: input, action, output, feedback." },
+      { "v": "Participation & collaboration", "note": "Studies how agency is shared in co-creation." }
+    ],
+    "challenges": [
+      { "v": "Designing for uncertainty", "note": "Configurations of agency and control are still unsettled." },
+      { "v": "Fragmented research", "note": "Synthesizes 134 papers over 20 years into one framework." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User autonomy & agency", "note": "Centers the distribution and dynamic of human agency." }
+    ]
+  },
+  "hci-adaptive-interfaces/nd-iovene-of-streets-and-squares.md": {
+    "uxEffects": [
+      { "v": "Sense of place", "note": "The character and life of urban streets and squares." },
+      { "v": "Wayfinding & spatial orientation", "note": "Public-space structure and how people move through it." }
+    ]
+  }
+}
