@@ -21,10 +21,11 @@ export default async function FacetsPage() {
       <TopBar />
       <main className="mx-auto min-h-[calc(100vh-3rem)] w-full max-w-5xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-3xl font-light text-neutral-100">Facets</h1>
+          <h1 className="text-3xl font-light text-neutral-100">Research</h1>
           <p className="mt-2 max-w-prose text-sm text-neutral-400">
-            The five dimensions papers connect along. Click any facet to see what
-            it means and every paper that carries it.
+            The research-paper collection, browsable by the five facet dimensions
+            papers connect along. Click any facet to see what it means and every
+            paper that carries it.
           </p>
         </header>
 

@@ -79,7 +79,7 @@ export default function ViewNav() {
             : "text-neutral-400 hover:text-neutral-100"
         }
       >
-        Facets
+        Research
       </Link>
     </nav>
   );
