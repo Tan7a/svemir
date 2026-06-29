@@ -57,6 +57,31 @@ const SKIP_FILES = new Set([
   "2020_unknown_article-do-products-respond-to-user-desires-a-case-study-2.md", // dup of non-"-2"
   "2013_mara_unconscious-human-behavior-at-visceral-level-of-emotional-2.md", // dup; keep fuller-titled non-"-2"
   "2002_project_pleasure-with-products-design-based-on-kansei.md", // dup of 1997_lee (real author) Kansei paper
+  // AI Personalization & SLR — non-papers + duplicates (content-verified by abstract fingerprint).
+  "1927_unknown_what-is-ai.md", // Elements-of-AI course transcript, not a paper
+  "2014_unknown_hooked-how-to-build-habit-forming-products.md", // the book (OCR stub)
+  "2015_outcomes_appendix-a-dataset-of-70-ai-ux-personalisation-studies.md", // dataset/appendix table
+  "2016_covington_deep-neural-networks-for-youtube-recommendations-2.md", // dup
+  "2016_interfaces_how-much-information-effects-of-transparency-on-trust-in-an-2.md", // dup
+  "2018_todi_familiarisation-restructuring-layouts-with-visual-learning-2.md", // dup
+  "2019_millecamp_to-explain-or-not-to-explain-the-effects-of-personal-2.md", // dup
+  "2020_haig_a-long-term-evaluation-of-adaptive-interface-design-for-2.md", // dup
+  "2020_sundar_rise-of-machine-agency-a-framework-for-studying-the-2.md", // dup
+  "2020_words_progressive-disclosure-when-why-and-how-do-users-want-2.md", // dup
+  "2021_liang_interactive-music-genre-exploration-with-visualization-and-2.md", // dup
+  "2022_qian_scalar-authoring-semantically-adaptive-augmented-reality-2.md", // dup
+  "2023_alipour_toward-changing-users-behavior-with-emotion-based-adaptive-2.md", // dup
+  "2024_costaa_towards-an-ai-driven-user-interface-design-for-web-2.md", // dup
+  "2018_transparency_explanations-as-mechanisms-for-supportingalgorithmic.md", // dup of 2018_rader
+  "2019_library_context-aware-online-adaptation-of-mixed-reality-interfaces.md", // dup of 2019_lindlbauer
+  "2019_zhang_international-journal-of-human-computer-studies.md", // dup of 2019_zhang_proactive-vs-reactive
+  "2021_unknown_visual-textual-or-hybrid-the-effect-of-user-expertise-on.md", // dup of 2021_szymanski
+  "2018_hal_using-user-emotions-to-trigger-ui-adaptation.md", // dup of 2025_alpes (keep the 2025 version)
+  // Cross-collection duplicates: these papers already live in another collection
+  // (kept + faceted there) and were merged into the AI channel; never re-ingest the AI copy.
+  "2007_desmet_framework-of-product-experience.md", // == emotional-design/2007_unknown_framework-of-product-experience
+  "2020_yang_re-examining-whether-why-and-how-human-ai-interaction-is.md", // == hci copy (note: also the kept HCI filename; harmless — already ingested)
+  "2019_version_todi-kashyap-jokinen-jussi-luyten-kris-oulasvirta-antti.md", // == 2019_luyten (same paper; this copy had only boilerplate abstract)
 ]);
 
 // Agent-curated metadata fixes for papers whose PDF→Markdown conversion lost or
@@ -94,6 +119,17 @@ const OVERRIDES = {
   "2013_schem_using-a-simulated-environment-to-investigate-experiences.md": { authors: [] },
   "2017_media_emotional-design-in-web-interfaces.md": { authors: [] },
   "2021_geodesicas_collaborative-emotional-mapping-as-a-tool-for-urban.md": { authors: [] },
+  // ── AI Personalization & SLR — titles/bylines recovered from each paper's body (frontmatter held the journal name or an arXiv id) ──
+  "2018_b_international-journal-of-human-computer-studies.md": { title: "Moodplay: Interactive Music Recommendation Based on Artists' Mood Similarity", authors: ["Ivana Andjelkovic", "Denis Parra", "John O'Donovan"] },
+  "2020_article_turkish-journal-of-computer-and-mathematics-education-vol.md": { title: "The Trend of Published Literature on User Experience (UX) Evaluation: A Bibliometric Analysis" },
+  "2020_b_computers-in-human-behavior.md": { title: "Customer Experiences in the Age of Artificial Intelligence", authors: ["Nisreen Ameen", "Ali Tarhini", "Alexander Reppel", "Amitabh Anand"] },
+  "2021_b_pattern-recognition-letters.md": { title: "Deep Learning for Emotion Driven User Experiences", authors: ["Carmen Bisogni", "Lucia Cascone", "Aniello Castiglione", "Ignazio Passero"] },
+  "2023_b_international-journal-of-human-computer-studies.md": { title: "Predicting the Need for XAI from High-Granularity Interaction Data", authors: ["Vagner Figueredo de Santana", "Ana Fucs", "Vinícius Segura", "Daniel Brugnaro de Moraes", "Renato Cerqueira"] },
+  "2024_ai_arxiv-2402-06089v2-cs-hc-13-feb-2024.md": { title: "AI Assistance for UX: A Literature Review Through Human-Centered AI" },
+  "2024_b_computers-and-education-artificial-intelligence.md": { title: "Large Language Models Meet User Interfaces: The Case of Provisioning Feedback", authors: ["Stanislav Pozdniakov", "Jonathan Brazil", "Solmaz Abdi", "Aneesha Bakharia", "Shazia Sadiq", "Dragan Gašević", "Paul Denny", "Hassan Khosravi"] },
+  "2024_khamaj_alexandria-engineering-journal.md": { title: "Real-Time Personalized User Interface Adaptation Using Reinforcement Learning", authors: ["Abdulrahman Khamaj", "Abdulelah M. Ali"] },
+  "2006_technology_user-experience-a-research-agenda.md": { authors: ["Marc Hassenzahl", "Noam Tractinsky"] },
+  "2024_10-1109-access-2024_toward-an-interactive-reading-experience-deep-learning.md": { authors: ["Jayasankar Santhosh", "Akshay Palimar Pai", "Shoya Ishimaru"] },
 };
 
 // ── CLI args ──────────────────────────────────────────────────────────────
