@@ -59,7 +59,12 @@ Source root: `~/Desktop/PhD/Markdown library/` (override with a positional arg).
 |---|---|---|
 | HCI & Adaptive Interfaces | 26 | ✅ done (21 in DB) |
 | Emotional Design | 78 | ✅ done (68 in DB; 10 skipped — see SKIP_FILES) |
-| **AI Personalization & SLR** | **226** | ⏳ ingested (204 in DB; 19 skipped + 3 dups merged/removed); **104/204 faceted** — resume at `2021-song-…` (path-sorted) |
+| AI Personalization & SLR | 226 | ✅ done (204 in DB; 19 skipped + 3 dups merged/removed); 204/204 faceted |
+
+**✅ Backfill complete (2026-06-29):** all three collections ingested + faceted —
+**293 papers, 1078 facet links, 90 canonical facet values**, every value defined and
+every link noted. Copyright gate verified (anon cannot read full text). The only
+remaining item is the optional **Phase 3 visual facet graph** (§10).
 
 **Known data-quality traps (already handled by the script, but verify per collection):**
 - **Smart/curly quotes** in YAML frontmatter broke ~61 AI-collection files — handled by

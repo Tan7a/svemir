@@ -1,5 +1,5 @@
 {
-  "_README": "Agent-produced facets (Step B). Keyed by items.paper_full_text_path. Each facet is {v, note}: v = canonical value (recurs to connect papers), note = how THIS paper relates to it. _definitions[dimension::value] = what the tag means. Re-run apply-facets.mjs after editing (idempotent). PROGRESS: HCI 21/21 + Emotional Design 68/68 faceted. AI Personalization & SLR: 204 ingested (19 skipped pre-ingest + 3 dups removed/merged), 104/204 faceted (IN PROGRESS — resume at the path-sorted paper after 'ai-personalization-slr/2021-putze-...', i.e. starting '2021-song-inertial-motion-tracking'). Vocabulary = 96 canonical values across the 5 dimensions; reuse it before coining new values.",
+  "_README": "Agent-produced facets (Step B). Keyed by items.paper_full_text_path. Each facet is {v, note}: v = canonical value (recurs to connect papers), note = how THIS paper relates to it. _definitions[dimension::value] = what the tag means. Re-run apply-facets.mjs after editing (idempotent). PROGRESS: COMPLETE — all 3 collections faceted: HCI 21/21, Emotional Design 68/68, AI Personalization & SLR 204/204 (19 skipped pre-ingest + 3 dups removed/merged). 293 papers, every paper faceted, every value defined, every link noted. Vocabulary = 90 canonical values across the 5 dimensions.",
   "_definitions": {
     "ai_technique::Human-AI interaction": "Designing and studying how people interact with AI systems as collaborators or tools.",
     "ai_technique::Adaptive/intelligent UI": "Interfaces (AUI/IUI) that adjust their layout, content, or behaviour to the user, often using AI.",
@@ -80,22 +80,16 @@
     "ux_effect::Transparency": "How clearly a system conveys what it does and why, so users can understand it.",
     "ux_effect::Cognitive load": "The mental effort an interface or task demands of the user.",
     "ux_effect::Information overload": "Being overwhelmed by more information or choice than one can process.",
-    "challenge::Cold start": "Recommending well when there is little data on a new user or item.",
-    "challenge::Data sparsity": "Sparse user–item interactions that weaken recommendation quality.",
-    "challenge::Filter bubble / over-personalization": "Personalization narrowing the content a user is exposed to.",
     "challenge::Scalability": "Maintaining quality and performance as users, items, or data grow large.",
     "challenge::Explainability": "Making complex AI decisions understandable and justifiable to users.",
     "challenge::Privacy-preserving personalization": "Personalizing while limiting the exposure of personal data.",
     "challenge::Adaptation usability trade-off": "Adapting an interface risks confusing users or imposing switching costs.",
     "metric::Accuracy / precision / recall": "Standard correctness metrics for prediction or classification.",
-    "metric::Ranking metrics (NDCG/MAP)": "Metrics for the quality of a ranked recommendation list (e.g. NDCG, MAP).",
     "metric::A/B testing": "Online controlled experiments comparing variants on live users.",
-    "metric::Click-through rate": "The rate at which users click recommended or presented items.",
     "metric::Task performance": "Objective task outcomes such as completion time, errors, or success rate.",
     "ethical_concern::Filter bubbles & echo chambers": "Personalization confining users to a narrow, self-reinforcing slice of content.",
     "ethical_concern::Algorithmic bias & fairness": "Systems producing unfair or discriminatory outcomes across groups.",
     "ethical_concern::Data consent": "Whether users meaningfully agree to how their data is collected and used.",
-    "ethical_concern::Surveillance": "Pervasive monitoring of users' behaviour, attention, or physiology.",
     "ethical_concern::Accountability": "Who is answerable for an automated system's decisions and harms."
   },
   "hci-adaptive-interfaces/2011-impagliazzo-utopia-participatory-design-from-scandinavia-to-the-world.md": {
@@ -2251,6 +2245,1049 @@
     ],
     "metrics": [
       { "v": "Physiological measures", "note": "Discriminates obstacles from multiple data modalities." }
+    ]
+  },
+  "ai-personalization-slr/2021-song-inertial-motion-tracking-on-mobile-and-wearable-devices.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "Learning-based inertial motion tracking on mobile/wearable IMUs." }
+    ],
+    "uxEffects": [
+      { "v": "Wayfinding & spatial orientation", "note": "Enables indoor navigation and gesture/text input from motion." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Surveys recent advances and open challenges in IMU tracking." }
+    ]
+  },
+  "ai-personalization-slr/2021-szymanski-visual-textual-or-hybrid-the-effect-of-user-expertise-on.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "Compares visual, textual, and hybrid AI explanations." }
+    ],
+    "uxEffects": [
+      { "v": "Transparency", "note": "Explanations for AI transparency and accountability." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "The right explanation type depends on the end-user." },
+      { "v": "Adapting to diverse users", "note": "User expertise shapes which explanations work." }
+    ]
+  },
+  "ai-personalization-slr/2021-todi-adapting-user-interfaces-with-model-based-reinforcement.md": {
+    "aiTechniques": [
+      { "v": "Reinforcement learning", "note": "Model-based RL decides when and how to adapt the interface." },
+      { "v": "Adaptive/intelligent UI", "note": "Adapts UIs while weighing positive and negative effects on the user." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Tailors interface changes to the individual user." }
+    ],
+    "challenges": [
+      { "v": "Adaptation usability trade-off", "note": "Careless adaptation imposes surprise and relearning costs." }
+    ]
+  },
+  "ai-personalization-slr/2021-voice-model-based-intelligent-user-interface-adaptation.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Model-based intelligent UI adaptation to the context of use." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Adapts the UI as users grow more demanding." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Adaptation quality across varied contexts of use." },
+      { "v": "Fragmented research", "note": "Reviews three decades of modelling methods and future directions." }
+    ]
+  },
+  "ai-personalization-slr/2022-chu-user-feedback-design-in-ai-driven-mood-tracker-mobile-apps.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "AI-driven mood tracking for personalized mental-health care." }
+    ],
+    "uxEffects": [
+      { "v": "Well-being", "note": "Supports more people's mental-health care via mood trackers." },
+      { "v": "Personalization & adaptation", "note": "User feedback improves the AI models and experience over time." }
+    ]
+  },
+  "ai-personalization-slr/2022-cscw-how-designers-find-their-ways-in-shaping-algorithmic-systems.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Increasing designers' participation in shaping algorithmic systems." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "How designers actually shape algorithmic personalization features." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User autonomy & agency", "note": "Algorithmic features raise concerns of reduced user agency." },
+      { "v": "Algorithmic bias & fairness", "note": "Concerns of unequal treatment of users." }
+    ]
+  },
+  "ai-personalization-slr/2022-february-service-aware-personalized-item-recommendation.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Service-aware personalized item recommendation." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Accounts for service-interaction stages in personalization." },
+      { "v": "Recommendation quality", "note": "Adds extrinsic service factors to improve rating estimates." }
+    ]
+  },
+  "ai-personalization-slr/2022-feit-auit-the-adaptive-user-interfaces-toolkit-for-designing-xr.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "AUIT toolkit for building adaptive UIs in XR." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Adapts interface elements within Extended Reality." },
+      { "v": "Personalization & adaptation", "note": "Adapts UI elements to the user's context." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "Eases laborious manual implementation of XR adaptation." }
+    ]
+  },
+  "ai-personalization-slr/2022-graefe1-b-how-well-does-the-algorithm-know-me.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "A taxonomy of user-adaptive systems (Levels of Adaptive Sensitivity)." },
+      { "v": "User modeling", "note": "Concerns how well systems model the individual user." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Frames degrees of user-adaptive personalization." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "User-adaptive-systems research lacks uniform terminology." }
+    ]
+  },
+  "ai-personalization-slr/2022-guesmi-explaining-user-models-with-different-levels-of-detail-for.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "RIMA: transparent recommendation with interest modeling." }
+    ],
+    "uxEffects": [
+      { "v": "Transparency", "note": "Interactive, layered explanations of the user model." },
+      { "v": "Personalization & adaptation", "note": "Considers user personal characteristics in explanations." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "Explains user models at different levels of detail." }
+    ]
+  },
+  "ai-personalization-slr/2022-january-real-time-adaptation-of-context-aware-intelligent-user.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Dynamic, context-aware UI adaptation for situational awareness." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Leverages current context to surface the most useful information." },
+      { "v": "Cognitive load", "note": "Delivers information optimally to enhance situational awareness." }
+    ]
+  },
+  "ai-personalization-slr/2022-kale-interpretability-then-what-editing-machine-learning-models.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "ML interpretability reveals undesirable patterns models exploit." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "Asks how to act on interpretability findings, not just surface them." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Algorithmic bias & fairness", "note": "Edits models to reflect human knowledge and values, avoiding harms." }
+    ]
+  },
+  "ai-personalization-slr/2022-liu-personalized-user-interface-elements-recommendation-system.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Recommends personalized UI elements." },
+      { "v": "Machine learning", "note": "Trains on user features and evaluations to recommend elements." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalizes interface elements per user." }
+    ]
+  },
+  "ai-personalization-slr/2022-markets-is-trust-in-artificial-intelligence-systems-related-to-user.md": {
+    "uxEffects": [
+      { "v": "Trust", "note": "Reviews whether trust in AI systems relates to user personality." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Personality differences shape trust in AI." },
+      { "v": "Fragmented research", "note": "Reviews scattered empirical evidence on AI trust." }
+    ]
+  },
+  "ai-personalization-slr/2022-ng-a-review-of-ai-teaching-and-learning-from-2000-to-2020.md": {
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Reviews AI teaching and learning ('AI literacy')." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Consolidates two decades of AITL research." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Societal impact of AI", "note": "AI literacy as a societal need amid pervasive AI." }
+    ]
+  },
+  "ai-personalization-slr/2022-pages-bibliometric-and-visualized-analysis-of-user-experience.md": {
+    "uxEffects": [
+      { "v": "Usability", "note": "Maps the field of user-experience design research." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Bibliometric analysis of UX design research, 1999–2019." },
+      { "v": "Fragmented research", "note": "Systematically reviews 14,825 UXD documents." }
+    ]
+  },
+  "ai-personalization-slr/2022-paper-user-acceptance-on-content-optimization-algorithms.md": {
+    "aiTechniques": [
+      { "v": "Conversational agents", "note": "Content optimization in conversational-AI services." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "User acceptance of content-optimization algorithms." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Filter bubbles & echo chambers", "note": "Predicts which users are susceptible to filter bubbles." }
+    ]
+  },
+  "ai-personalization-slr/2022-qian-scalar-authoring-semantically-adaptive-augmented-reality.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "ScalAR authors semantically adaptive AR experiences." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Associates virtual content with environmental entities in AR." },
+      { "v": "Personalization & adaptation", "note": "Adapts AR content behaviour across environments." }
+    ],
+    "challenges": [
+      { "v": "Scalability", "note": "Targets adaptive AR under large-scale, varied deployment." }
+    ]
+  },
+  "ai-personalization-slr/2022-research-artificial-intelligence-based-humancomputer-interaction.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "AI-based HCI technology for consumer and education contexts." }
+    ],
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Applied to experiential education." },
+      { "v": "Behaviour change", "note": "Analyses consumer behaviour with AI-based HCI." }
+    ]
+  },
+  "ai-personalization-slr/2022-research-personalized-recommendation-model-of-electronic-commerce-in.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Personalized e-commerce recommendation model." },
+      { "v": "Emotion recognition", "note": "Uses semantic emotion analysis to inform recommendations." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalizes recommendations in the new-media era." }
+    ]
+  },
+  "ai-personalization-slr/2022-silva-algorithms-for-the-development-of-adaptive-web-interfaces-a.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Algorithms for developing adaptive web interfaces." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Adapts web UIs for better user experience." },
+      { "v": "Satisfaction", "note": "UI is a key driver of user satisfaction with web apps." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic literature review of adaptive-web-UI algorithms." }
+    ]
+  },
+  "ai-personalization-slr/2022-zdanowsk-a-study-of-ux-practitioners-roles-in-designing-real-world.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "Studies real-world enterprise ML system design." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "UX practitioners' roles in designing ML systems." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "How UCD methods influence design of the system behind the interface." }
+    ]
+  },
+  "ai-personalization-slr/2023-alipour-toward-changing-users-behavior-with-emotion-based-adaptive.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Emotion-based adaptive interactive systems." },
+      { "v": "Adaptive/intelligent UI", "note": "Adapts the UI to the user's emotions." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Treats users' emotions as first-class design entities." },
+      { "v": "Behaviour change", "note": "Aims to change user behaviour via emotion-based adaptation." }
+    ]
+  },
+  "ai-personalization-slr/2023-b-data-in-design-how-big-data-and-thick-data-inform-design.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Big data and thick data informing design-thinking projects." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "Integrates data into design-thinking practice." },
+      { "v": "Designing for uncertainty", "note": "Helps firms cope with uncertainty and complexity." }
+    ]
+  },
+  "ai-personalization-slr/2023-b-international-journal-of-human-computer-studies.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "Predicts when explainability (XAI) is needed." }
+    ],
+    "uxEffects": [
+      { "v": "Transparency", "note": "Targets making AI more understandable to humans." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "Need for explainability across healthcare, finance, justice, recruiting." }
+    ],
+    "metrics": [
+      { "v": "Task performance", "note": "Predicts XAI need from high-granularity interaction data." }
+    ]
+  },
+  "ai-personalization-slr/2023-b-zero-shot-multitask-intent-and-emotion-prediction-from.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Zero-shot prediction of intent and emotion from multimodal data." },
+      { "v": "Conversational agents", "note": "Empathetic conversational AI responding to user emotion." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Empathy: understanding and responding to the user's emotions." }
+    ]
+  },
+  "ai-personalization-slr/2023-cheng-interactionadapt-interaction-driven-workspace-adaptation.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Interaction-driven workspace adaptation for situated VR." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Flexible, personalized VR work environments." },
+      { "v": "Personalization & adaptation", "note": "Adapts VR workspaces to populated physical environments." }
+    ]
+  },
+  "ai-personalization-slr/2023-degen-hci-international-2023-late-breaking-papers.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Reviews the impact of AI on mobile computing (human factors)." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "AI shaping mobile-computing experiences." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic review from a human-factors perspective." }
+    ]
+  },
+  "ai-personalization-slr/2023-design-choice-based-personalization-in-moocs-impact-on-activity.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Choice-based personalization in MOOCs." },
+      { "v": "Experiential learning", "note": "Tailors instruction to learners' interests in education." },
+      { "v": "User engagement", "note": "Examines impact on learner activity and perceived value." }
+    ]
+  },
+  "ai-personalization-slr/2023-esposito-end-user-development-for-artificial-intelligence-a.md": {
+    "aiTechniques": [
+      { "v": "Human-AI co-creation", "note": "End-user development lets non-experts create AI solutions." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic literature review of EUD for AI." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Empowers users to build AI tailored to their needs." }
+    ]
+  },
+  "ai-personalization-slr/2023-gao-hci-international-2023-late-breaking-papers.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Personalized news recommendation for older people." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Uses users' life stories to personalize news." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Inclusion & accessibility", "note": "Designs recommendation for older adults." }
+    ]
+  },
+  "ai-personalization-slr/2023-language-arxiv-2303-03638v1-cs-hc-7-mar-2023.md": {
+    "aiTechniques": [
+      { "v": "Conversational agents", "note": "Conversational AI assistants as collaborators in UX evaluation." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Humans collaborate with CAs to evaluate UX." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Explores AI assistance for conducting UX evaluation." }
+    ]
+  },
+  "ai-personalization-slr/2023-liang-influence-of-artificial-intelligence-recommendation-on.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "AI recommendation in e-commerce." }
+    ],
+    "uxEffects": [
+      { "v": "Persuasion", "note": "Influence of AI recommendation on purchase intention." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Filter bubbles & echo chambers", "note": "Homogeneous information creates an 'information cocoon'." }
+    ]
+  },
+  "ai-personalization-slr/2023-moghaddam-user-interface-and-architecture-adaption-based-on.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Factors emotion and behaviour into self-adaptation." },
+      { "v": "Adaptive/intelligent UI", "note": "Self-adapts UI and architecture to improve QoS." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Reconfigures the system to the user at runtime." },
+      { "v": "Emotional response", "note": "Considers users' emotions in socio-technical adaptation." }
+    ]
+  },
+  "ai-personalization-slr/2023-niyazov-user-driven-constraints-for-layout-optimisation-in.md": {
+    "aiTechniques": [
+      { "v": "Combinatorial optimization", "note": "Models AR layout placement as cost-function constraints." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Arranges augmented-reality content in the real world." },
+      { "v": "Personalization & adaptation", "note": "User-driven constraints steer the automatic layout." }
+    ]
+  },
+  "ai-personalization-slr/2023-plizzari-an-outlook-into-the-future-of-egocentric-vision.md": {
+    "aiTechniques": [
+      { "v": "Computer vision", "note": "Egocentric vision from outward-facing wearable cameras." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Wearable computing with digital overlays in daily life." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A survey mapping current vs anticipated egocentric vision." }
+    ]
+  },
+  "ai-personalization-slr/2023-rogers-tracing-and-visualizing-human-ml-ai-collaborative-processes.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "AutoML lowers barriers but still needs human intervention." },
+      { "v": "Human-AI co-creation", "note": "Humans and machines trade off work in data tasks." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Traces collaborative human-ML/AI data work." },
+      { "v": "Transparency", "note": "Makes visible what was done, by whom or what." }
+    ]
+  },
+  "ai-personalization-slr/2023-sensors-article-ux-framework-including-imbalanced-ux-dataset.md": {
+    "uxEffects": [
+      { "v": "Satisfaction", "note": "Evaluates user satisfaction with game AI." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "A UX framework with an imbalanced-dataset reduction method." }
+    ],
+    "metrics": [
+      { "v": "Behavioural measures", "note": "Analyses user interaction input through the UI." }
+    ]
+  },
+  "ai-personalization-slr/2023-sharm-from-sci-fi-to-reality-the-evolution-of-human-computer.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "AI bringing personalization and adaptivity to HCI." },
+      { "v": "Natural language processing", "note": "Advanced NLP among the enabling techniques." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Unprecedented levels of personalization and adaptivity." }
+    ]
+  },
+  "ai-personalization-slr/2023-shi-understanding-design-collaboration-between-designers-and.md": {
+    "aiTechniques": [
+      { "v": "Human-AI co-creation", "note": "Design collaboration between designers and AI." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Designers as a user group interacting with AI." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic literature review of designer-AI collaboration." }
+    ]
+  },
+  "ai-personalization-slr/2023-smereka-27th-international-conference-on-knowledge-based-and.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Automatically adapts the UI of a workflow-ERP system." },
+      { "v": "Content-based recommendation", "note": "Content-based filtering recommends UI configurations." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Adapts the UI to how processes are carried out." }
+    ]
+  },
+  "ai-personalization-slr/2023-technologies-roles-of-artificial-intelligence-experience-information.md": {
+    "aiTechniques": [
+      { "v": "Conversational agents", "note": "Intelligent Personal Assistants (IPAs) in education." }
+    ],
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Studies IPAs' effect on active-learning behaviours." },
+      { "v": "User engagement", "note": "AI experience and familiarity shape engagement." }
+    ]
+  },
+  "ai-personalization-slr/2023-usmani-human-centered-artificial-intelligence-designing-for-user.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Human-Centered AI prioritizing the user." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "User-centric design principles for AI." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Centers user empowerment and ethical considerations." }
+    ]
+  },
+  "ai-personalization-slr/2023-vaidhyanathan-emoticontrol-emotions-based-control-of-user-interfaces.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Emoticontrol: emotion-based control of UI adaptations." },
+      { "v": "Adaptive/intelligent UI", "note": "Emotions drive UI-adaptation decisions." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Ignoring emotions causes failure or discomfort." },
+      { "v": "Personalization & adaptation", "note": "Adapts interactive systems to the user's emotions." }
+    ]
+  },
+  "ai-personalization-slr/2023-vorvoreanu-assessing-human-ai-interaction-early-through-factorial.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "A research protocol to evaluate human-AI interaction." }
+    ],
+    "challenges": [
+      { "v": "Measuring user experience", "note": "Assesses HAII solutions and validates design decisions early." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "A factorial protocol for assessing interaction solutions." }
+    ]
+  },
+  "ai-personalization-slr/2023-wang-designing-responsible-ai-adaptations-of-ux-practice-to-meet.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Adapts UX practice and roles for Responsible AI." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "New practices to meet Responsible-AI challenges." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Accountability", "note": "Responds to efforts to audit and regulate AI systems." }
+    ]
+  },
+  "ai-personalization-slr/2023-wasilewski-clustering-methods-for-adaptive-e-commerce-user-interfaces.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Provides different interfaces to different user groups." },
+      { "v": "Machine learning", "note": "Clusters users (incl. AI methods) to drive adaptation." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Adapts e-commerce UIs to user behaviour." }
+    ]
+  },
+  "ai-personalization-slr/2023-yildirim-creating-design-resources-to-scafold-the-ideation-of-ai.md": {
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "A Research-through-Design process to ideate AI products." }
+    ],
+    "challenges": [
+      { "v": "Designing for uncertainty", "note": "Scaffolds ideation of hard-to-envision AI capabilities." },
+      { "v": "Bridging theory and practice", "note": "Makes AI advances useful in the real world." }
+    ]
+  },
+  "ai-personalization-slr/2024-10-1109-access-2024-a-systematic-review-of-the-impact-of-auxiliary-information.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Auxiliary information in recommender systems." },
+      { "v": "Content-based recommendation", "note": "Uses demographics, item attributes, and context." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalized experiences across many domains." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic review of auxiliary-information impact." }
+    ]
+  },
+  "ai-personalization-slr/2024-10-1109-access-2024-machine-learning-algorithms-for-improved-product-design.md": {
+    "aiTechniques": [
+      { "v": "Reinforcement learning", "note": "Deep RL among the techniques for product-design UX." },
+      { "v": "Machine learning", "note": "Combines PSO and ML for user-centric product design." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Improves product-design user experience." }
+    ]
+  },
+  "ai-personalization-slr/2024-10-1109-access-2024-one-size-does-not-fit-all-multivariant-user-interface.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "Multivariant UI personalization for e-commerce." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Replaces one-size-fits-all storefronts with variants." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Accounts for individual customer characteristics." }
+    ]
+  },
+  "ai-personalization-slr/2024-10-1109-access-2024-toward-an-interactive-reading-experience-deep-learning.md": {
+    "aiTechniques": [
+      { "v": "Deep learning", "note": "Deep-learning insights into the reading experience." },
+      { "v": "Emotion recognition", "note": "Tracks engagement and emotion during reading." }
+    ],
+    "uxEffects": [
+      { "v": "User engagement", "note": "Engagement is central to the reading experience." },
+      { "v": "Emotional response", "note": "Models readers' dynamic emotional states." }
+    ]
+  },
+  "ai-personalization-slr/2024-10-1109-access-2024-unpacking-human-ai-interaction-in-safety-critical.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Human-AI interaction in safety-critical industries." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Existing HAII research is limited and fragmented; an SLR." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Accountability", "note": "Poor interaction can cause catastrophic consequences." }
+    ]
+  },
+  "ai-personalization-slr/2024-ai-arxiv-2402-06089v2-cs-hc-13-feb-2024.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "AI-enabled tools for UX practitioners, via a Human-Centered AI lens." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic literature review of AI assistance for UX." },
+      { "v": "Bridging theory and practice", "note": "Mainstream adoption of AI-UX tools remains limited." }
+    ]
+  },
+  "ai-personalization-slr/2024-ai-arxiv-2402-15350v2-cs-hc-2-jul-2024.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "Prompt-based LLM interfaces for app prototyping." },
+      { "v": "Human-AI co-creation", "note": "Supports building AI-powered applications." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Accountability", "note": "Fosters Responsible-AI awareness about potential harms during prototyping." }
+    ]
+  },
+  "ai-personalization-slr/2024-asthan-i-know-even-if-you-dont-tell-me-understanding-users-privacy.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalization via AI inferences of sensitive information." },
+      { "v": "Transparency", "note": "Studies how transparency of inferences affects users." }
+    ],
+    "challenges": [
+      { "v": "Privacy-preserving personalization", "note": "Personalizing from inferred sensitive attributes." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Privacy", "note": "Platforms collect data without users' awareness or consent." }
+    ]
+  },
+  "ai-personalization-slr/2024-b-an-empirical-study-of-ai-techniques-in-mobile-applications.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "Empirical study of AI/ML techniques in mobile apps." },
+      { "v": "Deep learning", "note": "Deep-learning technologies in AI-driven mobile apps." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "AI provides personalized services in mobile apps." }
+    ]
+  },
+  "ai-personalization-slr/2024-b-computers-and-education-artificial-intelligence.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "LLMs provisioning feedback through user interfaces." }
+    ],
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "LLM feedback in an educational setting." },
+      { "v": "Personalization & adaptation", "note": "Tailors feedback to learners via the interface." }
+    ]
+  },
+  "ai-personalization-slr/2024-broker-optimizing-emotion-classification-from-eeg-signals-a.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Emotion classification from EEG signals (DEAP dataset)." },
+      { "v": "Affective computing", "note": "Targets affective computing and HCI applications." }
+    ],
+    "metrics": [
+      { "v": "EEG / neural measures", "note": "Optimizes classifiers over EEG emotion signals." }
+    ]
+  },
+  "ai-personalization-slr/2024-changal-next-gen-human-computer-interaction-a-hybrid.md": {
+    "aiTechniques": [
+      { "v": "Deep learning", "note": "Fuses LSTM and CNN for next-gen HCI." },
+      { "v": "Adaptive/intelligent UI", "note": "Delivers personalized, adaptive user experiences." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Meets rising demand for personalized, adaptive UX." }
+    ]
+  },
+  "ai-personalization-slr/2024-cho-minexr-mining-personalized-extended-reality-interfaces.md": {
+    "aiTechniques": [
+      { "v": "Adaptive/intelligent UI", "note": "MineXR: a design-mining workflow for personalized XR interfaces." },
+      { "v": "User modeling", "note": "Builds knowledge of user behaviour and preferences." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Engaging Extended Reality interfaces." },
+      { "v": "Personalization & adaptation", "note": "Personalizes XR interfaces to the user." }
+    ]
+  },
+  "ai-personalization-slr/2024-constantinides-culturai-exploring-mixed-reality-art-exhibitions-with-large.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "CulturAI uses LLMs for personalized MR art exhibitions." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Mixed Reality blends physical and virtual art experiences." },
+      { "v": "Personalization & adaptation", "note": "Personalizes the immersive exhibition experience." }
+    ]
+  },
+  "ai-personalization-slr/2024-costaa-towards-an-ai-driven-user-interface-design-for-web.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Integrating AI capabilities into web UI design." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Best practices for AI-driven web UI design." }
+    ],
+    "challenges": [
+      { "v": "Bridging theory and practice", "note": "How to integrate AI into modern UI design." }
+    ]
+  },
+  "ai-personalization-slr/2024-cuadr-the-illusion-of-empathy-notes-on-displays-of-emotion-in.md": {
+    "aiTechniques": [
+      { "v": "Conversational agents", "note": "From ELIZA to Alexa, CAs designed to project empathy." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Characterizes empathy in interactions with CAs." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Emotional manipulation", "note": "Projected empathy can be deceptive and exploitative." }
+    ]
+  },
+  "ai-personalization-slr/2024-design-application-of-artificial-intelligence-in-interactive-ui.md": {
+    "aiTechniques": [
+      { "v": "Generative AI", "note": "Generative design tools in interactive UI design." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Evaluates AI's effect across conceptual to final design." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "Assesses effects through experiments and analysis." }
+    ]
+  },
+  "ai-personalization-slr/2024-edi40-predicting-the-usability-of-mobile-applications-using-ai.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "Proposes 'large user interface models' (LUIMs) to generate UIs." },
+      { "v": "Adaptive/intelligent UI", "note": "AI generation and usability prediction for mobile UIs." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Predicts usability of mobile applications." }
+    ],
+    "metrics": [
+      { "v": "Usability evaluation", "note": "An integrated framework for testing usability." }
+    ]
+  },
+  "ai-personalization-slr/2024-ijircst-ai-driven-ux-ui-design-empirical-research-and-applications.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "AI-driven UX/UI design in FinTech." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Examines user preferences and AI-tool adoption." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "Mixed methods: surveys, interviews, case studies." }
+    ]
+  },
+  "ai-personalization-slr/2024-intelligence-a-roadmap-of-explainable-artificial-intelligence-explain-to.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "A roadmap of XAI: explain to whom, when, what, and how." }
+    ],
+    "uxEffects": [
+      { "v": "Transparency", "note": "Stresses explaining to the actual end-user, not just developers." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "A disconnect persists across XAI research communities." }
+    ]
+  },
+  "ai-personalization-slr/2024-intelligence-utilizing-emotion-recognition-technology-to-enhance-user.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Real-time emotion recognition to enhance UX." },
+      { "v": "Affective computing", "note": "Applies affective computing in HCI." }
+    ],
+    "uxEffects": [
+      { "v": "User engagement", "note": "Aims to improve user engagement and satisfaction." },
+      { "v": "Emotional response", "note": "Monitors users' emotions in real time." }
+    ]
+  },
+  "ai-personalization-slr/2024-javadi-article-lime-mine-explainable-machine-learning-for-user.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "LIME-Mine: explainable ML for user-behaviour analysis (IoT)." },
+      { "v": "Machine learning", "note": "Extracts patterns from IoT user-activity traces." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Patterns drive smarter, more personalized IoT apps." }
+    ],
+    "challenges": [
+      { "v": "Explainability", "note": "Makes ML user-behaviour models interpretable." }
+    ]
+  },
+  "ai-personalization-slr/2024-khamaj-alexandria-engineering-journal.md": {
+    "aiTechniques": [
+      { "v": "Reinforcement learning", "note": "RL with a Deep Q-Network drives real-time UI adaptation." },
+      { "v": "Adaptive/intelligent UI", "note": "A dynamic, personalized UI that changes with user behaviour." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Real-time personalized interface adaptation." }
+    ]
+  },
+  "ai-personalization-slr/2024-li-situationadapt-contextual-ui-optimization-in-mixed-reality.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "LLM reasoning provides situation awareness for adaptation." },
+      { "v": "Adaptive/intelligent UI", "note": "Contextual MR UI optimization beyond static environments." }
+    ],
+    "uxEffects": [
+      { "v": "Immersion & presence", "note": "Adapts Mixed Reality layouts to mobile contexts." },
+      { "v": "Personalization & adaptation", "note": "Adapts the UI to varying real-world situations." }
+    ]
+  },
+  "ai-personalization-slr/2024-lu-inevitable-challenges-of-autonomy-ethical-concerns-in.md": {
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalized algorithmic decision-making assists daily tasks." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User autonomy & agency", "note": "Reliance on algorithmic decisions challenges human autonomy." },
+      { "v": "Accountability", "note": "Raises ethical concerns of personalized algorithmic decisions." }
+    ]
+  },
+  "ai-personalization-slr/2024-molaei-shaping-human-ai-collaboration-varied-scafolding-levels-in.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "Co-writing with LLMs at varied scaffolding levels." },
+      { "v": "Human-AI co-creation", "note": "Novel human-AI co-writing experiences." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Studies how scaffolding shapes the co-writing process." }
+    ],
+    "metrics": [
+      { "v": "Controlled experiment", "note": "A within-subjects field experiment (Latin square)." }
+    ]
+  },
+  "ai-personalization-slr/2024-nandipi-a-systematic-review-on-human-and-computer.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Reviews the evolving landscape of HCI research." }
+    ],
+    "uxEffects": [
+      { "v": "Usability", "note": "Surveys key HCI concepts and interaction quality." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A comprehensive review of HCI research." }
+    ]
+  },
+  "ai-personalization-slr/2024-neural-a-personalized-product-recommendation-model-in-e-commerce.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "A personalized product recommendation model (retrieval strategy)." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalizes online-shopping product recommendations." },
+      { "v": "Recommendation quality", "note": "Improves the recommendation engine's relevance." }
+    ]
+  },
+  "ai-personalization-slr/2024-nimmo-user-characteristics-in-explainable-ai-the-rabbit-hole-of.md": {
+    "aiTechniques": [
+      { "v": "Explainable AI (XAI)", "note": "User characteristics in explainable AI." }
+    ],
+    "uxEffects": [
+      { "v": "Transparency", "note": "XAI for transparency and trust among users." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Catering XAI to data scientists, domain experts, end-users." }
+    ]
+  },
+  "ai-personalization-slr/2024-objectives-granting-non-ai-experts-creative-control-over-ai-systems.md": {
+    "aiTechniques": [
+      { "v": "Human-AI co-creation", "note": "Lets non-AI experts directly design AI systems." }
+    ],
+    "uxEffects": [
+      { "v": "Participation & collaboration", "note": "Domain experts contribute expertise to AI design." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Grants non-experts creative control to reduce AI harms." }
+    ]
+  },
+  "ai-personalization-slr/2024-oorni-article-functional-framework-for-multivariant-e-commerce.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Data analytics drive e-commerce product recommendations." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Multivariant e-commerce UIs beyond a single page." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Accounts for individual customer characteristics." }
+    ]
+  },
+  "ai-personalization-slr/2024-paper-analyzing-behavioral-intentions-toward-generative.md": {
+    "aiTechniques": [
+      { "v": "Generative AI", "note": "Studies behavioural intentions toward generative AI (ChatGPT)." },
+      { "v": "Large language models", "note": "ChatGPT as the focal generative-AI technology." }
+    ],
+    "uxEffects": [
+      { "v": "User engagement", "note": "Examines factors driving adoption and use of GenAI." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "Surveys individuals' intentions toward generative AI." }
+    ]
+  },
+  "ai-personalization-slr/2024-perer-human-centered-ai-enhancing-user-interaction-with.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Human-Centered AI across healthcare, finance, education." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Improves user interaction with intelligent systems." },
+      { "v": "Emotional response", "note": "Considers human abilities, values, and emotions." }
+    ],
+    "ethicalConcerns": [
+      { "v": "User empowerment", "note": "Deploys AI to respect human values and involvement." }
+    ]
+  },
+  "ai-personalization-slr/2024-research-does-personality-matter-examining-the-value-of-personality.md": {
+    "aiTechniques": [
+      { "v": "User modeling", "note": "Uses personality insights to model learners." }
+    ],
+    "uxEffects": [
+      { "v": "Persuasion", "note": "Personalized nudges encourage selecting learning resources." },
+      { "v": "Experiential learning", "note": "Targets selection of educational resources." }
+    ],
+    "challenges": [
+      { "v": "Adapting to diverse users", "note": "Tests whether personality improves personalized nudges." }
+    ]
+  },
+  "ai-personalization-slr/2024-safe-arxiv-2404-14218v1-cs-hc-22-apr-2024.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Best practices for AI experiences aimed at children." }
+    ],
+    "uxEffects": [
+      { "v": "User engagement", "note": "Balances safety with engagement for children." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Accountability", "note": "Measuring safety, trustworthiness, and reliability for children." }
+    ]
+  },
+  "ai-personalization-slr/2024-technologies-unveiling-the-landscape-of-generative-artificial.md": {
+    "aiTechniques": [
+      { "v": "Generative AI", "note": "A taxonomy of generative AI (ChatGPT) in education." }
+    ],
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Implications of GenAI for education." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A comprehensive taxonomy of applications and challenges." }
+    ]
+  },
+  "ai-personalization-slr/2024-technologies-visualizing-the-knowledge-mapping-of-artificial.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "Maps AI in education (AIED) research." }
+    ],
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "AI's role in education and learning." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "A systematic review and knowledge-mapping of AIED." }
+    ]
+  },
+  "ai-personalization-slr/2024-technology-transforming-user-experience-ux-through-artificial.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "AI transforming UX in interactive media." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "AI promotes design innovation in interactive products." },
+      { "v": "Usability", "note": "Applies AI across digital-media interactive product design." }
+    ]
+  },
+  "ai-personalization-slr/2024-unknown-collaborative-filtering-and-recommendation-algorithm-for.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Recommendation for live-streaming e-commerce." },
+      { "v": "Collaborative filtering", "note": "Collaborative-filtering algorithm over big data." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "More intelligent, personalized recommendation results." }
+    ],
+    "challenges": [
+      { "v": "Scalability", "note": "Big-data recommendation for live-streaming platforms." }
+    ]
+  },
+  "ai-personalization-slr/2024-unknown-computers-in-human-behavior-reports.md": {
+    "aiTechniques": [
+      { "v": "Human-AI interaction", "note": "HCI researchers studying experiences with pocket technology." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Strives to predict and meet user needs." },
+      { "v": "User engagement", "note": "Studies user intentions toward and experiences with technology." }
+    ]
+  },
+  "ai-personalization-slr/2024-unknown-harnessing-ai-potential-in-e-commerce-improving-user.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "Deep-learning product recommendations in e-commerce." },
+      { "v": "Deep learning", "note": "DL-based recommendation reshaping e-commerce." }
+    ],
+    "uxEffects": [
+      { "v": "User engagement", "note": "Improves user engagement and sales." },
+      { "v": "Personalization & adaptation", "note": "Personalized product recommendations." }
+    ]
+  },
+  "ai-personalization-slr/2024-unknown-title-educating-artificial-intelligence-following-the-child.md": {
+    "uxEffects": [
+      { "v": "Experiential learning", "note": "Trains AI following child learning-development trajectories." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Algorithmic bias & fairness", "note": "Confronts gender/disability bias from biased datasets." },
+      { "v": "Accountability", "note": "Notes lack of transparency and accountability in algorithms." }
+    ]
+  },
+  "ai-personalization-slr/2024-vankhede-predictive-analytics-for-website-user-behavior.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "Random-forest predictive analytics for user behaviour." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Forecasts e-commerce behavioural patterns." }
+    ],
+    "metrics": [
+      { "v": "Behavioural measures", "note": "Analyses customer-behaviour data from e-commerce." }
+    ]
+  },
+  "ai-personalization-slr/2024-yeroshkin-28th-international-conference-on-knowledge-based-and.md": {
+    "aiTechniques": [
+      { "v": "Recommender systems", "note": "A recommendations UI in web-based e-commerce." },
+      { "v": "Adaptive/intelligent UI", "note": "Adaptive UIs personalize the shopping experience." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Personalizes e-commerce to attract and retain customers." }
+    ]
+  },
+  "ai-personalization-slr/2024-zhang-identifying-hand-based-input-preference-based-on-wearable.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "EEG-based method to evaluate hand-input preference." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Input preference informs personalization on a smartwatch." }
+    ],
+    "metrics": [
+      { "v": "EEG / neural measures", "note": "Wearable EEG measures preference for touch vs mid-air gestures." }
+    ]
+  },
+  "ai-personalization-slr/2025-10-1109-access-2025-advancements-in-context-recognition-for-edge-devices-and.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "On-device context recognition for edge devices and eyewear." }
+    ],
+    "uxEffects": [
+      { "v": "Personalization & adaptation", "note": "Context-aware services enable dynamic adaptation." }
+    ],
+    "challenges": [
+      { "v": "Fragmented research", "note": "Reviews sensors and applications for context recognition." }
+    ]
+  },
+  "ai-personalization-slr/2025-alpes-using-user-emotions-to-trigger-ui-adaptation.md": {
+    "aiTechniques": [
+      { "v": "Emotion recognition", "note": "Detects negative emotions at runtime to trigger adaptation." },
+      { "v": "Adaptive/intelligent UI", "note": "Adapts the user interface to users' emotions." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Maintains UX quality by responding to emotion." },
+      { "v": "Personalization & adaptation", "note": "Emotion-triggered interface adaptation." }
+    ]
+  },
+  "ai-personalization-slr/2025-kodam-article-effects-of-ai-virtual-anchors-on-brand-image-and.md": {
+    "aiTechniques": [
+      { "v": "Conversational agents", "note": "AI virtual anchors selling products live." }
+    ],
+    "uxEffects": [
+      { "v": "Persuasion", "note": "Effects of AI anchors on brand image and loyalty." },
+      { "v": "Trust", "note": "Perceived value shapes brand trust and loyalty." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "PLS-SEM and ANN analysis of user perceptions." }
+    ]
+  },
+  "ai-personalization-slr/2025-sarkar-the-impact-of-generative-ai-on-critical-thinking-self.md": {
+    "aiTechniques": [
+      { "v": "Generative AI", "note": "GenAI in knowledge workflows." }
+    ],
+    "uxEffects": [
+      { "v": "Cognitive load", "note": "Self-reported reductions in cognitive effort with GenAI." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Societal impact of AI", "note": "Questions GenAI's effect on critical-thinking skills." }
+    ],
+    "metrics": [
+      { "v": "Survey responses", "note": "Surveys 319 knowledge workers." }
+    ]
+  },
+  "ai-personalization-slr/2025-stoynov-a-novel-emotion-aware-networking-model-for-enhanced-user.md": {
+    "aiTechniques": [
+      { "v": "Affective computing", "note": "Emotional intelligence built into 5G networks (ENP)." },
+      { "v": "Emotion recognition", "note": "Emotion-aware networking paradigm." }
+    ],
+    "uxEffects": [
+      { "v": "Emotional response", "note": "Incorporates emotion to enhance the user experience." },
+      { "v": "Personalization & adaptation", "note": "Adapts network behaviour to users' emotional state." }
+    ]
+  },
+  "ai-personalization-slr/2025-trai-it-s-just-distributed-computing-rethinking-ai-governance.md": {
+    "aiTechniques": [
+      { "v": "Machine learning", "note": "Frames 'AI' as varied ML applications on distributed computing." }
+    ],
+    "ethicalConcerns": [
+      { "v": "Accountability", "note": "A framework for rethinking AI governance." },
+      { "v": "Societal impact of AI", "note": "Analyses AI's societal footprint as ubiquitous computing." }
+    ]
+  },
+  "ai-personalization-slr/nd-radfor-improving-language-understanding-by-generative-pre-training.md": {
+    "aiTechniques": [
+      { "v": "Large language models", "note": "The GPT generative pre-training approach to language understanding." },
+      { "v": "Natural language processing", "note": "Tackles NLU tasks: entailment, QA, similarity, classification." },
+      { "v": "Deep learning", "note": "Generative pre-training on large unlabeled corpora." }
+    ],
+    "metrics": [
+      { "v": "Accuracy / precision / recall", "note": "Evaluated across diverse language-understanding benchmarks." }
     ]
   }
 }
