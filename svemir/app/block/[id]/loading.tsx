@@ -12,8 +12,8 @@ export default function Loading() {
       <main className="min-h-[calc(100vh-3rem)]">
         <div className="grid grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]">
           <div className="flex flex-col gap-4">
-            <div className="h-7 w-72 animate-pulse rounded-md bg-neutral-900" />
-            <div className="h-[60vh] w-full animate-pulse rounded-sm bg-neutral-900" />
+            <div className="h-7 w-72 animate-pulse rounded-xl bg-neutral-900" />
+            <div className="h-[60vh] w-full animate-pulse rounded-xl bg-neutral-900" />
           </div>
           <aside className="flex flex-col gap-4">
             <div className="h-8 w-2/3 animate-pulse rounded bg-neutral-900" />

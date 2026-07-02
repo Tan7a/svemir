@@ -36,7 +36,7 @@ export default function PaperFullText({ blockId }: Props) {
   }
 
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-950/60">
+    <section className="rounded-xl border border-neutral-800 bg-neutral-950/60">
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className="text-xs font-medium text-neutral-300">Full text</span>
         {state.status !== "ok" && (
@@ -44,7 +44,7 @@ export default function PaperFullText({ blockId }: Props) {
             type="button"
             onClick={load}
             disabled={state.status === "loading"}
-            className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 transition-colors hover:bg-neutral-900 disabled:opacity-50"
+            className="rounded-xl border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 transition-colors hover:bg-neutral-900 disabled:opacity-50"
           >
             {state.status === "loading" ? "Loading…" : "Read full text"}
           </button>

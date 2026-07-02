@@ -8,6 +8,8 @@ import {
   type OrderKind,
   type ViewKind,
 } from "./FilterBar";
+import { MenuPanel, MenuItem } from "./ui/Menu";
+import Chevron from "./ui/Chevron";
 
 // Sorts that operate on individual blocks (kind / category / source). Offered
 // in both views; choosing one from Channels view also switches to Blocks.
@@ -86,42 +88,34 @@ export default function OrderDropdown() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+        className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
       >
         {currentLabel}
-        <span aria-hidden className="text-[10px] text-neutral-500">
-          ▾
-        </span>
+        <Chevron open={open} className="text-neutral-500" />
       </button>
       {open && (
-        <ul className="absolute right-0 z-40 mt-1 min-w-[12rem] rounded-md border border-neutral-800 bg-neutral-950 py-1 shadow-xl">
+        <MenuPanel className="absolute right-0 z-40 mt-1 min-w-[12rem]">
           {options.map((opt) => {
             const active = current === opt.value;
             return (
-              <li key={opt.value}>
-                <button
-                  type="button"
-                  onClick={() => choose(opt.value)}
-                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
-                    active
-                      ? "text-neutral-100"
-                      : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
-                  }`}
-                >
+              <MenuItem
+                key={opt.value}
+                selected={active}
+                onClick={() => choose(opt.value)}
+                leading={
                   <span
-                    aria-hidden
                     className={`h-1.5 w-1.5 rounded-full border ${
                       active
                         ? "border-neutral-200 bg-neutral-200"
                         : "border-neutral-600"
                     }`}
                   />
-                  {opt.label}
-                </button>
-              </li>
+                }
+                label={opt.label}
+              />
             );
           })}
-        </ul>
+        </MenuPanel>
       )}
     </div>
   );

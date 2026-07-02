@@ -321,11 +321,11 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search title, description, URL…"
-            className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            className="flex-1 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
           />
           <button
             type="submit"
-            className="rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-900"
+            className="rounded-xl bg-neutral-100 px-3 py-2 text-sm text-neutral-900"
           >
             Search
           </button>
@@ -343,7 +343,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           type="button"
           onClick={handleScrapeMissing}
           disabled={scraping || backfilling || refetching}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
           title="Fetch missing image/description for up to 10 items on this page"
         >
           {scraping ? "Scraping…" : "Scrape missing (10)"}
@@ -352,7 +352,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           type="button"
           onClick={handleBackfillAll}
           disabled={scraping || backfilling || indexing || refetching}
-          className="rounded-md border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 hover:bg-white disabled:opacity-50"
+          className="rounded-xl border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 hover:bg-white disabled:opacity-50"
           title="Scrape image/description for ALL items in the archive that are missing them"
         >
           {backfilling
@@ -367,7 +367,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           type="button"
           onClick={handleRefetchCovers}
           disabled={scraping || backfilling || indexing || refetching}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
           title="Replace old screenshot covers with each page's own og:image"
         >
           {refetching
@@ -382,7 +382,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           type="button"
           onClick={() => handleExtractConcepts(false)}
           disabled={scraping || backfilling || indexing || refetching}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
           title="Extract concepts/terms (locally, no AI) for every block not yet indexed"
         >
           {indexing
@@ -425,13 +425,13 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
       )}
 
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg bg-neutral-100 px-4 py-2.5 text-sm text-neutral-900">
+        <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-2.5 text-sm text-neutral-900">
           <span>{selected.size} selected</span>
           <button
             type="button"
             onClick={handleBulkDelete}
             disabled={busy === "bulk"}
-            className="rounded-md bg-red-500 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+            className="rounded-xl bg-red-500 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
           >
             {busy === "bulk" ? "Deleting…" : "Delete"}
           </button>
@@ -446,7 +446,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
       )}
 
       {error && (
-        <p className="rounded-md border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">
+        <p className="rounded-xl border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">
           {error}
         </p>
       )}
@@ -644,14 +644,14 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
                           type="button"
                           onClick={saveEdit}
                           disabled={busy === item.id}
-                          className="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 disabled:opacity-50"
+                          className="rounded-xl bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 disabled:opacity-50"
                         >
                           {busy === item.id ? "…" : "Save"}
                         </button>
                         <button
                           type="button"
                           onClick={cancelEdit}
-                          className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs"
+                          className="rounded-xl border border-neutral-700 px-2.5 py-1 text-xs"
                         >
                           Cancel
                         </button>
@@ -661,7 +661,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
                         <button
                           type="button"
                           onClick={() => startEdit(item)}
-                          className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs hover:bg-neutral-800"
+                          className="rounded-xl border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs hover:bg-neutral-800"
                         >
                           Edit
                         </button>
@@ -669,7 +669,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
                           type="button"
                           onClick={() => handleDelete(item.id)}
                           disabled={busy === item.id}
-                          className="rounded-md border border-red-900 bg-transparent px-2.5 py-1 text-xs text-red-400 hover:bg-red-950 disabled:opacity-50"
+                          className="rounded-xl border border-red-900 bg-transparent px-2.5 py-1 text-xs text-red-400 hover:bg-red-950 disabled:opacity-50"
                         >
                           {busy === item.id ? "…" : "Delete"}
                         </button>
@@ -689,7 +689,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
             type="button"
             disabled={page <= 1}
             onClick={() => go(page - 1)}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm disabled:opacity-50"
           >
             ← Prev
           </button>
@@ -700,7 +700,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
             type="button"
             disabled={page >= totalPages}
             onClick={() => go(page + 1)}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm disabled:opacity-50"
           >
             Next →
           </button>

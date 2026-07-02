@@ -32,7 +32,7 @@ export default function TopBar() {
         </Suspense>
         <Suspense
           fallback={
-            <span className="flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200">
+            <span className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200">
               Add <span className="text-neutral-400">+</span>
             </span>
           }

@@ -7,7 +7,7 @@ import { HINT_COOKIE } from "@/lib/access";
 import SignInModal from "./SignInModal";
 
 const BUTTON_CLASS =
-  "flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-900";
+  "flex items-center gap-1.5 rounded-xl border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-900";
 
 function hasHintCookie(): boolean {
   if (typeof document === "undefined") return false;

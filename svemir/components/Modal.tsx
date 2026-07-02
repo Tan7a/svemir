@@ -9,7 +9,7 @@ type Props = {
 
 /**
  * Right-side panel for intercepted block routes. Replaces the old centered
- * popup with a 600px-wide panel anchored to the right edge. Closes via:
+ * popup with a wide (up to 1200px) panel anchored to the right edge. Closes via:
  *   - clicking the backdrop
  *   - clicking the × button
  *   - pressing Escape
@@ -44,7 +44,7 @@ export default function Modal({ children }: Props) {
 
       {/* Panel — fixed 600px on the right, full height, scrolls internally. */}
       <div
-        className="absolute inset-y-0 right-0 flex w-full max-w-[600px] flex-col border-l border-neutral-800 bg-background shadow-2xl shadow-black/60"
+        className="absolute inset-y-0 right-0 flex w-full max-w-[1200px] flex-col border-l border-neutral-800 bg-background shadow-2xl shadow-black/60"
         style={{ animation: "panel-in 0.2s ease-out" }}
       >
         <div className="flex shrink-0 items-center justify-end border-b border-neutral-800 px-4 py-2.5">
@@ -52,7 +52,7 @@ export default function Modal({ children }: Props) {
             type="button"
             onClick={() => router.back()}
             aria-label="Close"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+            className="flex h-7 w-7 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
           >
             ×
           </button>

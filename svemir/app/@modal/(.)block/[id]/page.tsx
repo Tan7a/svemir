@@ -47,8 +47,8 @@ async function BlockDetailContent({
 function BlockDetailSkeleton() {
   return (
     <div className="flex flex-col gap-6 px-6 py-6">
-      <div className="h-[40vh] w-full animate-pulse rounded-sm bg-neutral-900" />
-      <div className="h-7 w-3/4 animate-pulse rounded-md bg-neutral-900" />
+      <div className="h-[40vh] w-full animate-pulse rounded-xl bg-neutral-900" />
+      <div className="h-7 w-3/4 animate-pulse rounded-xl bg-neutral-900" />
       <div className="h-4 w-1/2 animate-pulse rounded bg-neutral-900" />
       <div className="mt-2 h-3 w-full animate-pulse rounded bg-neutral-900" />
       <div className="h-3 w-2/3 animate-pulse rounded bg-neutral-900" />

@@ -15,7 +15,7 @@ type Props = {
 };
 
 /**
- * are.na-style multi-select channel picker:
+ * Multi-select channel picker:
  *  - Selected chips at top.
  *  - Search filters across All channels (cached on first focus).
  *  - Suggested section appears when `suggestions` is non-empty.
@@ -159,7 +159,7 @@ export default function ChannelPicker({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search or create a channel…"
-        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
+        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
       />
 
       {!q && suggestions.length > 0 && (
@@ -167,7 +167,7 @@ export default function ChannelPicker({
           <h4 className="mb-1 flex items-center gap-1 text-xs uppercase tracking-wide text-neutral-500">
             <span aria-hidden>✻</span> Suggested
           </h4>
-          <ul className="divide-y divide-neutral-800 rounded-md border border-neutral-800 bg-neutral-900">
+          <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800 bg-neutral-900">
             {suggestions.map((s) => {
               const selected = valueLower.has(s.title.toLowerCase());
               return (
@@ -198,7 +198,7 @@ export default function ChannelPicker({
           <h4 className="mb-1 text-xs uppercase tracking-wide text-neutral-500">
             Recent channels
           </h4>
-          <ul className="divide-y divide-neutral-800 rounded-md border border-neutral-800 bg-neutral-900">
+          <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800 bg-neutral-900">
             {recents.slice(0, 10).map((r) => {
               const selected = valueLower.has(r.title.toLowerCase());
               return (
@@ -226,7 +226,7 @@ export default function ChannelPicker({
       )}
 
       {!q && recents.length === 0 && suggestions.length === 0 && (
-        <p className="rounded-md border border-dashed border-neutral-800 px-3 py-4 text-center text-xs text-neutral-500">
+        <p className="rounded-xl border border-dashed border-neutral-800 px-3 py-4 text-center text-xs text-neutral-500">
           No channels yet — type to create your first one.
         </p>
       )}
@@ -234,7 +234,7 @@ export default function ChannelPicker({
       {q && (
         <section>
           {matches.length > 0 && (
-            <ul className="divide-y divide-neutral-800 rounded-md border border-neutral-800 bg-neutral-900">
+            <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800 bg-neutral-900">
               {matches.map((t) => {
                 const selected = valueLower.has(t.toLowerCase());
                 return (
@@ -262,7 +262,7 @@ export default function ChannelPicker({
             <button
               type="button"
               onClick={() => createAndAdd(query)}
-              className="mt-2 w-full rounded-md border border-dashed border-neutral-700 px-3 py-2 text-left text-sm text-neutral-300 hover:bg-neutral-900"
+              className="mt-2 w-full rounded-xl border border-dashed border-neutral-700 px-3 py-2 text-left text-sm text-neutral-300 hover:bg-neutral-900"
             >
               + Create new channel:{" "}
               <span className="text-neutral-100">&quot;{query}&quot;</span>

@@ -28,9 +28,6 @@ export default function TopBarSearch() {
 
   return (
     <div className="hidden items-center text-sm text-neutral-500 md:flex">
-      <span aria-hidden className="mr-2 text-[22px] leading-none">
-        ⌕
-      </span>
       <input
         type="text"
         value={value}

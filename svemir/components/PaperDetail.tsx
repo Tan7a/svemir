@@ -128,7 +128,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
   }
 
   const btn =
-    "rounded-md border px-3 py-1.5 text-xs transition-colors disabled:opacity-50";
+    "rounded-xl border px-3 py-1.5 text-xs transition-colors disabled:opacity-50";
   const editControls = editing ? (
     <>
       <button
@@ -242,7 +242,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
             onChange={(e) => setAbstractDraft(e.target.value)}
             disabled={busy}
             rows={8}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 p-3 text-[15px] leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
+            className="w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-[15px] leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
           />
         ) : block.description ? (
           <p className="max-w-prose whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-200">
@@ -272,7 +272,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
                       key={v.slug}
                       href={`/facet/${v.slug}`}
                       title="See definition & all papers with this facet"
-                      className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-neutral-900 ${dim?.border ?? "border-neutral-700"} ${dim?.text ?? "text-neutral-300"}`}
+                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-neutral-900 ${dim?.border ?? "border-neutral-700"} ${dim?.text ?? "text-neutral-300"}`}
                     >
                       {v.value}
                       {v.count > 1 && (

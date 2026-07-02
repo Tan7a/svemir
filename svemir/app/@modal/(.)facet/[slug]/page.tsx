@@ -38,7 +38,7 @@ function FacetDetailSkeleton() {
   return (
     <div className="flex flex-col gap-5 px-6 py-6">
       <div className="h-4 w-24 animate-pulse rounded bg-neutral-900" />
-      <div className="h-8 w-2/3 animate-pulse rounded-md bg-neutral-900" />
+      <div className="h-8 w-2/3 animate-pulse rounded-xl bg-neutral-900" />
       <div className="h-3 w-full animate-pulse rounded bg-neutral-900" />
       <div className="h-3 w-1/2 animate-pulse rounded bg-neutral-900" />
       <div className="mt-4 h-16 w-full animate-pulse rounded bg-neutral-900" />

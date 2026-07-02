@@ -10,7 +10,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/"
-          className="mt-6 inline-block rounded-sm border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 hover:text-neutral-100"
+          className="mt-6 inline-block rounded-xl border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 hover:text-neutral-100"
         >
           Back to svemir
         </Link>

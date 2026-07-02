@@ -15,7 +15,7 @@
    text) and only flips light/dark polarity.
    ---------------------------------------------------------------------------- */
 
-/* Dark (default) — the original svemir palette, mirrors are.na. */
+/* Dark (default): the original svemir palette. */
 :root,
 html[data-theme="dark"] {
   --background: #0a0a0a;
@@ -112,6 +112,9 @@ html[data-theme="funky"] {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
+  /* Bebas Neue — the display / brand font (wordmark + big headings). Exposed as
+     the `font-display` utility; the raw var is set by next/font in layout.tsx. */
+  --font-display: var(--font-display);
 }
 
 html,

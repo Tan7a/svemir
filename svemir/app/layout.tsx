@@ -14,8 +14,8 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
-  title: "svemir",
-  description: "Personal universe of references — blocks, channels, graph.",
+  title: "Svemir",
+  description: "Personal universe of references: blocks, channels, graph.",
   icons: {
     icon: "/svemir.svg",
     apple: "/svemir.svg",
@@ -62,7 +62,7 @@ export default function RootLayout({
           rel="noopener noreferrer"
           className="fixed bottom-3 left-4 z-40 text-[11px] text-neutral-600 transition-colors hover:text-neutral-300"
         >
-          made by Tanja Radovanovic
+          designed &amp; built by Tanja Radovanovic
         </a>
       </body>
     </html>

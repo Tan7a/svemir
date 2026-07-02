@@ -74,14 +74,14 @@ export default function BlockPicker({
   const q = query.trim();
 
   return (
-    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-2">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-2">
       <input
         ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search blocks by title…"
-        className="w-full rounded-sm border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+        className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
         disabled={busy}
       />
       {!q ? (
@@ -102,9 +102,9 @@ export default function BlockPicker({
                   type="button"
                   disabled={already || busy}
                   onClick={() => onPick(r)}
-                  className="flex w-full items-center gap-2 rounded-sm px-1.5 py-1 text-left text-xs text-neutral-200 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex w-full items-center gap-2 rounded-xl px-1.5 py-1 text-left text-xs text-neutral-200 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-sm border border-neutral-800 bg-neutral-950">
+                  <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
                     {r.image_url ? (
                       <Image
                         src={r.image_url}

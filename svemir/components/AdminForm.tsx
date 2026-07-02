@@ -28,7 +28,7 @@ type SmartHint =
   | { kind: "text"; label: string };
 
 const inputClass =
-  "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500";
+  "w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500";
 
 function looksLikeUrl(s: string): boolean {
   if (!s) return false;
@@ -352,7 +352,7 @@ export default function AdminForm() {
         }}
         onDragLeave={() => setSmartDragOver(false)}
         onDrop={handleSmartDrop}
-        className={`rounded-md border border-dashed px-4 py-3 transition-colors ${
+        className={`rounded-xl border border-dashed px-4 py-3 transition-colors ${
           smartDragOver
             ? "border-neutral-400 bg-neutral-900"
             : "border-neutral-700 bg-neutral-950"
@@ -402,7 +402,7 @@ export default function AdminForm() {
       </div>
 
       {/* Kind tabs */}
-      <div className="flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 p-1 text-xs">
+      <div className="flex items-center gap-1 rounded-xl border border-neutral-800 bg-neutral-900 p-1 text-xs">
         {(["link", "image", "text"] as const).map((k) => {
           const active = kind === k;
           return (
@@ -439,7 +439,7 @@ export default function AdminForm() {
               type="button"
               onClick={() => url && scrapeUrl(url)}
               disabled={status.kind === "scraping"}
-              className="shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
+              className="shrink-0 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-60"
               title="Re-fetch metadata"
             >
               {status.kind === "scraping" ? "Fetching…" : "↻"}
@@ -489,7 +489,7 @@ export default function AdminForm() {
               <button
                 type="button"
                 onClick={() => setImageUrl("")}
-                className="shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+                className="shrink-0 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
               >
                 Clear
               </button>
@@ -500,7 +500,7 @@ export default function AdminForm() {
             <img
               src={imageUrl}
               alt=""
-              className="mt-2 h-32 w-auto rounded-md border border-neutral-800 object-cover"
+              className="mt-2 h-32 w-auto rounded-xl border border-neutral-800 object-cover"
             />
           )}
           {status.kind === "uploading" && (
@@ -542,7 +542,7 @@ export default function AdminForm() {
           type="button"
           onClick={handleSave}
           disabled={status.kind === "saving"}
-          className="rounded-md bg-neutral-100 px-5 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
+          className="rounded-xl bg-neutral-100 px-5 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
         >
           {status.kind === "saving"
             ? "Saving…"

@@ -32,13 +32,13 @@ export default function Error({
           <button
             type="button"
             onClick={reset}
-            className="rounded-sm border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-100 hover:bg-neutral-800"
+            className="rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-100 hover:bg-neutral-800"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="rounded-sm border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:text-neutral-100"
+            className="rounded-xl border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:text-neutral-100"
           >
             Back to svemir
           </Link>

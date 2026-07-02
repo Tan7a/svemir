@@ -34,7 +34,7 @@ export default function ChannelCard({ channel }: Props) {
     .map(([c]) => c);
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-neutral-800 transition-colors hover:border-white">
+    <div className="group relative flex flex-col rounded-[34px] border border-neutral-800 transition-colors hover:border-white">
       {/* Top-left — title + meta. The after:inset-0 overlay makes the whole card
           a link to the channel (stretched-link). */}
       <Link
@@ -63,10 +63,9 @@ export default function ChannelCard({ channel }: Props) {
           </div>
         ) : (
           thumbs.map((b) => (
-            <Link
+            <div
               key={b.id}
-              href={`/block/${b.id}`}
-              className="pointer-events-auto relative z-10 aspect-square h-[240px] w-[240px] shrink-0 overflow-hidden rounded-2xl bg-neutral-900"
+              className="relative aspect-square h-[240px] w-[240px] shrink-0 overflow-hidden rounded-3xl bg-neutral-900"
             >
               {b.kind === "paper" ? (
                 <div className="flex h-full w-full flex-col gap-1.5 p-3">
@@ -100,7 +99,7 @@ export default function ChannelCard({ channel }: Props) {
                   ○
                 </div>
               )}
-            </Link>
+            </div>
           ))
         )}
       </div>

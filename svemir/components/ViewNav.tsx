@@ -21,15 +21,17 @@ export default function ViewNav() {
     pathname !== "/" &&
     pathname !== "/graph" &&
     pathname !== "/concepts" &&
-    pathname !== "/facets"
+    pathname !== "/facets" &&
+    pathname !== "/design-system"
   )
     return null;
   const onGraph = pathname === "/graph";
   const onConcepts = pathname === "/concepts";
   const onFacets = pathname === "/facets";
+  const onDesignSystem = pathname === "/design-system";
 
   const activeView: ViewKind | null =
-    onGraph || onConcepts || onFacets
+    onGraph || onConcepts || onFacets || onDesignSystem
       ? null
       : searchParams.get("view") === "channels"
         ? "channels"
@@ -80,6 +82,16 @@ export default function ViewNav() {
         }
       >
         Research
+      </Link>
+      <Link
+        href="/design-system"
+        className={
+          onDesignSystem
+            ? "text-neutral-100"
+            : "text-neutral-400 hover:text-neutral-100"
+        }
+      >
+        Design
       </Link>
     </nav>
   );

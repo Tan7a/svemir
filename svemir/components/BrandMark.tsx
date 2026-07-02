@@ -141,7 +141,7 @@ export default function BrandMark() {
               <MenuItem label="← Back" onClick={() => setView("root")} />
               <Separator />
               <div className="px-3 py-2 text-xs leading-relaxed text-neutral-400">
-                <span className="text-neutral-200">svemir</span> — your personal
+                <span className="text-neutral-200">svemir</span> is your personal
                 universe of references. Blocks, channels, and a knowledge graph.
               </div>
             </>
@@ -170,7 +170,7 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-neutral-200 transition-colors hover:bg-neutral-900"
+      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-neutral-200 transition-colors hover:bg-neutral-900"
     >
       <span className="flex-1">{label}</span>
       {trailing ? (

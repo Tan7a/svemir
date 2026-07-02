@@ -10,6 +10,15 @@ import {
   renameChannel,
 } from "@/app/admin/actions";
 import ChannelInfoModal from "./ChannelInfoModal";
+import { MenuPanel, MenuItem } from "./ui/Menu";
+import ConfirmDialog from "./ui/ConfirmDialog";
+import {
+  IconConnect,
+  IconUnlink,
+  IconTrash,
+  IconEdit,
+  IconInfo,
+} from "./ui/icons";
 
 type Props = {
   channelId: string;
@@ -25,63 +34,6 @@ type Props = {
   };
 };
 
-const stroke = {
-  width: 14,
-  height: 14,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.75,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
-
-function IconConnect() {
-  return (
-    <svg {...stroke}>
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  );
-}
-function IconUnlink() {
-  return (
-    <svg {...stroke}>
-      <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M5.16 11.75l-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-      <line x1="2" y1="2" x2="22" y2="22" />
-    </svg>
-  );
-}
-function IconTrash() {
-  return (
-    <svg {...stroke}>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
-function IconPencil() {
-  return (
-    <svg {...stroke}>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-function IconInfo() {
-  return (
-    <svg {...stroke}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4" />
-      <path d="M12 8h.01" />
-    </svg>
-  );
-}
-
 export default function ChannelActions({
   channelId,
   channelTitle,
@@ -91,6 +43,7 @@ export default function ChannelActions({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(channelTitle);
@@ -198,20 +151,18 @@ export default function ChannelActions({
     }
   }
 
-  async function handleDelete() {
-    if (
-      !confirm(
-        `Delete channel "${channelTitle}"? Blocks will stay, but their connection to this channel will be removed. This cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  function handleDelete() {
+    setOpen(false);
+    setConfirmOpen(true);
+  }
+
+  async function doDelete() {
+    setConfirmOpen(false);
     setBusy(true);
     setError(null);
     const result = await deleteChannel(channelId);
     setBusy(false);
     if (result.success) {
-      setOpen(false);
       router.push("/?view=channels");
     } else {
       setError(result.error);
@@ -234,12 +185,12 @@ export default function ChannelActions({
           e.preventDefault();
           setOpen((o) => !o);
         }}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+        className="flex h-7 w-7 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
       >
         <span aria-hidden className="text-lg leading-none">⋯</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-max min-w-[11rem] max-w-xs overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl shadow-black/60">
+        <MenuPanel className="absolute right-0 top-[calc(100%+6px)] z-20 w-max min-w-[11rem] max-w-xs">
           {renaming ? (
             <div className="p-1.5">
               <p className="mb-2 text-[10px] uppercase tracking-wide text-neutral-500">
@@ -259,7 +210,7 @@ export default function ChannelActions({
                   }
                 }}
                 placeholder="Channel name…"
-                className="w-full rounded-sm border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
                 disabled={busy}
               />
               <p className="mt-2 text-[10px] text-neutral-500">
@@ -270,7 +221,7 @@ export default function ChannelActions({
           ) : !picking ? (
             <>
               <MenuItem
-                icon={<IconPencil />}
+                leading={<IconEdit />}
                 label="Rename channel"
                 onClick={() => {
                   setRenameValue(channelTitle);
@@ -278,13 +229,13 @@ export default function ChannelActions({
                 }}
               />
               <MenuItem
-                icon={<IconConnect />}
+                leading={<IconConnect />}
                 label="Connect to channel…"
                 onClick={() => setPicking(true)}
               />
               {hasParent && (
                 <MenuItem
-                  icon={<IconUnlink />}
+                  leading={<IconUnlink />}
                   label="Remove from parent"
                   onClick={detach}
                   disabled={busy}
@@ -292,7 +243,7 @@ export default function ChannelActions({
               )}
               {info && (
                 <MenuItem
-                  icon={<IconInfo />}
+                  leading={<IconInfo />}
                   label="Channel info"
                   onClick={() => {
                     setInfoOpen(true);
@@ -302,7 +253,7 @@ export default function ChannelActions({
               )}
               <div className="my-1 border-t border-neutral-800" />
               <MenuItem
-                icon={<IconTrash />}
+                leading={<IconTrash />}
                 label="Delete channel"
                 onClick={handleDelete}
                 disabled={busy}
@@ -329,7 +280,7 @@ export default function ChannelActions({
                   }
                 }}
                 placeholder="Type a channel name…"
-                className="w-full rounded-sm border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
                 disabled={busy}
               />
               {suggestions.length > 0 && (
@@ -357,7 +308,7 @@ export default function ChannelActions({
           {error && (
             <p className="px-3 py-2 text-xs text-red-400">{error}</p>
           )}
-        </div>
+        </MenuPanel>
       )}
       {info && (
         <ChannelInfoModal
@@ -371,43 +322,17 @@ export default function ChannelActions({
           topics={info.topics}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        tone="danger"
+        title={`Delete “${channelTitle}”?`}
+        message="Blocks stay in your archive — only their connection to this channel is removed. This can't be undone."
+        confirmLabel="Delete channel"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
 
-function MenuItem({
-  icon,
-  label,
-  onClick,
-  disabled,
-  danger,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        danger
-          ? "text-red-400 hover:bg-red-950/50"
-          : "text-neutral-200 hover:bg-neutral-900"
-      }`}
-    >
-      <span
-        aria-hidden
-        className={`flex h-4 w-4 shrink-0 items-center justify-center ${
-          danger ? "text-red-400" : "text-neutral-400"
-        }`}
-      >
-        {icon}
-      </span>
-      <span className="flex-1">{label}</span>
-    </button>
-  );
-}

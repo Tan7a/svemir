@@ -194,14 +194,14 @@ export default function ImportForm() {
             type="button"
             onClick={handleImport}
             disabled={filteredCount === 0}
-            className="rounded-md bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+            className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
           >
             Import {filteredCount} bookmarks
           </button>
           <button
             type="button"
             onClick={() => setStatus({ kind: "idle" })}
-            className="rounded-md px-3 py-2.5 text-sm text-neutral-400 hover:text-neutral-100"
+            className="rounded-xl px-3 py-2.5 text-sm text-neutral-400 hover:text-neutral-100"
           >
             Cancel
           </button>
@@ -241,20 +241,20 @@ export default function ImportForm() {
         <div className="flex gap-2 pt-2">
           <Link
             href="/admin/manage"
-            className="rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
+            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
           >
             Manage imported items
           </Link>
           <Link
             href="/"
-            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
+            className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
           >
             View archive
           </Link>
           <button
             type="button"
             onClick={() => setStatus({ kind: "idle" })}
-            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
+            className="rounded-xl px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
           >
             Import another file
           </button>

@@ -65,7 +65,7 @@ export default function SignInModal({ open, onClose }: Props) {
   }
 
   const inputClass =
-    "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none";
+    "w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none";
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -78,14 +78,14 @@ export default function SignInModal({ open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Sign in"
-        className="relative w-full max-w-sm rounded-lg border border-neutral-800 bg-background p-6 shadow-2xl shadow-black/60"
+        className="relative w-full max-w-sm rounded-xl border border-neutral-800 bg-background p-6 shadow-2xl shadow-black/60"
         style={{ animation: "dialog-in 0.18s ease-out" }}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
         >
           ×
         </button>
@@ -130,7 +130,7 @@ export default function SignInModal({ open, onClose }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="mt-1 rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
+            className="mt-1 rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
           >
             {pending ? "Signing in…" : "Sign in"}
           </button>

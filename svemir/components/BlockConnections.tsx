@@ -145,7 +145,7 @@ export default function BlockConnections({ blockId, initial }: Props) {
                 href={`/block/${b.id}`}
                 className="flex flex-1 items-center gap-2 truncate text-neutral-200 hover:underline"
               >
-                <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-sm border border-neutral-800 bg-neutral-950">
+                <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
                   {b.image_url ? (
                     <Image
                       src={b.image_url}
@@ -189,7 +189,7 @@ export default function BlockConnections({ blockId, initial }: Props) {
                   href={`/block/${b.id}`}
                   className="flex flex-1 items-center gap-2 truncate text-neutral-400 hover:text-neutral-200 hover:underline"
                 >
-                  <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-sm border border-neutral-800 bg-neutral-950">
+                  <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
                     {b.image_url ? (
                       <Image
                         src={b.image_url}
