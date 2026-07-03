@@ -19,7 +19,7 @@ type Props = {
  * the click feels instant; router.refresh() pulls in any server-side derived
  * state (e.g. graph revalidation).
  *
- * Below the manual list it surfaces "Suggested connections" — blocks that share
+ * Below the manual list it surfaces "Suggested connections" - blocks that share
  * concepts with this one (TF-IDF-weighted, via the related_blocks RPC). These
  * are the system's guesses; promoting one calls the SAME connectBlocks action
  * as a manual connection, so the curatorial gesture stays the single source of

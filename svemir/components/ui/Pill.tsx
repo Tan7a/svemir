@@ -1,5 +1,5 @@
 /**
- * Pill atom — the small caps tag used for channels, categories, and facets.
+ * Pill atom - the small caps tag used for channels, categories, and facets.
  * Full-round border chip; `neutral-*` tokens so it retheme automatically.
  */
 export default function Pill({

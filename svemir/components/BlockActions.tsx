@@ -173,7 +173,7 @@ export default function BlockActions({
       setToast({ kind: "error", message: "No image to download." });
       return;
     }
-    // Open in a new tab — browser handles the download or display.
+    // Open in a new tab - browser handles the download or display.
     window.open(imageUrl, "_blank", "noopener,noreferrer");
   }
 

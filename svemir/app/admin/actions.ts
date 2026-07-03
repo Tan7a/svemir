@@ -115,7 +115,7 @@ export async function addItem(
       body_text: cleanBodyText ?? null,
     });
   } catch {
-    // non-fatal — the block is saved; concepts can be backfilled later
+    // non-fatal - the block is saved; concepts can be backfilled later
   }
 
   revalidatePath("/");
@@ -171,7 +171,7 @@ export async function bulkImportBookmarks(
   }
 
   // For each fresh bookmark, derive the list of channel-titles from its
-  // folder path. (deriveTagsAndCategories still returns {tags,categories} —
+  // folder path. (deriveTagsAndCategories still returns {tags,categories} -
   // we just treat the "tags" as channel titles in this new model.)
   const channelTitlesPerBookmark: string[][] = [];
   const allChannelTitles = new Set<string>();
@@ -384,7 +384,7 @@ export async function updateBlockImage(
 }
 
 /**
- * Rename a block — update its title only. Used by double-clicking the title in
+ * Rename a block - update its title only. Used by double-clicking the title in
  * the block detail panel.
  */
 export async function renameBlock(
@@ -440,7 +440,7 @@ export async function updateBlockDescription(
 }
 
 /**
- * Rename a channel — update its title only. The `slug` is intentionally left
+ * Rename a channel - update its title only. The `slug` is intentionally left
  * unchanged so existing /channel/[slug] links keep resolving. Used by the
  * "Rename" action in the channel "⋯" menu and by double-clicking a channel name.
  */
@@ -675,7 +675,7 @@ export async function scrapeMissingMetadata(
 /**
  * Backfill: replace old auto-captured screenshots with the page's own og:image.
  * Targets only blocks whose image_url points at our own Supabase "screenshots"
- * bucket (a past capture) AND that have a source url to re-scrape — never
+ * bucket (a past capture) AND that have a source url to re-scrape - never
  * external og covers or user-uploaded images. Keyset-paginates by id like
  * scrapeMissingMetadata; the client calls it repeatedly until remaining is 0.
  */
@@ -724,7 +724,7 @@ export async function refetchScreenshotCovers(
       const url = t.url as string;
       try {
         const meta = await scrapeOpenGraph(url);
-        // Only swap when the page offers a usable https image — next/image needs
+        // Only swap when the page offers a usable https image - next/image needs
         // https, and we won't wipe a working cover in exchange for nothing.
         if (!meta.image || !meta.image.startsWith("https://")) {
           return { id, scraped: false } as const;

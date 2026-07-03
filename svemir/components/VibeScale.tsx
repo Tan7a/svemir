@@ -28,7 +28,7 @@ export default function VibeScale({ vibes, index, count, onChange }: Props) {
           className="max-w-[8rem] truncate text-center text-sm font-medium text-neutral-100"
           title={current}
         >
-          {current || "—"}
+          {current || "-"}
         </span>
         <span className="text-[10px] text-neutral-500">
           {count} block{count === 1 ? "" : "s"}

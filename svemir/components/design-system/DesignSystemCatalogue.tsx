@@ -44,7 +44,7 @@ import BlockCard from "@/components/BlockCard";
 import ChannelCard from "@/components/ChannelCard";
 
 /* ---------------------------------------------------------------------------
-   Side-nav map — every group + component, mirrored by ids on the sections
+   Side-nav map - every group + component, mirrored by ids on the sections
    below. Clicking scrolls to the target; the page stays a single scroll.
    --------------------------------------------------------------------------- */
 
@@ -266,7 +266,7 @@ function Swatch({ varName, label }: { varName: string; label: string }) {
 }
 
 /* ---------------------------------------------------------------------------
-   Fixed mock data for the organism examples — no remote images, no network.
+   Fixed mock data for the organism examples - no remote images, no network.
    --------------------------------------------------------------------------- */
 
 const FIXED_DATE = "2026-01-01T00:00:00.000Z";
@@ -437,7 +437,7 @@ export default function DesignSystemCatalogue() {
   const [selected, setSelected] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Sync the initial theme from <html data-theme> after mount — SSR defaults to
+  // Sync the initial theme from <html data-theme> after mount - SSR defaults to
   // "dark", so reading during render would cause a hydration mismatch.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setThemeState(getTheme()), []);
@@ -452,7 +452,9 @@ export default function DesignSystemCatalogue() {
       {/* Header + live theme switcher */}
       <header className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-light text-neutral-100">Design system</h1>
+          <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
+            Design system
+          </h1>
           <div className="mt-2 flex max-w-[450px] flex-col gap-3 text-sm leading-relaxed text-neutral-500">
             <p>
               svemir is my personal universe of references: blocks, channels, a
@@ -728,7 +730,7 @@ export default function DesignSystemCatalogue() {
             <Spec
               id="a-pill"
               name="Pill"
-              usage="channel / category / facet tag"
+              usage="channel / category / theme tag"
               recipe="<Pill>Design</Pill> · px-2 py-1 rounded-full"
             >
               <Pill>Design</Pill>

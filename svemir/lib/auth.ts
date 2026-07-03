@@ -7,7 +7,7 @@ export type AuthResult =
 
 /**
  * Verify a `Authorization: Bearer <token>` header against the api_tokens
- * table. Hashes the presented token with sha256 and looks up by hash —
+ * table. Hashes the presented token with sha256 and looks up by hash -
  * plaintexts never touch the DB or logs.
  *
  * Bumps `last_used_at` fire-and-forget. Service-role bypasses RLS on the

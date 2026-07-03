@@ -6,7 +6,7 @@ import { VIEW_OPTIONS, type ViewKind } from "./FilterBar";
 
 /**
  * Horizontal view switcher, centered in the TopBar. Channels / Blocks set the
- * ?view= param on the homepage; Graph is its own page. Only rendered on "/" —
+ * ?view= param on the homepage; Graph is its own page. Only rendered on "/" -
  * the view vocabulary is meaningless elsewhere. Absolutely centered so it stays
  * mid-bar regardless of the left (logo + search) and right (order + add) widths.
  */
@@ -16,22 +16,24 @@ export default function ViewNav() {
   const searchParams = useSearchParams();
 
   // Visible on the home view, the graph page, the concepts page, and the facets
-  // index — all "the main view".
+  // index - all "the main view".
   if (
     pathname !== "/" &&
     pathname !== "/graph" &&
     pathname !== "/concepts" &&
     pathname !== "/facets" &&
+    pathname !== "/guestbook" &&
     pathname !== "/design-system"
   )
     return null;
   const onGraph = pathname === "/graph";
   const onConcepts = pathname === "/concepts";
   const onFacets = pathname === "/facets";
+  const onGuestbook = pathname === "/guestbook";
   const onDesignSystem = pathname === "/design-system";
 
   const activeView: ViewKind | null =
-    onGraph || onConcepts || onFacets || onDesignSystem
+    onGraph || onConcepts || onFacets || onGuestbook || onDesignSystem
       ? null
       : searchParams.get("view") === "channels"
         ? "channels"
@@ -45,7 +47,7 @@ export default function ViewNav() {
   }
 
   return (
-    <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm min-[900px]:flex">
+    <nav className="hidden items-center gap-6 text-sm md:flex">
       {VIEW_OPTIONS.map((opt) => {
         const active = activeView === opt.value;
         return (

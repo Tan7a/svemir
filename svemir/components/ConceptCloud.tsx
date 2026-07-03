@@ -20,7 +20,7 @@ export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] })
         No concepts yet. Open{" "}
         <code className="rounded bg-neutral-900 px-1">/admin/manage</code> and run{" "}
         <span className="text-neutral-300">Extract concepts</span> to index your
-        archive — it reads each block&apos;s text locally (no AI) and surfaces
+        archive - it reads each block&apos;s text locally (no AI) and surfaces
         the terms you collect most.
       </p>
     );

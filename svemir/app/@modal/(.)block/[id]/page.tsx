@@ -14,7 +14,7 @@ import { getBlockWithChannels } from "@/lib/queries";
  *
  * The panel is mounted ONCE here, synchronously, so it slides in a single time.
  * The data fetch happens inside a Suspense boundary, so only the inner content
- * swaps from skeleton → loaded — no second panel, no replayed animation. (Using
+ * swaps from skeleton → loaded - no second panel, no replayed animation. (Using
  * a segment-level loading.tsx would instead mount its own <Modal>, causing the
  * "double open" glitch.)
  */

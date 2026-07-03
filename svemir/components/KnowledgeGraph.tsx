@@ -62,7 +62,7 @@ type GraphNode = {
   color: string;
   slug?: string;
   prevalence?: number;
-  // Link degree (centrality) — drives node size, Obsidian-style.
+  // Link degree (centrality) - drives node size, Obsidian-style.
   deg?: number;
 };
 
@@ -82,7 +82,7 @@ const CONCEPT_HEX = "#f59e0b"; // detail-card accent
 
 const conceptNodeId = (id: string) => `concept:${id}`;
 
-// Normalise a link endpoint to its id — force-graph mutates source/target from
+// Normalise a link endpoint to its id - force-graph mutates source/target from
 // id strings into node objects once the simulation runs.
 function linkEndId(end: unknown): string {
   return typeof end === "object" && end !== null
@@ -90,7 +90,7 @@ function linkEndId(end: unknown): string {
     : String(end);
 }
 
-// World-space radius of a node's dot — scales with its link count (degree), so
+// World-space radius of a node's dot - scales with its link count (degree), so
 // well-connected hubs read bigger. Shared by the painter, the click hit-area,
 // and the collision force so spacing matches what's drawn.
 function nodeRadius(node: { deg?: number }): number {
@@ -118,7 +118,7 @@ export default function KnowledgeGraph({
     zoomToFit?: (ms?: number, padding?: number) => void;
   } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  // The node the cursor is over — drives Obsidian-style neighbour highlighting.
+  // The node the cursor is over - drives Obsidian-style neighbour highlighting.
   const [hoverId, setHoverId] = useState<string | null>(null);
   // The node whose detail card is open, plus where (within the container) to
   // anchor the card. Cleared by clicking empty space.
@@ -198,7 +198,7 @@ export default function KnowledgeGraph({
 
     const links = Array.from(byKey.values());
 
-    // Degree centrality — how many edges each node has. Drives node size.
+    // Degree centrality - how many edges each node has. Drives node size.
     const deg = new Map<string, number>();
     for (const l of links) {
       deg.set(l.source, (deg.get(l.source) ?? 0) + 1);
@@ -246,7 +246,7 @@ export default function KnowledgeGraph({
   // Neo4j-style "magnet": strong, short links pull connected nodes into tight
   // clusters, while only mild repulsion keeps them from overlapping and light
   // gravity holds the whole map together. The previous strong-repulsion /
-  // weak-link mix strung everything out — this flips that ratio so groups clump.
+  // weak-link mix strung everything out - this flips that ratio so groups clump.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || size.w === 0) return;
@@ -362,13 +362,13 @@ export default function KnowledgeGraph({
               !neighbors.get(hoverId)?.has(node.id);
             ctx.globalAlpha = dim ? 0.12 : 1;
 
-            // Flat dot — no glow. Blocks in their channel colour, concepts amber.
+            // Flat dot - no glow. Blocks in their channel colour, concepts amber.
             ctx.beginPath();
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
             ctx.fillStyle = node.color;
             ctx.fill();
 
-            // Labels are white and fade in gradually as you zoom — opacity ramps
+            // Labels are white and fade in gradually as you zoom - opacity ramps
             // from 0 to 1 across a per-type zoom window (concepts appear earlier
             // than blocks). Font is kept at a constant on-screen size (world font
             // ÷ zoom). A hovered node and its neighbours are always fully legible.

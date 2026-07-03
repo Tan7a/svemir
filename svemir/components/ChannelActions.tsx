@@ -327,7 +327,7 @@ export default function ChannelActions({
         open={confirmOpen}
         tone="danger"
         title={`Delete “${channelTitle}”?`}
-        message="Blocks stay in your archive — only their connection to this channel is removed. This can't be undone."
+        message="Blocks stay in your archive - only their connection to this channel is removed. This can't be undone."
         confirmLabel="Delete channel"
         onConfirm={doDelete}
         onCancel={() => setConfirmOpen(false)}

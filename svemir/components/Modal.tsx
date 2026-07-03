@@ -36,13 +36,13 @@ export default function Modal({ children }: Props) {
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* Backdrop — dims the page behind the panel. */}
+      {/* Backdrop - dims the page behind the panel. */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => router.back()}
       />
 
-      {/* Panel — fixed 600px on the right, full height, scrolls internally. */}
+      {/* Panel - fixed 600px on the right, full height, scrolls internally. */}
       <div
         className="absolute inset-y-0 right-0 flex w-full max-w-[1200px] flex-col border-l border-neutral-800 bg-background shadow-2xl shadow-black/60"
         style={{ animation: "panel-in 0.2s ease-out" }}

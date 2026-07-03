@@ -44,7 +44,7 @@ export default function SignInModal({ open, onClose }: Props) {
   }, [open, onClose]);
 
   // Render via a portal to document.body: the TopBar uses backdrop-blur, which
-  // makes it a containing block for fixed descendants — without the portal the
+  // makes it a containing block for fixed descendants - without the portal the
   // overlay would be trapped inside the 48px-tall header instead of the viewport.
   if (!open || typeof document === "undefined") return null;
 
@@ -92,7 +92,7 @@ export default function SignInModal({ open, onClose }: Props) {
 
         <h2 className="text-lg font-light text-neutral-100">Sign in to add</h2>
         <p className="mb-5 mt-1 text-xs text-neutral-500">
-          Browsing is open to everyone — signing in is only needed to save.
+          Browsing is open to everyone - signing in is only needed to save.
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">

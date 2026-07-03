@@ -5,7 +5,7 @@
 
    Tailwind v4 compiles every `neutral-*` utility to `var(--color-neutral-*)`
    (verified), so re-defining that ramp under an `html[data-theme="…"]`
-   selector re-themes the entire app at once — no per-component edits. Each
+   selector re-themes the entire app at once - no per-component edits. Each
    theme also sets --background / --foreground (consumed by the html/body rule
    and the `bg-background` token) plus selection colours.
 
@@ -39,7 +39,7 @@ html[data-theme="dark"] {
   --color-neutral-950: #0a0a0a;
 }
 
-/* Light white — clean and cool. Inverted ramp. */
+/* Light white - clean and cool. Inverted ramp. */
 html[data-theme="light-white"] {
   --background: #ffffff;
   --foreground: #171717;
@@ -62,7 +62,7 @@ html[data-theme="light-white"] {
   --color-neutral-950: #ffffff;
 }
 
-/* Cream — warm off-white. Inverted ramp with a warm hue. */
+/* Cream - warm off-white. Inverted ramp with a warm hue. */
 html[data-theme="cream"] {
   --background: #f5efe1;
   --foreground: #2b2620;
@@ -85,7 +85,7 @@ html[data-theme="cream"] {
   --color-neutral-950: #faf5ea;
 }
 
-/* Funky — light blue and airy. Light polarity (inverted ramp) with a blue hue. */
+/* Funky - light blue and airy. Light polarity (inverted ramp) with a blue hue. */
 html[data-theme="funky"] {
   --background: #e8f1fc;
   --foreground: #102a43;
@@ -112,7 +112,7 @@ html[data-theme="funky"] {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  /* Bebas Neue — the display / brand font (wordmark + big headings). Exposed as
+  /* Bebas Neue - the display / brand font (wordmark + big headings). Exposed as
      the `font-display` utility; the raw var is set by next/font in layout.tsx. */
   --font-display: var(--font-display);
 }
@@ -149,4 +149,28 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* Guestbook: a warm cream "paper" surface with faint ruled lines + a soft
+   page shadow. Theme-independent (a sticky note is cream on any theme). Used
+   by the guestbook form and note cards (components/GuestbookForm.tsx,
+   app/guestbook/page.tsx). */
+.paper-note {
+  background-color: #f4ecd6;
+  background-image:
+    radial-gradient(120% 80% at 15% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(120, 100, 60, 0.05) 0,
+      rgba(120, 100, 60, 0.05) 1px,
+      transparent 1px,
+      transparent 28px
+    );
+  color: #37322a;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    inset 0 0 44px rgba(180, 150, 100, 0.12);
+}
+.paper-note ::selection {
+  background: rgba(120, 100, 60, 0.25);
 }

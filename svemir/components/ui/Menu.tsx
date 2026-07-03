@@ -5,7 +5,7 @@
  *
  * One source of truth for the "floating panel of rows" pattern used by the sort
  * dropdown, the channel "⋯" menu, and the block "Actions" menu. Callers keep
- * their own open/close state (outside-click, Escape) and positioning — this
+ * their own open/close state (outside-click, Escape) and positioning - this
  * only owns the *look*: panel chrome + row hover states.
  *
  * MenuPanel accepts arbitrary children (not just MenuItems) so callers can drop
@@ -41,7 +41,7 @@ export function MenuItem({
   /** Icon or indicator (e.g. a radio dot) rendered in a fixed 4×4 slot. */
   leading?: React.ReactNode;
   label: React.ReactNode;
-  /** Right-aligned adornment — a keyboard hint or badge. */
+  /** Right-aligned adornment - a keyboard hint or badge. */
   trailing?: React.ReactNode;
   /** Current/active row: brighter label (pair with a filled `leading` dot). */
   selected?: boolean;

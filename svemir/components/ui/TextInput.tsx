@@ -1,8 +1,8 @@
 /**
- * TextInput atom — the two canonical input treatments in svemir.
+ * TextInput atom - the two canonical input treatments in svemir.
  *
- *   default — form-scale input (admin form, sign-in): bg-neutral-900, ring-2
- *   small   — compact picker/inline input: bg-neutral-950, tighter, ring-1
+ *   default - form-scale input (admin form, sign-in): bg-neutral-900, ring-2
+ *   small   - compact picker/inline input: bg-neutral-950, tighter, ring-1
  *
  * Existing call sites still use inline classes and can migrate incrementally.
  */

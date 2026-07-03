@@ -11,7 +11,7 @@ type Params = Promise<{ slug: string }>;
 
 /**
  * A single concept's page: every block that mentions it, most-relevant first
- * (by term frequency within the block). Modeled on the channel detail route —
+ * (by term frequency within the block). Modeled on the channel detail route -
  * async params, a nested select, and the shared BlocksView grid.
  */
 export default async function ConceptPage({ params }: { params: Params }) {

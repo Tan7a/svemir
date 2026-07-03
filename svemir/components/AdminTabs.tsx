@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type Props = {
-  active?: "add" | "import" | "manage" | "tokens";
+  active?: "add" | "import" | "manage" | "tokens" | "guestbook";
 };
 
 const tabs = [
@@ -9,6 +9,7 @@ const tabs = [
   { id: "import", label: "Bulk import", href: "/admin/import" },
   { id: "manage", label: "Manage", href: "/admin/manage" },
   { id: "tokens", label: "Tokens", href: "/admin/tokens" },
+  { id: "guestbook", label: "Guestbook", href: "/admin/guestbook" },
 ] as const;
 
 export default function AdminTabs({ active }: Props) {

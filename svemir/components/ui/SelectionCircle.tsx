@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SelectionCircle atom — the Pinterest-style multi-select toggle shown on block
+ * SelectionCircle atom - the Pinterest-style multi-select toggle shown on block
  * cards. Selected = filled white with a check; idle = translucent ring.
  *
  * Owns only the circle's appearance + behaviour. The caller supplies

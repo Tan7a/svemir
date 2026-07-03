@@ -12,7 +12,7 @@ import { hueFromId } from "@/lib/constants";
 
 export const revalidate = 60;
 
-// Cap concept nodes shown in the graph — keeps the force simulation legible.
+// Cap concept nodes shown in the graph - keeps the force simulation legible.
 const MAX_CONCEPT_NODES = 150;
 
 type ChannelRef = { id: string; title: string };
@@ -166,7 +166,7 @@ export default async function GraphPage() {
       <TopBar />
       {items.length === 0 ? (
         <main className="flex h-[calc(100vh-3rem)] items-center justify-center text-sm text-neutral-500">
-          No blocks yet — add some from <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
+          No blocks yet - add some from <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
         </main>
       ) : (
         <Suspense fallback={<div className="h-[calc(100vh-3rem)]" />}>

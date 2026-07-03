@@ -55,12 +55,13 @@ export default function RootLayout({
         />
         {children}
         {modal}
-        {/* Site-wide maker credit, tucked in the bottom-left corner. */}
+        {/* Site-wide maker credit, pinned bottom-right in a subtle pill.
+            (The Guestbook link lives up in the TopBar next to the sort control.) */}
         <a
           href="https://www.linkedin.com/in/tanjaradovanovic/"
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-3 left-4 z-40 text-[11px] text-neutral-600 transition-colors hover:text-neutral-300"
+          className="fixed bottom-3 right-4 z-40 rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100"
         >
           designed &amp; built by Tanja Radovanovic
         </a>

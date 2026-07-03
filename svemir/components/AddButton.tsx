@@ -18,7 +18,7 @@ function hasHintCookie(): boolean {
 
 /**
  * The "Add" control. Browsing is public; saving requires sign-in. Reads the
- * readable hint cookie (NOT a security boundary — the proxy + server actions
+ * readable hint cookie (NOT a security boundary - the proxy + server actions
  * enforce the real httpOnly cookie) to decide:
  *   - signed in  → a plain link to /admin (keeps prefetch)
  *   - signed out → a button that opens the sign-in popup

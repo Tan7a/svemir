@@ -40,7 +40,7 @@ function escapeLike(value: string): string {
 }
 
 /**
- * Insert-then-lookup for a facet, keyed on (dimension, lower(value)) — the
+ * Insert-then-lookup for a facet, keyed on (dimension, lower(value)) - the
  * unique index from 0007. Race-safe the same way `ensureConcept` is: if a
  * concurrent writer created the same facet (unique violation) we re-select it.
  * Slug collisions between *different* facet values that slugify identically are
@@ -57,7 +57,7 @@ export async function ensureFacet(
   const value = rawValue.trim();
   if (!value) return null;
 
-  // Fast path — already exists (case-insensitive match within the dimension).
+  // Fast path - already exists (case-insensitive match within the dimension).
   const { data: existing } = await client
     .from("paper_facets")
     .select("id")

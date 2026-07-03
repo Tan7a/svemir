@@ -35,13 +35,13 @@ type PlantView = {
 };
 
 /**
- * Idea Garden — each channel grows into a thin, pale L-system plant (a bare stem
+ * Idea Garden - each channel grows into a thin, pale L-system plant (a bare stem
  * under a rounded crown of leaves; blocks = leaves, oldest at the base, newest at
  * the tip). Plants stand on an invisible ground dusted with faint specks; channel
  * names sit at the screen edges with thin leader lines. A timeline scrubber grows
  * the whole garden by `created_at`.
  *
- * Pure Three.js. Flat matte materials — NO bloom/glow, NO gradients. The entire
+ * Pure Three.js. Flat matte materials - NO bloom/glow, NO gradients. The entire
  * scene + overlay DOM is built in one effect and fully torn down on cleanup so it
  * is safe under React StrictMode's dev double-mount.
  */
@@ -66,7 +66,7 @@ export default function IdeaGarden({ gardens }: Props) {
     mount.appendChild(renderer.domElement);
 
     // ── scene ────────────────────────────────────────────────────────────────────
-    // Flat, unlit line-art look — no lights, so nothing casts shading or shadows.
+    // Flat, unlit line-art look - no lights, so nothing casts shading or shadows.
     const scene = new THREE.Scene();
 
     // ── shared materials + leaf geometries ──────────────────────────────────────
@@ -96,7 +96,7 @@ export default function IdeaGarden({ gardens }: Props) {
         segmentLength: 1.0,
         baseRadius: 0.05, // thin branches
         taper: 0.86, // near-uniform thickness
-        branchAngleDeg: 26 + vr() * 16, // 26–42°
+        branchAngleDeg: 26 + vr() * 16, // 26-42°
         lengthDecay: 0.78 + vr() * 0.08,
         apicalBias: vr() * 0.45,
         pitchJitter: 0.25 + vr() * 0.25,

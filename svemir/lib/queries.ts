@@ -31,7 +31,7 @@ export async function getBlockWithChannels(
   const client = supabase;
 
   // Round 1 (parallel): the item+channels join and the block_connections
-  // edges are independent — fire both at once.
+  // edges are independent - fire both at once.
   const [
     { data, error },
     { data: edgeRows },
@@ -74,7 +74,7 @@ export async function getBlockWithChannels(
   return { ...rest, channels, connected_blocks };
 }
 
-/** All facets (anon/public), ordered by prevalence — for the /facets index. */
+/** All facets (anon/public), ordered by prevalence - for the /facets index. */
 export async function listFacets(): Promise<PaperFacet[]> {
   if (!supabase) return [];
   const { data } = await supabase
@@ -87,7 +87,7 @@ export async function listFacets(): Promise<PaperFacet[]> {
 
 /**
  * A facet by slug with the papers that carry it and each paper's note (how that
- * paper relates to the facet). Anon/public — facets are select-using(true).
+ * paper relates to the facet). Anon/public - facets are select-using(true).
  */
 export async function getFacetWithPapers(
   slug: string
@@ -129,7 +129,7 @@ export async function getFacetWithPapers(
   return { ...(facet as PaperFacet), papers };
 }
 
-/** Paper ids carrying a facet (by slug) — for filtering the grid by ?facet=. */
+/** Paper ids carrying a facet (by slug) - for filtering the grid by ?facet=. */
 export async function paperIdsForFacet(slug: string): Promise<string[]> {
   if (!supabase) return [];
   const { data: facet } = await supabase

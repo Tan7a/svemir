@@ -1,17 +1,17 @@
 // Single-user access control, runtime-agnostic core.
 //
 // Reuses the EXISTING admin credentials (ADMIN_USERNAME / ADMIN_PASSWORD) that
-// proxy.ts used for HTTP Basic Auth — we only swap the *mechanism* from a
+// proxy.ts used for HTTP Basic Auth - we only swap the *mechanism* from a
 // browser-native Basic Auth challenge to a cookie set by our own sign-in popup.
 //
 // This module must run in BOTH the proxy (Edge/Node middleware) and Node server
 // actions, so it uses Web Crypto (`crypto.subtle`) rather than `node:crypto`.
-// It must NOT import `next/headers` (that would break the proxy bundle) — the
+// It must NOT import `next/headers` (that would break the proxy bundle) - the
 // cookie-store helpers live in access-server.ts / access-actions.ts instead.
 
 export const COOKIE_NAME = "svemir_access";
 // Readable companion cookie (value "1") used only by the client Add button to
-// decide popup-vs-navigate. NOT a security boundary — real auth is COOKIE_NAME.
+// decide popup-vs-navigate. NOT a security boundary - real auth is COOKIE_NAME.
 export const HINT_COOKIE = "svemir_access_hint";
 
 // Versioned salt so the token shape can be rotated later without colliding.

@@ -13,7 +13,7 @@ type IconProps = { size?: number; className?: string };
 
 /* ---- Flero-ported icons (recolored to currentColor) --------------------- */
 
-/** Flero `view.svg` — used for the search field and "view". */
+/** Flero `view.svg` - used for the search field and "view". */
 export function IconEye({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className} aria-hidden>
@@ -27,7 +27,7 @@ export function IconEye({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `edit.svg` — pencil in a frame. */
+/** Flero `edit.svg` - pencil in a frame. */
 export function IconEdit({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden>
@@ -37,7 +37,7 @@ export function IconEdit({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `delete.svg` — filled trash can. */
+/** Flero `delete.svg` - filled trash can. */
 export function IconTrash({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" className={className} aria-hidden>
@@ -49,7 +49,7 @@ export function IconTrash({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `copy.svg` — overlapping sheets. */
+/** Flero `copy.svg` - overlapping sheets. */
 export function IconCopy({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.0944" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -59,7 +59,7 @@ export function IconCopy({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `Workflow_export.svg` — tray with an up arrow. */
+/** Flero `Workflow_export.svg` - tray with an up arrow. */
 export function IconDownload({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -68,7 +68,7 @@ export function IconDownload({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `Workflow_information.svg` — i-in-a-circle. */
+/** Flero `Workflow_information.svg` - i-in-a-circle. */
 export function IconInfo({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.125" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -77,7 +77,7 @@ export function IconInfo({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `Workflow_share.svg` — three linked nodes. */
+/** Flero `Workflow_share.svg` - three linked nodes. */
 export function IconShare({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.0944" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -86,7 +86,7 @@ export function IconShare({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `New_folder.svg` — folder. */
+/** Flero `New_folder.svg` - folder. */
 export function IconFolder({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -96,7 +96,7 @@ export function IconFolder({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Flero `Toolbar_Zoomin.svg` — plus. */
+/** Flero `Toolbar_Zoomin.svg` - plus. */
 export function IconPlus({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" className={className} aria-hidden>
@@ -173,7 +173,7 @@ export function IconUnlink({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/* ---- More Flero icons (recolored to currentColor) — ready for later use -- */
+/* ---- More Flero icons (recolored to currentColor) - ready for later use -- */
 
 export function IconArchive({ size = 16, className = "" }: IconProps) {
   return (
@@ -234,7 +234,7 @@ export function IconList({ size = 16, className = "" }: IconProps) {
   );
 }
 
-/** Double chevron — also handy as an expand/collapse or up-down control. */
+/** Double chevron - also handy as an expand/collapse or up-down control. */
 export function IconExpand({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.125" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -294,6 +294,24 @@ export function IconCheckSquare({ size = 16, className = "" }: IconProps) {
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
       <path d="M7.04162 10.3531L4.72726 8.03818L5.49854 7.2669L7.04162 8.80945L10.1267 5.72382L10.8985 6.49563L7.04162 10.3531Z" fill="currentColor" />
       <path fillRule="evenodd" clipRule="evenodd" d="M2 4.18181C2 3.60316 2.22987 3.04821 2.63904 2.63904C3.04821 2.22987 3.60316 2 4.18181 2H11.8182C12.3968 2 12.9518 2.22987 13.3609 2.63904C13.7701 3.04821 14 3.60316 14 4.18181V11.8182C14 12.3968 13.7701 12.9518 13.3609 13.3609C12.9518 13.7701 12.3968 14 11.8182 14H4.18181C3.60316 14 3.04821 13.7701 2.63904 13.3609C2.22987 12.9518 2 12.3968 2 11.8182V4.18181ZM4.18181 3.09091H11.8182C12.1075 3.09091 12.385 3.20584 12.5896 3.41043C12.7941 3.61501 12.9091 3.89249 12.9091 4.18181V11.8182C12.9091 12.1075 12.7941 12.385 12.5896 12.5896C12.385 12.7941 12.1075 12.9091 11.8182 12.9091H4.18181C3.89249 12.9091 3.61501 12.7941 3.41043 12.5896C3.20584 12.385 3.09091 12.1075 3.09091 11.8182V4.18181C3.09091 3.89249 3.20584 3.61501 3.41043 3.41043C3.61501 3.20584 3.89249 3.09091 4.18181 3.09091Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Hamburger - three lines, for the mobile nav toggle. */
+export function IconMenu({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  );
+}
+
+/** Close - an X, for dismissing the mobile nav. */
+export function IconClose({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M18 6L6 18M6 6l12 12" />
     </svg>
   );
 }

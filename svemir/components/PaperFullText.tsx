@@ -14,7 +14,7 @@ type State =
 /**
  * Owner-only full text for a paper. Lazy-loads from the gated route
  * `/api/papers/[id]/content`, which returns 403 to the public. The full text is
- * never in the page payload — it's fetched on demand and only delivered to the
+ * never in the page payload - it's fetched on demand and only delivered to the
  * authenticated owner, keeping the copyright gate intact.
  */
 export default function PaperFullText({ blockId }: Props) {

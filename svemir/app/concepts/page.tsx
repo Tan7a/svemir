@@ -13,7 +13,7 @@ type ConceptRow = {
 };
 
 /**
- * The prevalence view — the "second brain" overview. Shows the concepts that
+ * The prevalence view - the "second brain" overview. Shows the concepts that
  * recur most across the archive, sized by how many blocks mention them. Each
  * links to its own page listing those blocks. Concept data is produced locally
  * (no AI) by the extractor; run "Extract concepts" in /admin/manage to populate.
@@ -30,7 +30,7 @@ export default async function ConceptsPage() {
     );
   }
 
-  // Only "recurring" concepts — those mentioned in 2+ blocks. A concept in a
+  // Only "recurring" concepts - those mentioned in 2+ blocks. A concept in a
   // single block is just a tag on that block, not a thread through the archive.
   const { data, error } = await supabase
     .from("concepts")

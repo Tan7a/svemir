@@ -153,7 +153,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
   );
 
   // Papers get their own detail view (title-first, abstract + owner-only full
-  // text, explicit edit mode) — see PaperDetail.
+  // text, explicit edit mode) - see PaperDetail.
   if (block.kind === "paper") {
     return <PaperDetail block={block} inModal={inModal} />;
   }
@@ -165,7 +165,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]"
       }
     >
-      {/* Left column — image (clickable), URL bar, and body text */}
+      {/* Left column - image (clickable), URL bar, and body text */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-1 items-start justify-center">
           {block.image_url ? (
@@ -232,7 +232,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
         {block.body_text && (
           <details className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950/60">
             <summary className="cursor-pointer select-none px-4 py-2 text-xs text-neutral-400 hover:text-neutral-200">
-              Reader — page text saved at the time
+              Reader - page text saved at the time
             </summary>
             <article className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-4 pb-4 pt-1 text-sm leading-relaxed text-neutral-300">
               {block.body_text}
@@ -328,7 +328,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
             <span className="text-neutral-500">Channels</span>
             <span className="text-neutral-600">
               {block.channels.length === 0
-                ? "—"
+                ? "-"
                 : relativeTime(block.created_at)}
             </span>
           </div>

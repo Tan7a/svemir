@@ -12,9 +12,9 @@ export type PickableBlock = {
 };
 
 type Props = {
-  /** Current block id — never offered as a match. */
+  /** Current block id - never offered as a match. */
   excludeId: string;
-  /** Already-connected block ids — rendered as "connected" + not clickable. */
+  /** Already-connected block ids - rendered as "connected" + not clickable. */
   excludeIds: string[];
   /** Fired when the user clicks a result. */
   onPick: (block: PickableBlock) => Promise<void> | void;

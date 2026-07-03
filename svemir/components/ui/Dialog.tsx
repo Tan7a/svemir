@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 /**
- * Dialog shell — the canonical centered modal for svemir. Portalled to
+ * Dialog shell - the canonical centered modal for svemir. Portalled to
  * document.body (so a backdrop-blur ancestor can't trap it), dims + blurs the
  * page, locks scroll, and closes on Escape or backdrop click. Animates in with
  * the shared `dialog-in` keyframes. Mirrors the pattern in SignInModal /

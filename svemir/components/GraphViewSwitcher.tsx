@@ -11,7 +11,7 @@ import KnowledgeGraph, {
 import ConceptCloud from "./ConceptCloud";
 import type { GardenChannel } from "./IdeaGarden";
 
-// Garden is a heavy Three.js scene — only load its chunk when that tab is active,
+// Garden is a heavy Three.js scene - only load its chunk when that tab is active,
 // and never on the server (it touches WebGL / browser APIs).
 const IdeaGarden = dynamic(() => import("./IdeaGarden"), {
   ssr: false,
@@ -41,7 +41,7 @@ type Props = { gardens: GardenChannel[]; graphProps: GraphProps };
 /**
  * Multi-view shell for /graph. A floating top-center pill switches between the
  * 3D Garden, the (future) Topologies view, and the existing Concepts graph.
- * View is held in the URL (?view=) — consistent with ViewNav/OrderDropdown — and
+ * View is held in the URL (?view=) - consistent with ViewNav/OrderDropdown - and
  * each view mounts/unmounts so the WebGL context is freed when Garden is hidden.
  */
 export default function GraphViewSwitcher({ gardens, graphProps }: Props) {
@@ -80,7 +80,7 @@ export default function GraphViewSwitcher({ gardens, graphProps }: Props) {
           <IdeaGarden gardens={gardens} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
-            No channels with blocks yet — add some from{" "}
+            No channels with blocks yet - add some from{" "}
             <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
           </div>
         ))}

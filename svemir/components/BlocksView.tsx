@@ -43,7 +43,7 @@ export default function BlocksView({ blocks }: Props) {
   if (blocks.length === 0) {
     return (
       <div className="px-8 py-12 text-sm text-neutral-500">
-        No blocks yet — add some from /admin.
+        No blocks yet - add some from /admin.
       </div>
     );
   }

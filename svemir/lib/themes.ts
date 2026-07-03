@@ -25,6 +25,6 @@ export function setTheme(id: ThemeId): void {
   try {
     localStorage.setItem("theme", id);
   } catch {
-    /* storage unavailable — theme still applies for this session */
+    /* storage unavailable - theme still applies for this session */
   }
 }

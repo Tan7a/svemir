@@ -1,5 +1,5 @@
 /**
- * Chevron atom — the dropdown-affordance caret. Rotates 180° when `open`.
+ * Chevron atom - the dropdown-affordance caret. Rotates 180° when `open`.
  * Inherits colour via `currentColor`, size defaults to 12px.
  */
 export default function Chevron({

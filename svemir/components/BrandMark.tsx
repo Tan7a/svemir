@@ -10,7 +10,7 @@ type View = "root" | "theme" | "about";
 
 /**
  * The svemir logomark. Left-click navigates home (unchanged); right-click opens
- * a classic product context menu — quick navigation, a theme switcher, copy
+ * a classic product context menu - quick navigation, a theme switcher, copy
  * link, and an about blurb. Reuses the same dropdown affordance as the channel
  * "⋯" menu (click-outside + Escape to close).
  */

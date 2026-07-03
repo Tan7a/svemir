@@ -48,7 +48,7 @@ function assertSafeUrl(raw: string): void {
 /**
  * Fetch OG metadata for a URL with a hard timeout. Single source of truth for
  * scraping across the admin form, "Scrape missing" bulk job, and the
- * bearer-token API. Caller is responsible for upstream error handling — this
+ * bearer-token API. Caller is responsible for upstream error handling - this
  * helper throws on failure rather than returning an error shape, since the
  * three call sites all want different fallback behaviour.
  */

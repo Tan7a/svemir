@@ -38,7 +38,7 @@ function relativeTime(iso: string): string {
 /**
  * Detail view for a paper (kind === "paper"). Unlike the generic BlockDetail it
  * leads with the title + authors + metadata, then the abstract and (owner-only)
- * full text — no image. An explicit Edit→Save mode toggles the title and
+ * full text - no image. An explicit Edit→Save mode toggles the title and
  * abstract into inputs; Save persists both and exits, surfacing any error (e.g.
  * "Not authorized" when signed out) instead of silently dropping the change.
  */
@@ -166,7 +166,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
           : "relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col gap-5 px-6 py-8"
       }
     >
-      {/* Header — title, authors, metadata (on top) */}
+      {/* Header - title, authors, metadata (on top) */}
       <header className="flex flex-col gap-3">
         {editing ? (
           <input
@@ -221,7 +221,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
         </dl>
       </header>
 
-      {/* Action row — Connect | Actions | Edit/Save (Edit sits next to Actions) */}
+      {/* Action row - Connect | Actions | Edit/Save (Edit sits next to Actions) */}
       <BlockActions
         blockId={block.id}
         url={block.url}
@@ -253,11 +253,11 @@ export default function PaperDetail({ block, inModal = false }: Props) {
         )}
       </section>
 
-      {/* Facets — the 5-dimension network tags (public). */}
+      {/* Facets - the 5-dimension network tags (public). */}
       {facetGroups.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Facets
+            Themes
           </h2>
           {facetGroups.map((g) => {
             const dim = FACET_DIMENSION_BY_KEY[g.dimension];
@@ -271,8 +271,8 @@ export default function PaperDetail({ block, inModal = false }: Props) {
                     <Link
                       key={v.slug}
                       href={`/facet/${v.slug}`}
-                      title="See definition & all papers with this facet"
-                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-neutral-900 ${dim?.border ?? "border-neutral-700"} ${dim?.text ?? "text-neutral-300"}`}
+                      title="See definition & all papers with this theme"
+                      className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
                     >
                       {v.value}
                       {v.count > 1 && (

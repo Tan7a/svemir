@@ -22,7 +22,7 @@ export type ChannelStat = {
  * existing row. Returns null only if title is empty or both the insert and
  * the fallback select fail.
  *
- * Resolves by **title**, not slug — callers (admin form and bearer-token
+ * Resolves by **title**, not slug - callers (admin form and bearer-token
  * API) accept user-typed titles and let this helper handle slug generation
  * and dedup. Sending a pre-slugified value would mismatch the case-insensitive
  * title index for existing channels (e.g. "ui-design" ≠ "UI Design").
@@ -91,7 +91,7 @@ export function compareChannelRecency(
 /**
  * Channels ordered by most-recently-connected. Channels with no connections
  * fall to the bottom (last_connected_at IS NULL). Aggregation in JS keeps
- * the Supabase query simple — fine at personal scale (<1000 channels).
+ * the Supabase query simple - fine at personal scale (<1000 channels).
  */
 export async function recentChannels(
   client: SupabaseClient,

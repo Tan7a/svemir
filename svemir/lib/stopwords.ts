@@ -21,7 +21,7 @@ export const STOPWORDS = new Set<string>([
   "just", "very", "too", "only", "own", "same", "such", "each", "few", "both",
   "its", "him", "she", "he", "them", "us", "am", "being", "doing", "having",
   "get", "got", "make", "made", "use", "used", "using", "via", "etc",
-  // web/archive noise — boilerplate that shows up in scraped page text
+  // web/archive noise - boilerplate that shows up in scraped page text
   "http", "https", "www", "com", "org", "net", "html", "read", "reading",
   "click", "here", "more", "article", "page", "site", "website", "blog",
   "post", "posts", "home", "menu", "search", "share", "comment", "comments",

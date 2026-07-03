@@ -5,7 +5,7 @@ import Dialog from "./Dialog";
 import { IconTrash, IconInfo } from "./icons";
 
 /**
- * Branded confirmation popup — replaces the browser-native `confirm()`. Icon
+ * Branded confirmation popup - replaces the browser-native `confirm()`. Icon
  * tile + title + message, with Cancel / Confirm bottom-right. Enter confirms,
  * Escape (or Cancel / backdrop) dismisses. `tone="danger"` tints the icon tile
  * red and defaults the icon to a trash can, while the confirm button stays the

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * Live search box in the TopBar. Mirrors the debounced pattern in BlockPicker,
- * but instead of fetching itself it drives the URL `?q=` param — the homepage
+ * but instead of fetching itself it drives the URL `?q=` param - the homepage
  * reads it and renders matching results in the main view (see SearchRoute in
  * app/page.tsx). Uses router.replace so each keystroke doesn't pile up history.
  */
@@ -27,7 +27,7 @@ export default function TopBarSearch() {
   }, [value, router, searchParams]);
 
   return (
-    <div className="hidden items-center text-sm text-neutral-500 md:flex">
+    <div className="hidden items-center text-sm text-neutral-500 lg:flex">
       <input
         type="text"
         value={value}

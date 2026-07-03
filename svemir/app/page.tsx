@@ -7,7 +7,6 @@ import BlocksVibeView from "@/components/BlocksVibeView";
 import ChannelsView from "@/components/ChannelsView";
 import { lastConnectedAt, compareChannelRecency } from "@/lib/channels";
 import { paperIdsForFacet } from "@/lib/queries";
-import { FACET_DIMENSION_BY_KEY } from "@/lib/constants";
 import type {
   Channel,
   ChannelWithBlocks,
@@ -31,7 +30,6 @@ const ALLOWED_ORDERS: Record<string, OrderKind> = {
   alphabetical: "alphabetical",
   source: "source",
   type: "type",
-  theme: "theme",
   vibes: "vibes",
   connections: "connections",
   random: "random",
@@ -42,7 +40,16 @@ type SP = Promise<{
   order?: string;
   q?: string;
   facet?: string;
+  filterKind?: string;
+  filterTheme?: string;
+  filterSource?: string;
 }>;
+
+/** One active block filter picked from a sort-dropdown submenu. */
+export type BlockFilter =
+  | { kind: "kind"; value: string }
+  | { kind: "theme"; value: string }
+  | { kind: "source"; value: string };
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -55,6 +62,16 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     (view === "channels" ? "updated" : "newest");
   const q = (sp.q ?? "").trim();
   const facetSlug = (sp.facet ?? "").trim();
+
+  // A block filter comes from a sort-dropdown submenu (By type/theme/source →
+  // pick a value). Only one is honoured at a time, in this precedence.
+  const blockFilter: BlockFilter | null = sp.filterKind?.trim()
+    ? { kind: "kind", value: sp.filterKind.trim() }
+    : sp.filterTheme?.trim()
+      ? { kind: "theme", value: sp.filterTheme.trim() }
+      : sp.filterSource?.trim()
+        ? { kind: "source", value: sp.filterSource.trim() }
+        : null;
 
   if (!supabase) {
     return (
@@ -69,7 +86,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     );
   }
 
-  // Counts for the Info column — cheap with head + exact count.
+  // Counts for the Info column - cheap with head + exact count.
   const [{ count: blockCount }, { count: channelCount }] = await Promise.all([
     supabase.from("items").select("id", { count: "exact", head: true }),
     supabase.from("channels").select("id", { count: "exact", head: true }),
@@ -97,8 +114,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           <SearchRoute q={q} />
         ) : facetSlug ? (
           <BlocksRoute order={order} facetSlug={facetSlug} />
-        ) : view === "blocks" ? (
-          <BlocksRoute order={order} />
+        ) : view === "blocks" || blockFilter ? (
+          <BlocksRoute order={order} blockFilter={blockFilter} />
         ) : (
           <ChannelsRoute order={order} />
         )}
@@ -107,13 +124,23 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   );
 }
 
-/** Server component fetching items for the Blocks view (optionally facet-filtered). */
+/** Human labels for the `kind` column, used in the filter banner. */
+const KIND_LABEL: Record<string, string> = {
+  link: "Links",
+  image: "Images",
+  text: "Text",
+  paper: "Papers",
+};
+
+/** Server component fetching items for the Blocks view (optionally facet- or value-filtered). */
 async function BlocksRoute({
   order,
   facetSlug,
+  blockFilter,
 }: {
   order: OrderKind;
   facetSlug?: string;
+  blockFilter?: BlockFilter | null;
 }) {
   if (!supabase) return null;
 
@@ -133,7 +160,7 @@ async function BlocksRoute({
   // Map order kinds to Supabase order spec. Order kinds we don't yet support
   // fall back to newest-first so the URL is always honoured visually. The
   // embedded connections(channels(...)) gives each block its topic tags in one
-  // round-trip (still one row per item — PostgREST nests the channels).
+  // round-trip (still one row per item - PostgREST nests the channels).
   let query = supabase
     .from("items")
     .select("*, connections(channels(slug, title))")
@@ -143,6 +170,17 @@ async function BlocksRoute({
     query = query.in("id", facetIds.length ? facetIds : [
       "00000000-0000-0000-0000-000000000000",
     ]);
+  }
+  // Value filter from a sort-dropdown submenu - narrow to one kind/source/theme.
+  if (blockFilter) {
+    if (blockFilter.kind === "kind") {
+      query = query.eq("kind", blockFilter.value);
+    } else if (blockFilter.kind === "source") {
+      query = query.eq("source_name", blockFilter.value);
+    } else if (blockFilter.kind === "theme") {
+      // categories is a text[] column - match rows that contain the value.
+      query = query.contains("categories", [blockFilter.value]);
+    }
   }
   switch (order) {
     case "oldest":
@@ -181,17 +219,18 @@ async function BlocksRoute({
   if (order === "vibes") return <BlocksVibeView blocks={blocks} />;
   if (order === "random") shuffle(blocks);
   else if (order === "type") orderByType(blocks);
-  else if (order === "theme") orderByTheme(blocks);
+  else if (order === "connections") {
+    // Most-connected first: a block's connection count is how many channels it
+    // belongs to (merged across duplicate saves during dedupe).
+    blocks.sort((a, b) => b.channels.length - a.channels.length);
+  }
 
   if (filterFacet) {
-    const dim = FACET_DIMENSION_BY_KEY[filterFacet.dimension];
     return (
       <>
         <div className="flex flex-wrap items-center gap-3 border-b border-neutral-900 px-5 py-3 text-sm">
-          <span className="text-neutral-500">Filtered by facet</span>
-          <span
-            className={`rounded-full border px-2.5 py-0.5 text-xs ${dim?.border ?? "border-neutral-700"} ${dim?.text ?? "text-neutral-200"}`}
-          >
+          <span className="text-neutral-500">Filtered by theme</span>
+          <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-200">
             {filterFacet.value}
           </span>
           <span className="text-neutral-500">{blocks.length} paper{blocks.length === 1 ? "" : "s"}</span>
@@ -203,6 +242,40 @@ async function BlocksRoute({
       </>
     );
   }
+
+  if (blockFilter) {
+    const label =
+      blockFilter.kind === "kind"
+        ? "type"
+        : blockFilter.kind === "source"
+          ? "source"
+          : "theme";
+    const shown =
+      blockFilter.kind === "kind"
+        ? KIND_LABEL[blockFilter.value] ?? blockFilter.value
+        : blockFilter.value;
+    return (
+      <>
+        <div className="flex flex-wrap items-center gap-3 border-b border-neutral-900 px-5 py-3 text-sm">
+          <span className="text-neutral-500">Filtered by {label}</span>
+          <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-100">
+            {shown}
+          </span>
+          <span className="text-neutral-500">
+            {blocks.length} block{blocks.length === 1 ? "" : "s"}
+          </span>
+          <Link
+            href="/"
+            className="ml-auto text-xs text-neutral-400 hover:text-neutral-100"
+          >
+            clear ✕
+          </Link>
+        </div>
+        <BlocksView blocks={blocks} />
+      </>
+    );
+  }
+
   return <BlocksView blocks={blocks} />;
 }
 
@@ -210,7 +283,7 @@ async function BlocksRoute({
  * Server component fetching channels + their connected blocks.
  *
  * Previously this fanned out N×2 queries (8 blocks + exact count) per
- * channel — at ~50 channels that's 100 Supabase round-trips through a
+ * channel - at ~50 channels that's 100 Supabase round-trips through a
  * single HTTPS pool. Collapsing into one nested select trades bandwidth
  * (we transfer every connection row instead of 8) for latency. At
  * personal scale (~1k blocks across ~50 channels) the payload is small.
@@ -322,18 +395,11 @@ function shuffle<T>(arr: T[]): void {
   }
 }
 
-// "By type" — group by kind (links, then images, then text). Array.sort is
+// "By type" - group by kind (links, then images, then text). Array.sort is
 // stable, so within each group the created_at-desc order is preserved.
 const KIND_RANK: Record<string, number> = { link: 0, image: 1, text: 2 };
 function orderByType(blocks: Item[]): void {
   blocks.sort((a, b) => (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9));
-}
-
-// "By theme" — cluster blocks sharing a first category; uncategorised last.
-function orderByTheme(blocks: Item[]): void {
-  const themeOf = (b: Item) =>
-    b.categories?.[0] ? b.categories[0].toLowerCase() : "￿";
-  blocks.sort((a, b) => themeOf(a).localeCompare(themeOf(b)));
 }
 
 /**
@@ -375,7 +441,7 @@ function sortChannels(
 }
 
 /**
- * Server component for the live search view — runs when `?q=` is present and
+ * Server component for the live search view - runs when `?q=` is present and
  * fills the main view with matches (concepts, then channels, then a block grid).
  *
  * Blocks are matched with Postgres full-text search via the `search_blocks` RPC

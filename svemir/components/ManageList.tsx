@@ -233,7 +233,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
 
   async function handleExtractConcepts(force = false) {
     const message = force
-      ? "Re-extract concepts for EVERY block? Use this after tuning — it rebuilds all concepts from scratch (locally, no AI) and may take a few minutes."
+      ? "Re-extract concepts for EVERY block? Use this after tuning - it rebuilds all concepts from scratch (locally, no AI) and may take a few minutes."
       : "Extract concepts for all blocks not yet indexed? This reads each block's text locally (no AI) and may take a few minutes.";
     if (!confirm(message)) return;
     setIndexing(true);
@@ -412,14 +412,14 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
       {refetchProgress && !refetching && (
         <p className="text-xs text-neutral-500">
           {refetchProgress.scraped === 0 && refetchProgress.failed === 0
-            ? "No screenshot covers to replace — nothing to do."
+            ? "No screenshot covers to replace - nothing to do."
             : `Cover re-fetch complete · ${refetchProgress.scraped} replaced · ${refetchProgress.failed} skipped`}
         </p>
       )}
       {indexProgress && !indexing && (
         <p className="text-xs text-neutral-500">
           {indexProgress.processed === 0 && indexProgress.failed === 0
-            ? "All blocks are already indexed — nothing to do."
+            ? "All blocks are already indexed - nothing to do."
             : `Concept extraction complete · ${indexProgress.processed} indexed · ${indexProgress.failed} failed`}
         </p>
       )}

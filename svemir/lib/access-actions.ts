@@ -12,7 +12,7 @@ const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 /**
  * Validate the submitted credentials against the configured admin and, on
- * success, set the session cookies. Reuses ADMIN_USERNAME / ADMIN_PASSWORD —
+ * success, set the session cookies. Reuses ADMIN_USERNAME / ADMIN_PASSWORD -
  * the password is unchanged from the old Basic Auth gate.
  */
 export async function signIn(

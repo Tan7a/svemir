@@ -20,7 +20,7 @@ export default function ChannelCard({ channel }: Props) {
   const thumbs = channel.blocks.slice(0, MAX_THUMBS);
   const count = channel.block_count;
 
-  // Most common categories across the channel's (sampled) blocks — a lightweight
+  // Most common categories across the channel's (sampled) blocks - a lightweight
   // "what's in here" summary for the info popup.
   const topicCounts = new Map<string, number>();
   for (const b of channel.blocks) {
@@ -35,7 +35,7 @@ export default function ChannelCard({ channel }: Props) {
 
   return (
     <div className="group relative flex flex-col rounded-[34px] border border-neutral-800 transition-colors hover:border-white">
-      {/* Top-left — title + meta. The after:inset-0 overlay makes the whole card
+      {/* Top-left - title + meta. The after:inset-0 overlay makes the whole card
           a link to the channel (stretched-link). */}
       <Link
         href={`/channel/${channel.slug}`}
@@ -45,15 +45,15 @@ export default function ChannelCard({ channel }: Props) {
           value={channel.title}
           onRename={renameChannel.bind(null, channel.id)}
           as="span"
-          className="relative z-10 cursor-text text-2xl font-light text-neutral-100"
-          inputClassName="relative z-10 w-full max-w-[260px] border-b border-neutral-500 bg-transparent text-2xl font-light text-neutral-100 outline-none"
+          className="relative z-10 cursor-text text-2xl font-semibold text-neutral-100"
+          inputClassName="relative z-10 w-full max-w-[260px] border-b border-neutral-500 bg-transparent text-2xl font-semibold text-neutral-100 outline-none"
         />
         <span className="text-xs text-neutral-500">
           {count} block{count === 1 ? "" : "s"}
         </span>
       </Link>
 
-      {/* Below — full-width strip of real thumbnails. pointer-events-none lets
+      {/* Below - full-width strip of real thumbnails. pointer-events-none lets
           clicks on empty strip space fall through to the channel overlay; each
           thumbnail re-enables clicks and sits above the overlay (z-10). */}
       <div className="pointer-events-none flex gap-3 overflow-hidden px-6 pb-6">
@@ -104,7 +104,7 @@ export default function ChannelCard({ channel }: Props) {
         )}
       </div>
 
-      {/* Hover-revealed actions menu — z-20 keeps it above the card overlay */}
+      {/* Hover-revealed actions menu - z-20 keeps it above the card overlay */}
       <div className="pointer-events-none absolute right-3 top-3 z-20 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <div className="pointer-events-auto">
           <ChannelActions

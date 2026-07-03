@@ -209,7 +209,7 @@ export default function ImportForm() {
         <p className="text-xs text-neutral-500">
           Existing URLs (already in the archive) will be skipped automatically.
           Folder names become channels. No images or descriptions are scraped at
-          this stage — use the Manage page to fill those in.
+          this stage - use the Manage page to fill those in.
         </p>
       </div>
     );
@@ -219,7 +219,7 @@ export default function ImportForm() {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
         <p className="text-sm text-neutral-200">
-          Importing… (this may take 10–60 seconds for large batches)
+          Importing… (this may take 10-60 seconds for large batches)
         </p>
       </div>
     );

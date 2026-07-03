@@ -77,7 +77,7 @@ export default function TokensClient({ initialTokens }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore — user can select manually
+      // ignore - user can select manually
     }
   }
 
@@ -87,7 +87,7 @@ export default function TokensClient({ initialTokens }: Props) {
         <h2 className="text-sm font-medium text-neutral-200">Mint a new token</h2>
         <p className="mt-1 text-xs text-neutral-500">
           For the Chrome extension or curl-based scripts. The plaintext is shown
-          once and never stored — copy it immediately.
+          once and never stored - copy it immediately.
         </p>
         <div className="mt-4 flex gap-2">
           <input
@@ -115,7 +115,7 @@ export default function TokensClient({ initialTokens }: Props) {
       {fresh && (
         <section className="rounded-xl border border-emerald-900 bg-emerald-950/40 p-5">
           <h2 className="text-sm font-medium text-emerald-300">
-            Token for &ldquo;{fresh.name}&rdquo; — copy it now
+            Token for &ldquo;{fresh.name}&rdquo; - copy it now
           </h2>
           <p className="mt-1 text-xs text-emerald-400/80">
             This is the only time you&apos;ll see the plaintext. After you
@@ -138,7 +138,7 @@ export default function TokensClient({ initialTokens }: Props) {
             onClick={() => setFresh(null)}
             className="mt-3 text-xs text-emerald-400/70 hover:text-emerald-200"
           >
-            I&apos;ve saved it — hide
+            I&apos;ve saved it - hide
           </button>
         </section>
       )}

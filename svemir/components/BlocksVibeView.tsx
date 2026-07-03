@@ -15,7 +15,7 @@ function vibeKey(b: Item): string {
 /**
  * The "Vibes" order, reimagined as an interactive scale. Instead of a one-shot
  * random shuffle (where you couldn't tell which vibe you were seeing), this
- * buckets blocks by vibe and lets you scrub the side scale through them — the
+ * buckets blocks by vibe and lets you scrub the side scale through them - the
  * grid swaps to the selected vibe instantly, client-side.
  */
 export default function BlocksVibeView({ blocks }: { blocks: VibeBlock[] }) {
@@ -42,7 +42,7 @@ export default function BlocksVibeView({ blocks }: { blocks: VibeBlock[] }) {
   if (blocks.length === 0) {
     return (
       <div className="px-5 py-12 text-sm text-neutral-500">
-        No blocks yet — add some from /admin.
+        No blocks yet - add some from /admin.
       </div>
     );
   }

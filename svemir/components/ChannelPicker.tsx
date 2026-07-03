@@ -227,7 +227,7 @@ export default function ChannelPicker({
 
       {!q && recents.length === 0 && suggestions.length === 0 && (
         <p className="rounded-xl border border-dashed border-neutral-800 px-3 py-4 text-center text-xs text-neutral-500">
-          No channels yet — type to create your first one.
+          No channels yet - type to create your first one.
         </p>
       )}
 

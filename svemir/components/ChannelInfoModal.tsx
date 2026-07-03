@@ -13,7 +13,7 @@ type Props = {
   topics: string[];
 };
 
-/** Absolute, locale-friendly date (pure — safe to call during render). */
+/** Absolute, locale-friendly date (pure - safe to call during render). */
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
@@ -79,7 +79,7 @@ export default function ChannelInfoModal({
           <Stat label="Created" value={fmtDate(createdAt)} />
           <Stat
             label="Last updated"
-            value={lastUpdated ? fmtDate(lastUpdated) : "—"}
+            value={lastUpdated ? fmtDate(lastUpdated) : "-"}
           />
         </dl>
 

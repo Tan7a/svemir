@@ -1,9 +1,9 @@
 /**
- * Button atom — the three canonical button treatments in svemir.
+ * Button atom - the three canonical button treatments in svemir.
  *
- *   primary   — filled light, for the main commit action (Save, Sign in)
- *   secondary — outlined, for secondary actions (Connect, Actions, Cancel, Add)
- *   icon      — square icon-only button (close ×, "⋯" trigger)
+ *   primary   - filled light, for the main commit action (Save, Sign in)
+ *   secondary - outlined, for secondary actions (Connect, Actions, Cancel, Add)
+ *   icon      - square icon-only button (close ×, "⋯" trigger)
  *
  * Thin pass-through over <button>; colours use `neutral-*` tokens so it
  * retheme automatically. Existing call sites still use inline classes and can

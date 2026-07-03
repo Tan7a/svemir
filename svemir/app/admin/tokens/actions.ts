@@ -7,7 +7,7 @@ import { isAuthed } from "@/lib/access-server";
 
 /**
  * Mint a fresh personal access token. Plaintext is returned to the caller
- * **exactly once** and never persisted — only its sha256 hash is stored.
+ * **exactly once** and never persisted - only its sha256 hash is stored.
  * The caller (a client component) must surface it to the user in a banner
  * and not re-render it after the next round-trip.
  */

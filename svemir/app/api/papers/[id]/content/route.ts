@@ -10,7 +10,7 @@ const BUCKET = "papers";
  * Owner-only full text for a paper. THE copyright gate: the abstract + facets are
  * public (anon client, RLS select-using-true), but the full text lives in the
  * PRIVATE `papers` bucket and is only ever read here, behind isAuthed(). The
- * public gets 403 — the text never reaches a public payload.
+ * public gets 403 - the text never reaches a public payload.
  */
 export async function GET(
   _req: Request,

@@ -3,12 +3,12 @@ import { STOPWORDS } from "./stopwords";
 /**
  * Local, no-AI concept extraction.
  *
- * Given a block's text, returns the most salient terms/phrases it mentions —
- * single words and 2–3 word phrases — using RAKE-style candidate extraction
+ * Given a block's text, returns the most salient terms/phrases it mentions -
+ * single words and 2-3 word phrases - using RAKE-style candidate extraction
  * (split on stopwords/punctuation, keep the runs in between) plus a frequency
  * score. Nothing leaves the machine; no LLM, no embeddings, no network.
  *
- * Pure function — no I/O, no external calls — so it's trivially testable, the
+ * Pure function - no I/O, no external calls - so it's trivially testable, the
  * same contract as lib/suggest.ts. Corpus-level thresholds (document frequency,
  * "too common" pruning) are applied by the caller (the server action), because
  * those need the whole archive, not one document.
@@ -52,14 +52,14 @@ const HEAD_WEIGHT = 3;
 
 /**
  * Conservative singularization for the dedup key. Deliberately NOT a Porter
- * stemmer — we want human-readable concepts, so we only fold obvious plurals
+ * stemmer - we want human-readable concepts, so we only fold obvious plurals
  * and leave everything else alone.
  */
 function singularizeWord(w: string): string {
   if (w.length <= 3) return w; // "ai", "css", "api"-ish short tokens left alone
   if (w.endsWith("ies") && w.length > 4) return w.slice(0, -3) + "y"; // stories→story
   // Drop "es" only after a true sibilant that genuinely needs it. NOT plain
-  // "-ses" — that wrongly turns "databases"→"databas" (it's database+"s").
+  // "-ses" - that wrongly turns "databases"→"databas" (it's database+"s").
   if (
     w.endsWith("sses") || // classes→class, processes→process
     w.endsWith("ches") || // churches→church
@@ -68,7 +68,7 @@ function singularizeWord(w: string): string {
   ) {
     return w.slice(0, -2);
   }
-  if (w.endsWith("ss")) return w; // class, css, glass — keep
+  if (w.endsWith("ss")) return w; // class, css, glass - keep
   if (w.endsWith("s") && !w.endsWith("us") && !w.endsWith("is")) {
     return w.slice(0, -1); // graphs→graph, databases→database, cases→case
   }
@@ -132,7 +132,7 @@ export function extractTerms(
   const bodyLimit = opts.bodyCharLimit ?? 20000;
 
   // Head (title + description) and body are tokenized separately so head terms
-  // can be counted HEAD_WEIGHT times over — the core of the on-topic fix.
+  // can be counted HEAD_WEIGHT times over - the core of the on-topic fix.
   const head = toPhrases(`${doc.title ?? ""}. ${doc.description ?? ""}`);
   const body = toPhrases((doc.body_text ?? "").slice(0, bodyLimit));
 
@@ -179,7 +179,7 @@ export function extractTerms(
     ex.ngram = Math.max(ex.ngram, ngram) as 1 | 2 | 3;
   }
 
-  // Salience: frequency weighted by phrase length — multi-word concepts are
+  // Salience: frequency weighted by phrase length - multi-word concepts are
   // more meaningful for a second brain, so they sort ahead of bare words.
   return [...byKey.values()]
     .sort((a, b) => b.tf * b.ngram - a.tf * a.ngram)

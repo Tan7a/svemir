@@ -29,7 +29,7 @@ function tokenize(s: string): Set<string> {
  * +1 per matching source_name (channel already collects from this host).
  *
  * Top 5 by score (score > 0). Up to 2 entries with score >= 3 are flagged
- * autoSelect so the UI can pre-tick them — feels helpful without being
+ * autoSelect so the UI can pre-tick them - feels helpful without being
  * presumptuous when nothing strongly matches.
  *
  * Pure function. No I/O. No external calls.

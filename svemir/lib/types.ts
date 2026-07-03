@@ -13,7 +13,7 @@ export type Item = {
   body_text: string | null;
   created_at: string;
   // Paper-only (kind === "paper"); see migration 0007. Optional so every other
-  // item shape is unaffected. Full text is NEVER here — it lives in the private
+  // item shape is unaffected. Full text is NEVER here - it lives in the private
   // `papers` bucket, referenced by paper_full_text_path.
   paper_authors?: string[] | null;
   paper_year?: number | null;
@@ -42,7 +42,7 @@ export type ChannelTag = { slug: string; title: string };
 export type BlockWithChannelTags = Item & { channels: ChannelTag[] };
 
 /**
- * A channel paired with its first N blocks — used by the Channels view to
+ * A channel paired with its first N blocks - used by the Channels view to
  * render the horizontal thumb strip.
  */
 export type ChannelWithBlocks = Channel & {
@@ -69,5 +69,5 @@ export type FacetPaper = {
   note: string | null;
 };
 
-/** A facet with the papers carrying it — the facet panel's data shape. */
+/** A facet with the papers carrying it - the facet panel's data shape. */
 export type FacetWithPapers = PaperFacet & { papers: FacetPaper[] };

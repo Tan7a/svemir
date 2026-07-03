@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       if (!imageUrl && meta.image) imageUrl = meta.image;
       if (!sourceName && meta.siteName) sourceName = meta.siteName;
     } catch {
-      // Scrape failure is non-fatal — caller-provided fields still save.
+      // Scrape failure is non-fatal - caller-provided fields still save.
     }
     if (!title) title = url;
   } else if (kind === "image") {

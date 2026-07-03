@@ -1,5 +1,5 @@
 /**
- * Idea Garden — deterministic L-system plant generator.
+ * Idea Garden - deterministic L-system plant generator.
  *
  * Pure + dependency-free (no three import) so it's trivially testable and safe
  * to import anywhere. Turns a leaf count into a branching "plant" with exactly
@@ -7,7 +7,7 @@
  * not an axiom-rewrite engine).
  *
  * Determinism: all randomness flows from a seeded PRNG, so a given (leafCount,
- * seed) always yields the same plant — a channel's plant is stable across loads.
+ * seed) always yields the same plant - a channel's plant is stable across loads.
  */
 
 export type Vec3 = { x: number; y: number; z: number };
@@ -33,13 +33,13 @@ export type PlantParams = {
   baseRadius?: number;
   /** radius shrink per branch level. Default 0.7. */
   taper?: number;
-  /** straight bare internodes grown before the first split — the stem under a
+  /** straight bare internodes grown before the first split - the stem under a
    * crown. Default 0 (branches immediately, as before). */
   trunkHeight?: number;
   /** internode length shrink per branch level (`len = segmentLength·decay^level`).
    * Default 0.8. */
   lengthDecay?: number;
-  /** apical dominance 0–1: how strongly the leading child keeps the budget and
+  /** apical dominance 0-1: how strongly the leading child keeps the budget and
    * grows straight (others branch off). Default 0 (even, symmetric split). */
   apicalBias?: number;
   /** width of the per-branch pitch randomness. Default 0.3. */
@@ -50,7 +50,7 @@ export type PlantParams = {
 
 // ── seeded PRNG ──────────────────────────────────────────────────────────────
 
-/** mulberry32 — small fast deterministic PRNG. Returns a fn giving [0,1). */
+/** mulberry32 - small fast deterministic PRNG. Returns a fn giving [0,1). */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return function () {
@@ -160,7 +160,7 @@ export function buildPlant(params: PlantParams): Plant {
     // Split remaining budget across 2 children (occasionally 3 for asymmetry).
     const childCount = rng() < 0.22 ? 3 : 2;
 
-    // Apical dominance: child 0 is the "leader" — it keeps a larger share of the
+    // Apical dominance: child 0 is the "leader" - it keeps a larger share of the
     // budget (so the main stem stays dense) and bends less. With apicalBias 0
     // this reduces to an even, symmetric split.
     const w0 = 1 + apicalBias * 2;

@@ -20,7 +20,7 @@ export async function ensureConcept(
   const key = matchKey.trim();
   if (!key) return null;
 
-  // Fast path — already exists.
+  // Fast path - already exists.
   const { data: existing } = await client
     .from("concepts")
     .select("id")
@@ -57,7 +57,7 @@ export async function ensureConcept(
  * Refresh the denormalized `block_count` (prevalence) for specific concepts.
  * Done with per-row updates (each carries a `WHERE id = …`) so it works under
  * Supabase's "safe update" mode, which rejects an UPDATE without a WHERE clause
- * — the reason an earlier set-based recompute RPC silently failed.
+ * - the reason an earlier set-based recompute RPC silently failed.
  */
 async function refreshConceptCounts(
   client: SupabaseClient,
