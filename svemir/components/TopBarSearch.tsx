@@ -27,7 +27,7 @@ export default function TopBarSearch() {
   }, [value, router, searchParams]);
 
   return (
-    <div className="hidden items-center text-sm text-neutral-500 lg:flex">
+    <div className="hidden items-center text-sm text-neutral-500 md:flex">
       <input
         type="text"
         value={value}

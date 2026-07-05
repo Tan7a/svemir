@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/icons";
 import BlockCard from "@/components/BlockCard";
 import ChannelCard from "@/components/ChannelCard";
+import { GUESTBOOK_STYLES, GUESTBOOK_COLORS, cardBg } from "@/lib/guestbook";
 
 /* ---------------------------------------------------------------------------
    Side-nav map - every group + component, mirrored by ids on the sections
@@ -93,6 +94,7 @@ const NAV = [
     items: [
       { label: "BlockCard", id: "o-blockcard" },
       { label: "ChannelCard", id: "o-channelcard" },
+      { label: "Guestbook note", id: "o-guestbook" },
       { label: "Other", id: "o-other" },
     ],
   },
@@ -602,8 +604,8 @@ export default function DesignSystemCatalogue() {
             <Spec
               id="f-type"
               name="Typography"
-              usage="Bebas Neue (display) · Inter (text), ss01/cv11"
-              recipe="display: font-display uppercase tracking-wider · headings: text-2xl/text-lg font-light · body: text-sm · meta: text-xs · labels: text-[10px] uppercase tracking-wide"
+              usage="Bebas Neue (display) · Inter (text), ss01/cv11 · Caveat (handwriting)"
+              recipe="display: font-display uppercase tracking-wider · headings: text-2xl/text-lg font-light · body: text-sm · meta: text-xs · labels: text-[10px] uppercase tracking-wide · handwriting: font-[family-name:var(--font-hand)] / Caveat (guestbook notes only)"
             >
               <div className="flex flex-col gap-2">
                 <span
@@ -623,6 +625,12 @@ export default function DesignSystemCatalogue() {
                 </span>
                 <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                   Label · text-[10px] uppercase tracking-wide
+                </span>
+                <span
+                  className="text-2xl text-neutral-100"
+                  style={{ fontFamily: "var(--font-hand)" }}
+                >
+                  Handwriting · Caveat · guestbook notes
                 </span>
               </div>
             </Spec>
@@ -954,6 +962,50 @@ export default function DesignSystemCatalogue() {
             >
               <div className="w-full max-w-md">
                 <ChannelCard channel={demoChannel} />
+              </div>
+            </Spec>
+
+            <Spec
+              id="o-guestbook"
+              name="Guestbook note"
+              usage="paper surface · 4 styles · handwritten (Caveat) · warm tints"
+              recipe=".paper-note + .paper-note--{grid|torn|tape} (lib/guestbook GUESTBOOK_STYLES) · tint via cardBg(color) · text: font-[family-name:var(--font-hand)] · card: aspect-[4/5]"
+            >
+              <div className="flex w-full flex-col gap-4">
+                <div className="grid w-full max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
+                  {GUESTBOOK_STYLES.map((s, i) => (
+                    <div
+                      key={s.key}
+                      style={{
+                        backgroundColor: cardBg(
+                          GUESTBOOK_COLORS[i % GUESTBOOK_COLORS.length].key
+                        ),
+                      }}
+                      className={`paper-note ${s.className} relative flex aspect-[4/5] flex-col rounded-md p-3`}
+                    >
+                      <span className="self-end text-[10px] text-stone-500">
+                        {s.label}
+                      </span>
+                      <p className="mt-1 flex-1 font-[family-name:var(--font-hand)] text-lg leading-snug text-[#37322a]">
+                        Hello Tanja!
+                      </p>
+                      <p className="text-right font-[family-name:var(--font-hand)] text-sm font-medium text-stone-700">
+                        - T
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {/* Warm paper palette (whole-card tints). */}
+                <div className="flex items-center gap-1.5">
+                  {GUESTBOOK_COLORS.map((c) => (
+                    <span
+                      key={c.key}
+                      title={c.key}
+                      style={{ backgroundColor: c.paper }}
+                      className="h-5 w-5 rounded-full border border-black/10"
+                    />
+                  ))}
+                </div>
               </div>
             </Spec>
 

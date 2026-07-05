@@ -35,6 +35,10 @@ const ADMIN_SECTIONS = [
 // Event a text block's "Edit" dispatches to open this composer pre-filled.
 export type EditTextDetail = { id: string; title: string; description: string };
 
+// Event a paper's "Read full text" dispatches to open the same composer on the
+// paper's (gated) full text, which saves back via PUT /api/papers/[id]/content.
+export type EditPaperFullTextDetail = { id: string; title: string; text: string };
+
 /**
  * Floating "+" quick-add, bottom-right, owner-only (readable HINT_COOKIE - the
  * real guard is isAuthed() in the server actions). Opens a full-screen,
@@ -75,6 +79,8 @@ export default function FloatingAdd() {
   // Edit mode: the block being edited (null = composing a new note). mountKey
   // remounts the (uncontrolled) editor with fresh content each time we open.
   const [editId, setEditId] = useState<string | null>(null);
+  // The paper whose full text is being edited (null = not a full-text edit).
+  const [paperFtId, setPaperFtId] = useState<string | null>(null);
   const [editOrigTitle, setEditOrigTitle] = useState("");
   const [mountKey, setMountKey] = useState(0);
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -95,6 +101,7 @@ export default function FloatingAdd() {
       const d = (ev as CustomEvent<EditTextDetail>).detail;
       if (!d) return;
       setEditId(d.id);
+      setPaperFtId(null);
       setEditOrigTitle(d.title ?? "");
       setTitle(d.title ?? "");
       setText(d.description ?? "");
@@ -108,6 +115,29 @@ export default function FloatingAdd() {
     }
     window.addEventListener("svemir:edit-text", onEdit);
     return () => window.removeEventListener("svemir:edit-text", onEdit);
+  }, []);
+
+  // Open on a paper's full text (same composer), seeded with the fetched text.
+  useEffect(() => {
+    function onEditPaper(ev: Event) {
+      const d = (ev as CustomEvent<EditPaperFullTextDetail>).detail;
+      if (!d) return;
+      setEditId(null);
+      setPaperFtId(d.id);
+      setEditOrigTitle(d.title ?? "");
+      setTitle(d.title ?? "");
+      setText(d.text ?? "");
+      setSource("");
+      setChannels([]);
+      setError("");
+      setStatus("idle");
+      setView("text");
+      setMountKey((k) => k + 1);
+      setOpen(true);
+    }
+    window.addEventListener("svemir:edit-paper-fulltext", onEditPaper);
+    return () =>
+      window.removeEventListener("svemir:edit-paper-fulltext", onEditPaper);
   }, []);
 
   // Lock background scroll while open; close on Escape.
@@ -151,6 +181,7 @@ export default function FloatingAdd() {
 
   function openNew() {
     setEditId(null);
+    setPaperFtId(null);
     setEditOrigTitle("");
     setTitle("");
     setText("");
@@ -172,6 +203,39 @@ export default function FloatingAdd() {
     }
     setStatus("saving");
     setError("");
+
+    if (paperFtId) {
+      // Editing a paper's full text: save the body via the gated PUT, and the
+      // title via renameBlock if it changed. (The abstract lives elsewhere.)
+      const res = await fetch(`/api/papers/${paperFtId}/content`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: body }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Could not save full text.");
+        setStatus("error");
+        return;
+      }
+      const nextTitle = title.trim();
+      if (nextTitle && nextTitle !== editOrigTitle) {
+        const r = await renameBlock(paperFtId, nextTitle);
+        if (!r.success) {
+          // The full text already saved above; only the title rename failed.
+          setError(`Full text saved, but the title didn't update: ${r.error}`);
+          setStatus("error");
+          return;
+        }
+      }
+      setStatus("saved");
+      router.refresh();
+      setTimeout(() => {
+        setStatus("idle");
+        setOpen(false);
+      }, 600);
+      return;
+    }
 
     if (editId) {
       // Editing an existing text block: update title + description only.
@@ -235,6 +299,7 @@ export default function FloatingAdd() {
   }
 
   const isEditing = editId !== null;
+  const isPaperFt = paperFtId !== null;
 
   return (
     <>
@@ -254,7 +319,7 @@ export default function FloatingAdd() {
             {view === "text" ? (
               <>
                 <div className="flex-1 text-center text-sm font-medium text-neutral-400">
-                  {isEditing ? "Edit note" : "New note"}
+                  {isPaperFt ? "Edit full text" : isEditing ? "Edit note" : "New note"}
                 </div>
                 <div className="flex items-center gap-3">
                   {status === "error" && (
@@ -263,7 +328,7 @@ export default function FloatingAdd() {
                   {status === "saved" && (
                     <span className="text-xs text-emerald-400">Saved</span>
                   )}
-                  {!isEditing && (
+                  {!isEditing && !isPaperFt && (
                     <button
                       type="button"
                       onClick={() => setView("more")}
@@ -329,7 +394,7 @@ export default function FloatingAdd() {
                 />
 
                 {/* New notes get source + channels; editing just touches the note. */}
-                {!isEditing && (
+                {!isEditing && !isPaperFt && (
                   <div className="mt-10 space-y-4 border-t border-white/10 pt-6">
                     <input
                       value={source}

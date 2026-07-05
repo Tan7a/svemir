@@ -20,11 +20,11 @@ export default function FacetDetail({ facet, inModal = false }: Props) {
     <div
       className={
         inModal
-          ? "relative flex h-full flex-col gap-6 px-6 py-6"
+          ? "relative flex flex-col gap-6 px-10 py-8"
           : "relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col gap-6 px-6 py-8"
       }
     >
-      <header className="flex flex-col gap-3">
+      <header className={`flex flex-col gap-3 ${inModal ? "pr-10" : ""}`}>
         <span
           className="w-fit rounded-full border border-neutral-700 px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400"
         >

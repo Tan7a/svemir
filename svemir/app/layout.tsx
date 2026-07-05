@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Inter, Bebas_Neue } from "next/font/google";
+import { Inter, Bebas_Neue, Caveat } from "next/font/google";
 import "./globals.css";
 import FloatingAdd from "@/components/FloatingAdd";
 import SignInGate from "@/components/SignInGate";
@@ -14,6 +14,13 @@ const bebasNeue = Bebas_Neue({
   variable: "--font-display",
   subsets: ["latin"],
   weight: "400",
+});
+
+// Handwritten script for guestbook notes (the composer + the wall of cards).
+const caveat = Caveat({
+  variable: "--font-hand",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -44,7 +51,7 @@ export default function RootLayout({
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${inter.variable} ${bebasNeue.variable} antialiased`}
+      className={`${inter.variable} ${bebasNeue.variable} ${caveat.variable} antialiased`}
     >
       <body className="min-h-screen font-sans">
         {/* No-flash theme: apply the saved theme to <html> before first paint

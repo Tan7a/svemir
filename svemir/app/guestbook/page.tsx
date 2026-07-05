@@ -1,7 +1,7 @@
 import TopBar from "@/components/TopBar";
 import GuestbookForm from "@/components/GuestbookForm";
 import { supabase } from "@/lib/supabase-client";
-import { cardBg, rotationFor } from "@/lib/guestbook";
+import { cardBg, styleClass } from "@/lib/guestbook";
 
 export const revalidate = 30;
 
@@ -10,6 +10,7 @@ type Entry = {
   name: string;
   message: string;
   color: string | null;
+  style: string | null;
   sticker: string | null;
   created_at: string;
 };
@@ -34,7 +35,7 @@ export default async function GuestbookPage() {
   if (supabase) {
     const { data } = await supabase
       .from("guestbook_entries")
-      .select("id, name, message, color, sticker, created_at")
+      .select("id, name, message, color, style, sticker, created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     entries = (data ?? []) as Entry[];
@@ -52,39 +53,34 @@ export default async function GuestbookPage() {
           </p>
         </header>
 
-        <div className="mb-12 max-w-xl">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+          {/* The composer is the first note in the wall - same shape as the
+              rest, just editable. */}
           <GuestbookForm />
-        </div>
-
-        {entries.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            No notes yet - be the first to sign.
-          </p>
-        ) : (
-          <div className="columns-1 gap-6 sm:columns-2">
-            {entries.map((e, i) => (
-              <div
-                key={e.id}
-                style={{ backgroundColor: cardBg(e.color) }}
-                className={`mb-6 break-inside-avoid rounded-md p-5 font-mono paper-note ${rotationFor(
-                  i
-                )}`}
-              >
-                <div className="mb-2 flex justify-end">
-                  <span className="text-[11px] text-stone-500">
-                    {formatDate(e.created_at)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#37322a]">
+          {entries.map((e) => (
+            <div
+              key={e.id}
+              style={{ backgroundColor: cardBg(e.color) }}
+              className={`paper-note ${styleClass(
+                e.style,
+              )} relative flex aspect-[4/5] flex-col rounded-md p-4`}
+            >
+              <span className="self-end text-[11px] text-stone-500">
+                {formatDate(e.created_at)}
+              </span>
+              {/* Message fills the card; long notes fade out at the foot
+                    rather than blowing past the ~3:4 shape. */}
+              <div className="mt-1 min-h-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_bottom,#000_72%,transparent)]">
+                <p className="whitespace-pre-wrap font-[family-name:var(--font-hand)] text-xl leading-snug text-[#37322a]">
                   {e.message}
                 </p>
-                <p className="mt-4 text-right text-xs font-medium text-stone-700">
-                  - {e.name?.trim() || "Anonymous"}
-                </p>
               </div>
-            ))}
-          </div>
-        )}
+              <p className="mt-2 text-right font-[family-name:var(--font-hand)] text-lg font-medium text-stone-700">
+                - {e.name?.trim() || "Anonymous"}
+              </p>
+            </div>
+          ))}
+        </div>
       </main>
     </>
   );

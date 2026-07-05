@@ -105,6 +105,15 @@ export function IconPlus({ size = 16, className = "" }: IconProps) {
   );
 }
 
+/** Send - a filled right-pointing triangle, for the guestbook Submit button. */
+export function IconSend({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden>
+      <path d="M3.2 2.4 13 8 3.2 13.6a.6.6 0 0 1-.9-.6l1-4.4a.6.6 0 0 1 0-.2l-1-4.4a.6.6 0 0 1 .9-.6Z" />
+    </svg>
+  );
+}
+
 /* ---- svemir originals (no Flero equivalent) ----------------------------- */
 
 const s24 = {

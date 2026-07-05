@@ -182,49 +182,58 @@ export default function BlockConnections({ blockId, initial }: Props) {
             Suggested connections
             <span className="ml-1 text-neutral-700">via shared concepts</span>
           </div>
-          <ul className="space-y-1.5">
+          {/* Pinterest-style grid so the images are visible at a glance. Each
+              card links to the block; connect / dismiss reveal on hover. */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {visibleSuggestions.map((b) => (
-              <li key={b.id} className="flex items-center gap-2">
+              <div key={b.id} className="group relative">
                 <Link
                   href={`/block/${b.id}`}
-                  className="flex flex-1 items-center gap-2 truncate text-neutral-400 hover:text-neutral-200 hover:underline"
+                  className="block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 transition-colors hover:border-neutral-700"
                 >
-                  <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
+                  <div className="relative aspect-[4/3] w-full">
                     {b.image_url ? (
                       <Image
                         src={b.image_url}
                         alt=""
                         fill
-                        sizes="24px"
+                        sizes="(min-width: 640px) 200px, 45vw"
                         className="object-cover"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[10px] text-neutral-600">
+                      <span className="flex h-full w-full items-center justify-center text-lg text-neutral-700">
                         {b.kind === "text" ? "T" : b.kind === "link" ? "↗" : "•"}
                       </span>
                     )}
-                  </span>
-                  <span className="truncate">{b.title || "Untitled"}</span>
+                  </div>
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => handlePick(b)}
-                  disabled={busy}
-                  className="text-neutral-500 hover:text-emerald-400 disabled:opacity-40"
-                >
-                  connect
-                </button>
-                <button
-                  type="button"
-                  onClick={() => dismissSuggestion(b.id)}
-                  aria-label={`Dismiss ${b.title || "block"}`}
-                  className="text-neutral-700 hover:text-neutral-400"
-                >
-                  ×
-                </button>
-              </li>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-neutral-400">
+                  {b.title || "Untitled"}
+                </p>
+                {/* Actions float over the top-right of the image. Revealed on
+                    hover, and on keyboard focus / touch (focus-within) so they
+                    aren't hover-only. */}
+                <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => handlePick(b)}
+                    disabled={busy}
+                    className="rounded-full bg-neutral-950/85 px-2 py-0.5 text-[10px] text-neutral-200 backdrop-blur transition-colors hover:text-emerald-400 disabled:opacity-40"
+                  >
+                    connect
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dismissSuggestion(b.id)}
+                    aria-label={`Dismiss ${b.title || "block"}`}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-950/85 text-[11px] text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
