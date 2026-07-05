@@ -16,7 +16,7 @@ import { useState } from "react";
  */
 
 const PORTFOLIO = "https://tanjaradovanovic.com/";
-const AVATAR_SRC = "/me.jpg";
+const AVATAR_SRC = "/me.jpeg";
 // Revealed corner (what's "behind" the page) = portfolio hero colour.
 // Placeholder until Tanja gives the exact hero hex.
 const PEEL_HERO = "#e7dcc8";
