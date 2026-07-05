@@ -7,13 +7,16 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 import {
   GUESTBOOK_COLORS,
   GUESTBOOK_STICKERS,
+  GUESTBOOK_STYLES,
   DEFAULT_COLOR,
+  DEFAULT_STYLE,
 } from "@/lib/guestbook";
 
 export type SignGuestbookInput = {
   name: string;
   message: string;
   color: string;
+  style: string;
   sticker: string;
   /** Honeypot - must stay empty; bots tend to fill every field. */
   website?: string;
@@ -68,6 +71,9 @@ export async function signGuestbook(
   const color = GUESTBOOK_COLORS.some((c) => c.key === data.color)
     ? data.color
     : DEFAULT_COLOR;
+  const style = GUESTBOOK_STYLES.some((s) => s.key === data.style)
+    ? data.style
+    : DEFAULT_STYLE;
   const sticker = GUESTBOOK_STICKERS.includes(data.sticker) ? data.sticker : null;
 
   // Rate-limit: one post per minute per IP.
@@ -89,7 +95,7 @@ export async function signGuestbook(
 
   const { error } = await supabaseAdmin
     .from("guestbook_entries")
-    .insert([{ name, message, color, sticker, ip_hash: ipHash }]);
+    .insert([{ name, message, color, style, sticker, ip_hash: ipHash }]);
 
   if (error) {
     return { success: false, error: error.message };

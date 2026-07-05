@@ -18,7 +18,7 @@ export default function TopBar() {
       <div className="flex min-w-0 items-center gap-5">
         <BrandMark />
         <Suspense
-          fallback={<div className="hidden h-6 w-56 lg:block" aria-hidden />}
+          fallback={<div className="hidden h-6 w-56 md:block" aria-hidden />}
         >
           <TopBarSearch />
         </Suspense>
@@ -33,7 +33,7 @@ export default function TopBar() {
         </Suspense>
       </div>
 
-      <nav className="flex items-center justify-end gap-2 text-sm">
+      <nav className="flex items-center justify-end gap-0 text-sm">
         {/* Quiet Guestbook link, sitting next to the sort control. */}
         <Link
           href="/guestbook"

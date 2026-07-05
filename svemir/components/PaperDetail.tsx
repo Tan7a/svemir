@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase-client";
 import { FACET_DIMENSIONS, FACET_DIMENSION_BY_KEY } from "@/lib/constants";
 import BlockActions from "./BlockActions";
 import BlockConnections from "./BlockConnections";
-import PaperFullText from "./PaperFullText";
 import { renameBlock, updateBlockDescription } from "@/app/admin/actions";
 
 type Props = {
@@ -52,6 +51,44 @@ export default function PaperDetail({ block, inModal = false }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facetGroups, setFacetGroups] = useState<FacetGroup[]>([]);
+
+  // Owner-only full text, lazy-loaded from the gated route
+  // `/api/papers/[id]/content` (403 to the public). Clicking "Read full text"
+  // fetches it and opens the SAME full-screen composer that text blocks use
+  // (via the svemir:edit-paper-fulltext event → FloatingAdd), where it can be
+  // read and edited; saving there writes back through the gated PUT.
+  type FullTextState =
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "denied" }
+    | { status: "error"; message: string };
+  const [fullText, setFullText] = useState<FullTextState>({ status: "idle" });
+
+  async function openFullText() {
+    setFullText({ status: "loading" });
+    try {
+      const res = await fetch(`/api/papers/${block.id}/content`);
+      if (res.status === 403) return setFullText({ status: "denied" });
+      const data = await res.json();
+      if (!res.ok) {
+        return setFullText({
+          status: "error",
+          message: data.error ?? "Could not load.",
+        });
+      }
+      window.dispatchEvent(
+        new CustomEvent("svemir:edit-paper-fulltext", {
+          detail: { id: block.id, title: block.title, text: data.text },
+        })
+      );
+      setFullText({ status: "idle" });
+    } catch (e) {
+      setFullText({
+        status: "error",
+        message: e instanceof Error ? e.message : "Could not load.",
+      });
+    }
+  }
 
   // Facets are public (RLS select-using-true), so fetch them with the anon
   // client. Grouped by dimension in canonical order.
@@ -158,16 +195,29 @@ export default function PaperDetail({ block, inModal = false }: Props) {
     </button>
   );
 
+  // "Read full text" sits in the action row next to Edit, white on black text.
+  // Hidden while editing to keep that row focused on Save/Cancel.
+  const fullTextButton = !editing ? (
+    <button
+      type="button"
+      onClick={openFullText}
+      disabled={fullText.status === "loading"}
+      className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-white`}
+    >
+      {fullText.status === "loading" ? "Loading…" : "Read full text"}
+    </button>
+  ) : null;
+
   return (
     <div
       className={
         inModal
-          ? "relative flex h-full flex-col gap-5 px-6 py-6"
+          ? "relative flex flex-col gap-5 px-10 py-8"
           : "relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col gap-5 px-6 py-8"
       }
     >
       {/* Header - title, authors, metadata (on top) */}
-      <header className="flex flex-col gap-3">
+      <header className={`flex flex-col gap-3 ${inModal ? "pr-10" : ""}`}>
         {editing ? (
           <input
             type="text"
@@ -227,7 +277,12 @@ export default function PaperDetail({ block, inModal = false }: Props) {
         url={block.url}
         imageUrl={block.image_url}
         inModal={inModal}
-        extra={editControls}
+        extra={
+          <>
+            {editControls}
+            {fullTextButton}
+          </>
+        }
       />
       {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -245,7 +300,11 @@ export default function PaperDetail({ block, inModal = false }: Props) {
             className="w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-[15px] leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
           />
         ) : block.description ? (
-          <p className="max-w-prose whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-200">
+          <p
+            className={`whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-200 ${
+              inModal ? "" : "max-w-prose"
+            }`}
+          >
             {block.description}
           </p>
         ) : (
@@ -287,8 +346,16 @@ export default function PaperDetail({ block, inModal = false }: Props) {
         </section>
       )}
 
-      {/* Owner-only full text */}
-      <PaperFullText blockId={block.id} />
+      {/* Owner-only full text is opened from the "Read full text" button in the
+          action row (into the composer); only the gate messages surface here. */}
+      {fullText.status === "denied" && (
+        <p className="text-xs text-neutral-500">
+          The full text is available to the owner only. Sign in to read it.
+        </p>
+      )}
+      {fullText.status === "error" && (
+        <p className="text-xs text-red-400">{fullText.message}</p>
+      )}
 
       {/* Connections */}
       <div className="mt-2 border-b border-neutral-800">

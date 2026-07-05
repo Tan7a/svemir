@@ -177,13 +177,43 @@ export default function BlockDetail({ block, inModal = false }: Props) {
     <div
       className={
         inModal
-          ? "relative flex h-full flex-col gap-6 px-6 py-6 lg:grid lg:grid-cols-[1fr_24rem] lg:gap-8"
+          ? "relative flex flex-col gap-6 px-10 py-8"
           : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]"
       }
     >
-      {/* Left column - image (clickable), URL bar, and body text */}
+      {/* Left column - title + description on top, then image/text, URL, reader. */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-1 items-start justify-center">
+        <header className={inModal ? "pr-10" : ""}>
+          {editing ? (
+            <input
+              type="text"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              disabled={busy}
+              className="w-full border-b border-neutral-500 bg-transparent text-2xl font-light leading-tight text-neutral-100 outline-none"
+            />
+          ) : (
+            <h1 className="text-2xl font-light leading-tight text-neutral-100">
+              {block.title || "Untitled"}
+            </h1>
+          )}
+          {editing ? (
+            <textarea
+              value={descriptionDraft}
+              onChange={(e) => setDescriptionDraft(e.target.value)}
+              disabled={busy}
+              rows={4}
+              placeholder="Add a description…"
+              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-2 text-sm leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
+            />
+          ) : block.description && block.kind !== "text" ? (
+            <p className="mt-1 text-neutral-400">{block.description}</p>
+          ) : !block.description ? (
+            <p className="mt-1 text-neutral-600">No description</p>
+          ) : null}
+        </header>
+
+        <div className="flex flex-1 items-start justify-start">
           {block.image_url ? (
             block.url ? (
               <a
@@ -278,36 +308,6 @@ export default function BlockDetail({ block, inModal = false }: Props) {
       {/* Metadata. In the page layout this is the right column; in the side
           panel it stacks below the image as a single column. */}
       <aside className="flex flex-col gap-4 text-sm text-neutral-300">
-        <header>
-          {editing ? (
-            <input
-              type="text"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              disabled={busy}
-              className="w-full border-b border-neutral-500 bg-transparent text-2xl font-light leading-tight text-neutral-100 outline-none"
-            />
-          ) : (
-            <h1 className="text-2xl font-light leading-tight text-neutral-100">
-              {block.title || "Untitled"}
-            </h1>
-          )}
-          {editing ? (
-            <textarea
-              value={descriptionDraft}
-              onChange={(e) => setDescriptionDraft(e.target.value)}
-              disabled={busy}
-              rows={4}
-              placeholder="Add a description…"
-              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-2 text-sm leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
-            />
-          ) : block.description && block.kind !== "text" ? (
-            <p className="mt-1 text-neutral-400">{block.description}</p>
-          ) : !block.description ? (
-            <p className="mt-1 text-neutral-600">No description</p>
-          ) : null}
-        </header>
-
         <dl className="space-y-1.5 text-xs">
           <div className="flex justify-between gap-4">
             <dt className="text-neutral-500">Added</dt>

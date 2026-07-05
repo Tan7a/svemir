@@ -174,3 +174,43 @@ body {
 .paper-note ::selection {
   background: rgba(120, 100, 60, 0.25);
 }
+
+/* Paper "style" modifiers, layered on `.paper-note` (see lib/guestbook.ts
+   GUESTBOOK_STYLES + styleClass). Each is a distinct sheet a visitor can pick
+   from the `< Style >` switcher. All flat/matte - the only shadows are plain
+   downward drop shadows for depth, never a glow. */
+
+/* Grid / quad paper - swap the single ruled lines for a faint crosshatch. */
+.paper-note--grid {
+  background-image:
+    radial-gradient(120% 80% at 15% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(90, 80, 55, 0.09) 0, rgba(90, 80, 55, 0.09) 1px, transparent 1px, transparent 22px),
+    repeating-linear-gradient(90deg, rgba(90, 80, 55, 0.09) 0, rgba(90, 80, 55, 0.09) 1px, transparent 1px, transparent 22px);
+}
+
+/* Torn paper - a ragged bottom edge, cut with a mask (solid body + an
+   irregular SVG tear stretched across the foot). */
+.paper-note--torn {
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 13px) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='14' preserveAspectRatio='none'%3E%3Cpath d='M0 0 H120 V5 L114 10 L108 4 L101 11 L94 5 L86 10 L78 3 L70 11 L62 5 L54 10 L46 3 L38 11 L30 5 L22 10 L14 4 L7 11 L0 6 Z' fill='%23000'/%3E%3C/svg%3E") bottom / 100% 14px no-repeat;
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 13px) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='14' preserveAspectRatio='none'%3E%3Cpath d='M0 0 H120 V5 L114 10 L108 4 L101 11 L94 5 L86 10 L78 3 L70 11 L62 5 L54 10 L46 3 L38 11 L30 5 L22 10 L14 4 L7 11 L0 6 Z' fill='%23000'/%3E%3C/svg%3E") bottom / 100% 14px no-repeat;
+}
+
+/* Taped note - a strip of translucent washi tape stuck across the top. The
+   card must keep `overflow: visible` so the tape can sit slightly proud. */
+.paper-note--tape::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 88px;
+  height: 22px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(214, 203, 170, 0.5);
+  border-left: 1px solid rgba(150, 140, 110, 0.2);
+  border-right: 1px solid rgba(150, 140, 110, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
