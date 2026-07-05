@@ -14,7 +14,7 @@ import ProfileCorner from "./ProfileCorner";
  */
 export default function TopBar() {
   return (
-    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-neutral-800 bg-background/95 px-5 backdrop-blur">
+    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-background/95 px-5 backdrop-blur">
       <div className="flex min-w-0 items-center gap-5">
         <BrandMark />
         <Suspense

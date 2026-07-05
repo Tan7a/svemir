@@ -457,12 +457,14 @@ export default function DesignSystemCatalogue() {
           <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
             Design system
           </h1>
-          <div className="mt-2 flex max-w-[450px] flex-col gap-3 text-sm leading-relaxed text-neutral-500">
+          {/* Matches the Research page intro: same max-w-prose width, 15px
+              body, gap, and neutral tones so the two pages read identically. */}
+          <div className="mt-4 flex max-w-prose flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
             <p>
               svemir is my personal universe of references: blocks, channels, a
               knowledge graph, and a research layer for papers.
             </p>
-            <p>
+            <p className="text-neutral-400">
               This is the system it runs on. A tight set of primitives sits over
               a single token layer, so nothing is hardcoded and every screen
               re-themes on command. Change one token and the whole product

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { connectBlocks, disconnectBlocks } from "@/app/admin/actions";
 import { supabase } from "@/lib/supabase-client";
+import { useAuthed } from "@/lib/use-authed";
 import BlockPicker, { type PickableBlock } from "./BlockPicker";
 
 type Props = {
@@ -25,9 +26,80 @@ type Props = {
  * as a manual connection, so the curatorial gesture stays the single source of
  * real edges. Suggestions are a progressive enhancement: if migration 0006
  * isn't applied (RPC missing) the section simply stays empty.
+ *
+ * Connected and suggested blocks share one card (ConnCard), rendered in the same
+ * grid so the two sections read as a set. Signed-out visitors see both grids but
+ * none of the curatorial controls (connect / disconnect / dismiss) - view only.
  */
+
+function kindLabel(kind: PickableBlock["kind"]): string {
+  return kind === "paper"
+    ? "paper"
+    : kind === "text"
+      ? "note"
+      : kind === "link"
+        ? "link"
+        : "image";
+}
+
+/**
+ * One block in a connections grid. Image blocks show their thumbnail; image-less
+ * blocks (papers, notes) show a text snippet instead of an empty box with a dot.
+ * The hover overlay (owner-only) is either a disconnect × (connected) or
+ * connect + dismiss (suggested).
+ */
+function ConnCard({
+  block,
+  overlay,
+}: {
+  block: PickableBlock;
+  overlay?: React.ReactNode;
+}) {
+  const snippet = block.description?.trim() || block.title || "Untitled";
+  return (
+    <div className="group relative">
+      <Link
+        href={`/block/${block.id}`}
+        className="block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 transition-colors hover:border-neutral-700"
+      >
+        <div className="relative aspect-[4/3] w-full">
+          {block.image_url ? (
+            <Image
+              src={block.image_url}
+              alt=""
+              fill
+              sizes="(min-width: 640px) 200px, 45vw"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col gap-1 overflow-hidden p-2">
+              <span className="text-[9px] uppercase tracking-wide text-neutral-600">
+                {kindLabel(block.kind)}
+              </span>
+              <p className="line-clamp-4 text-[11px] leading-snug text-neutral-400">
+                {snippet}
+              </p>
+            </div>
+          )}
+        </div>
+      </Link>
+      <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-neutral-400">
+        {block.title || "Untitled"}
+      </p>
+      {overlay && (
+        // Actions float over the top-right of the card. Revealed on hover, and on
+        // keyboard focus / touch (focus-within) so they aren't hover-only.
+        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100">
+          {overlay}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BlockConnections({ blockId, initial }: Props) {
   const router = useRouter();
+  const authed = useAuthed();
   const [items, setItems] = useState<PickableBlock[]>(initial);
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,7 +120,7 @@ export default function BlockConnections({ blockId, initial }: Props) {
       const ids = (data as { other_id: string }[]).map((r) => r.other_id);
       const { data: rows } = await client
         .from("items")
-        .select("id, title, image_url, kind")
+        .select("id, title, image_url, kind, description")
         .in("id", ids);
       if (cancelled || !rows) return;
       const byId = new Map((rows as PickableBlock[]).map((r) => [r.id, r]));
@@ -114,17 +186,19 @@ export default function BlockConnections({ blockId, initial }: Props) {
           Connected blocks{" "}
           <span className="ml-0.5 text-neutral-600">{items.length}</span>
         </span>
-        <button
-          type="button"
-          onClick={() => setPicking((p) => !p)}
-          disabled={busy}
-          className="text-neutral-500 hover:text-neutral-200 disabled:opacity-40"
-        >
-          {picking ? "cancel" : "+ connect block"}
-        </button>
+        {authed && (
+          <button
+            type="button"
+            onClick={() => setPicking((p) => !p)}
+            disabled={busy}
+            className="text-neutral-500 hover:text-neutral-200 disabled:opacity-40"
+          >
+            {picking ? "cancel" : "+ connect block"}
+          </button>
+        )}
       </div>
 
-      {picking && (
+      {authed && picking && (
         <div className="mb-2">
           <BlockPicker
             excludeId={blockId}
@@ -138,42 +212,27 @@ export default function BlockConnections({ blockId, initial }: Props) {
       {items.length === 0 && !picking ? (
         <p className="text-neutral-600">No block connections yet.</p>
       ) : (
-        <ul className="space-y-1.5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {items.map((b) => (
-            <li key={b.id} className="flex items-center gap-2">
-              <Link
-                href={`/block/${b.id}`}
-                className="flex flex-1 items-center gap-2 truncate text-neutral-200 hover:underline"
-              >
-                <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
-                  {b.image_url ? (
-                    <Image
-                      src={b.image_url}
-                      alt=""
-                      fill
-                      sizes="24px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[10px] text-neutral-600">
-                      {b.kind === "text" ? "T" : b.kind === "link" ? "↗" : "•"}
-                    </span>
-                  )}
-                </span>
-                <span className="truncate">{b.title || "Untitled"}</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => handleDisconnect(b.id)}
-                disabled={busy}
-                aria-label={`Disconnect ${b.title || "block"}`}
-                className="text-neutral-600 hover:text-neutral-300 disabled:opacity-40"
-              >
-                ×
-              </button>
-            </li>
+            <ConnCard
+              key={b.id}
+              block={b}
+              overlay={
+                authed ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDisconnect(b.id)}
+                    disabled={busy}
+                    aria-label={`Disconnect ${b.title || "block"}`}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-950/85 text-[11px] text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100 disabled:opacity-40"
+                  >
+                    ×
+                  </button>
+                ) : undefined
+              }
+            />
           ))}
-        </ul>
+        </div>
       )}
 
       {visibleSuggestions.length > 0 && (
@@ -182,56 +241,35 @@ export default function BlockConnections({ blockId, initial }: Props) {
             Suggested connections
             <span className="ml-1 text-neutral-700">via shared concepts</span>
           </div>
-          {/* Pinterest-style grid so the images are visible at a glance. Each
-              card links to the block; connect / dismiss reveal on hover. */}
+          {/* Same grid + card as connected, so the two sections read as a set. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {visibleSuggestions.map((b) => (
-              <div key={b.id} className="group relative">
-                <Link
-                  href={`/block/${b.id}`}
-                  className="block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 transition-colors hover:border-neutral-700"
-                >
-                  <div className="relative aspect-[4/3] w-full">
-                    {b.image_url ? (
-                      <Image
-                        src={b.image_url}
-                        alt=""
-                        fill
-                        sizes="(min-width: 640px) 200px, 45vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-lg text-neutral-700">
-                        {b.kind === "text" ? "T" : b.kind === "link" ? "↗" : "•"}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-                <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-neutral-400">
-                  {b.title || "Untitled"}
-                </p>
-                {/* Actions float over the top-right of the image. Revealed on
-                    hover, and on keyboard focus / touch (focus-within) so they
-                    aren't hover-only. */}
-                <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => handlePick(b)}
-                    disabled={busy}
-                    className="rounded-full bg-neutral-950/85 px-2 py-0.5 text-[10px] text-neutral-200 backdrop-blur transition-colors hover:text-emerald-400 disabled:opacity-40"
-                  >
-                    connect
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dismissSuggestion(b.id)}
-                    aria-label={`Dismiss ${b.title || "block"}`}
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-950/85 text-[11px] text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
+              <ConnCard
+                key={b.id}
+                block={b}
+                overlay={
+                  authed ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handlePick(b)}
+                        disabled={busy}
+                        className="rounded-full bg-neutral-950/85 px-2 py-0.5 text-[10px] text-neutral-200 backdrop-blur transition-colors hover:text-emerald-400 disabled:opacity-40"
+                      >
+                        connect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => dismissSuggestion(b.id)}
+                        aria-label={`Dismiss ${b.title || "block"}`}
+                        className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-950/85 text-[11px] text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : undefined
+                }
+              />
             ))}
           </div>
         </div>

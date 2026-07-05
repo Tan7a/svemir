@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { useAuthed } from "@/lib/use-authed";
 import {
   addChannelToBlock,
   deleteItem,
@@ -41,6 +42,7 @@ export default function BlockActions({
   extra,
 }: Props) {
   const router = useRouter();
+  const authed = useAuthed();
   const [picking, setPicking] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -240,6 +242,12 @@ export default function BlockActions({
   const hasExactMatch =
     value.trim() !== "" &&
     allChannels.some((c) => c.toLowerCase() === value.trim().toLowerCase());
+
+  // View-only for signed-out visitors: the whole action row (Connect, the
+  // Actions menu, and the Edit control passed in via `extra`) is owner tooling.
+  // The real guard is isAuthed() in the server actions; this just keeps the UI
+  // clean. Connections/channels stay visible - they render outside this row.
+  if (!authed) return null;
 
   return (
     <div className="flex flex-col gap-2 pt-1">

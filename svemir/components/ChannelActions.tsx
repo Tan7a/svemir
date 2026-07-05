@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { useAuthed } from "@/lib/use-authed";
 import {
   setChannelParent,
   removeChannelParent,
@@ -41,6 +42,7 @@ export default function ChannelActions({
   info,
 }: Props) {
   const router = useRouter();
+  const authed = useAuthed();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -174,6 +176,10 @@ export default function ChannelActions({
     allChannels.some(
       (c) => c.title.toLowerCase() === value.trim().toLowerCase()
     );
+
+  // Owner-only tooling (rename / nest / delete). Signed-out visitors get a clean
+  // read-only channel; the server actions re-check real auth regardless.
+  if (!authed) return null;
 
   return (
     <div className="relative" ref={menuRef}>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { HINT_COOKIE } from "@/lib/access";
+import { useAuthed } from "@/lib/use-authed";
 import {
   addItem,
   renameBlock,
@@ -12,6 +12,7 @@ import {
 import { signOut } from "@/lib/access-actions";
 import ChannelPicker from "./ChannelPicker";
 import AdminForm from "./AdminForm";
+import SignInModal from "./SignInModal";
 import { supabase } from "@/lib/supabase-client";
 import type { RecentChannel } from "@/lib/channels";
 
@@ -47,12 +48,11 @@ export type EditPaperFullTextDetail = { id: string; title: string; text: string 
  * raw symbols). New notes save via addItem (kind:"text"); editing an existing
  * text block (opened via the "svemir:edit-text" event) saves via
  * updateBlockDescription/renameBlock. "More options" reveals the full admin hub.
+ *
+ * The + is ALWAYS visible: signed out, it opens the sign-in popup (so the owner
+ * can always get back in); signed in, it opens the composer. The addItem action
+ * re-checks real auth server-side regardless.
  */
-
-function hasHintCookie(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie.split("; ").some((c) => c === `${HINT_COOKIE}=1`);
-}
 
 export default function FloatingAdd() {
   const router = useRouter();
@@ -64,7 +64,8 @@ export default function FloatingAdd() {
   const isGarden =
     pathname === "/graph" && (viewParam === null || viewParam === "garden");
 
-  const [authed, setAuthed] = useState(false);
+  const authed = useAuthed();
+  const [signInOpen, setSignInOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"text" | "more">("text");
   const [title, setTitle] = useState("");
@@ -84,8 +85,6 @@ export default function FloatingAdd() {
   const [editOrigTitle, setEditOrigTitle] = useState("");
   const [mountKey, setMountKey] = useState(0);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => setAuthed(hasHintCookie()), []);
 
   // Auto-grow the title so long titles wrap onto new lines instead of truncating.
   useEffect(() => {
@@ -176,8 +175,6 @@ export default function FloatingAdd() {
           );
       });
   }, [open, recents.length]);
-
-  if (!authed) return null;
 
   function openNew() {
     setEditId(null);
@@ -445,17 +442,25 @@ export default function FloatingAdd() {
         </div>
       )}
 
-      {/* Floating + trigger, above the maker-credit pill. */}
+      {/* Floating + trigger, above the maker-credit pill. Always visible:
+          signed out it opens the sign-in popup, signed in it opens the composer. */}
       <button
         type="button"
-        onClick={openNew}
-        aria-label="Quick add"
-        className={`fixed right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/90 text-xl text-neutral-200 backdrop-blur transition-colors hover:bg-neutral-800 hover:text-white ${
+        onClick={authed ? openNew : () => setSignInOpen(true)}
+        aria-label={authed ? "Quick add" : "Sign in"}
+        // Liquid-glass: translucent white over a blurred + saturated backdrop
+        // with a hairline rim (no glow, per house rule). Rests at 50% opacity and
+        // clears to full on hover so it stays discoverable without shouting.
+        className={`fixed right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-neutral-100 opacity-50 ring-1 ring-inset ring-white/10 backdrop-blur-md backdrop-saturate-150 transition-all hover:bg-white/15 hover:opacity-100 ${
           isGarden ? "bottom-20" : "bottom-12"
         }`}
       >
         <span className="-mt-0.5 leading-none">+</span>
       </button>
+
+      {!authed && (
+        <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
+      )}
     </>
   );
 }

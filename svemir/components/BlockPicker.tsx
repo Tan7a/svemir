@@ -9,6 +9,8 @@ export type PickableBlock = {
   title: string;
   image_url: string | null;
   kind: "link" | "image" | "text" | "paper";
+  /** Snippet shown inside image-less cards (papers, notes) so they aren't blank. */
+  description?: string | null;
 };
 
 type Props = {

@@ -73,14 +73,22 @@ export default function BrandMark() {
     }
   }
 
+  function replayIntro() {
+    close();
+    window.dispatchEvent(new Event("svemir:play-intro"));
+  }
+
   return (
     <div ref={ref} className="flex items-center">
       <Link
         href="/"
         aria-label="svemir home"
-        className="flex items-center"
+        className="flex items-center gap-2"
         onContextMenu={openMenu}
       >
+        <span className="font-[family-name:var(--font-display)] text-xl leading-none tracking-wider text-neutral-100">
+          svemir
+        </span>
         <Image
           src="/svemir.svg"
           alt="svemir"
@@ -113,6 +121,7 @@ export default function BrandMark() {
                 label={copied ? "Copied ✓" : "Copy link"}
                 onClick={copyLink}
               />
+              <MenuItem label="Replay intro" onClick={replayIntro} />
               <MenuItem
                 label="About svemir"
                 trailing="▸"

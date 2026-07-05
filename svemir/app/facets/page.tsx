@@ -25,8 +25,11 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
   return (
     <>
       <TopBar />
-      <main className="mx-auto min-h-[calc(100vh-3rem)] w-full max-w-5xl px-6 py-10">
-        <header className="max-w-prose">
+      {/* Full-width like the Blocks / Channels pages (no centered max-width) so
+          the page left-aligns and the papers grid can use the full BlocksView
+          card size. Header + themes sit in the same gutter as the grid. */}
+      <main className="min-h-[calc(100vh-3rem)] w-full py-10">
+        <header className="max-w-prose px-5 sm:px-8">
           <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
             Research
           </h1>
@@ -71,7 +74,13 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
         </header>
 
         <div className="mt-10">
-          {order === "themes" ? <ThemesDirectory /> : <PapersGrid order={order} />}
+          {order === "themes" ? (
+            <div className="px-5 sm:px-8">
+              <ThemesDirectory />
+            </div>
+          ) : (
+            <PapersGrid order={order} />
+          )}
         </div>
       </main>
     </>
@@ -182,11 +191,7 @@ async function PapersGrid({ order }: { order: string }) {
     }
   );
 
-  // BlocksView owns its own horizontal padding, so pull the grid out of the
-  // page's px-6 gutter for an edge-to-edge wall.
-  return (
-    <div className="-mx-6">
-      <BlocksView blocks={papers} />
-    </div>
-  );
+  // BlocksView owns its own horizontal padding (px-3 sm:px-8) and full-width
+  // responsive grid, so render it directly - same card size as the Blocks page.
+  return <BlocksView blocks={papers} />;
 }
