@@ -46,6 +46,13 @@ export type PlantParams = {
   pitchJitter?: number;
   /** small per-segment direction perturbation so stems curve. Default 0. */
   wobble?: number;
+  /** 0-1: how strongly crown branches bend toward horizontal as they climb, so
+   * the canopy fans out wide instead of shooting straight up. Default 0. */
+  spread?: number;
+  /** richness of the branch skeleton relative to leaf count. >1 grows more
+   * branch tips than there are leaves (extra tips = bare twigs), so the crown
+   * looks full even for channels with few blocks. Default 1. */
+  crownDensity?: number;
 };
 
 // ── seeded PRNG ──────────────────────────────────────────────────────────────
@@ -119,12 +126,27 @@ export function buildPlant(params: PlantParams): Plant {
   const apicalBias = Math.max(0, Math.min(1, params.apicalBias ?? 0));
   const pitchJitter = params.pitchJitter ?? 0.3;
   const wobble = params.wobble ?? 0;
+  const spread = Math.max(0, Math.min(1, params.spread ?? 0));
   const rng = mulberry32(params.seed || 1);
 
-  const maxDepth = Math.min(6, Math.max(1, Math.ceil(Math.log2(leafCount + 1))));
+  const crownDensity = Math.max(0.2, params.crownDensity ?? 1);
+  // The branch skeleton is grown to a "branch budget" that is independent of (and
+  // richer than) the leaf count, so even a channel with a handful of blocks gets
+  // a full, twiggy crown. Leaves are hung on a subset of the resulting tips after
+  // growth; leftover tips stay as bare twigs (a real tree has far more branches
+  // than leafy tips).
+  const branchBudget = Math.min(
+    160,
+    Math.max(14, Math.round(leafCount * 1.5 * crownDensity))
+  );
+  const maxDepth = Math.min(
+    8,
+    Math.max(3, Math.ceil(Math.log2(branchBudget + 1)) + 1)
+  );
 
   const segments: Segment[] = [];
   const leafPts: Vec3[] = [];
+  const tips: { center: Vec3; dir: Vec3 }[] = [];
   let yaw = 0; // accumulates a golden-angle spiral so branches don't stack in a plane
 
   // Drop `k` leaves in a small rounded cluster around a tip (the crown blobs).
@@ -136,13 +158,16 @@ export function buildPlant(params: PlantParams): Plant {
       return;
     }
     const [side, up] = perpBasis(dir);
-    const r = 0.22;
+    // Small, tight foliage puff at each branch tip. With the deeper branching
+    // above, leaves land on many tips, so the crown reads as fine dense foliage
+    // with the branch armature showing through - the reference-drawing look.
+    const r = 0.6 + 0.28 * Math.sqrt(k);
     for (let i = 0; i < k; i++) {
       const a = (i / k) * Math.PI * 2 + rng() * 0.7;
-      const rad = r * (0.45 + rng() * 0.7);
+      const rad = r * (0.55 + rng() * 0.6);
       const off = add(scale(side, Math.cos(a) * rad), scale(up, Math.sin(a) * rad));
-      // small offset along the branch direction gives the cluster depth
-      const along = scale(dir, (rng() - 0.3) * r);
+      // offset along the branch direction gives the cluster real depth
+      const along = scale(dir, (rng() - 0.3) * r * 1.4);
       leafPts.push(add(add(center, off), along));
     }
   }
@@ -153,12 +178,13 @@ export function buildPlant(params: PlantParams): Plant {
     segments.push({ start, end, depth: level, radius: baseRadius * Math.pow(taper, level) });
 
     if (budget <= 1 || level >= maxDepth) {
-      sprayLeaves(end, dir, budget);
+      tips.push({ center: end, dir });
       return;
     }
 
-    // Split remaining budget across 2 children (occasionally 3 for asymmetry).
-    const childCount = rng() < 0.22 ? 3 : 2;
+    // Split remaining budget across 2 children (often 3 for a fuller,
+    // wider-spreading crown like the reference trees).
+    const childCount = rng() < 0.32 ? 3 : 2;
 
     // Apical dominance: child 0 is the "leader" - it keeps a larger share of the
     // budget (so the main stem stays dense) and bends less. With apicalBias 0
@@ -189,6 +215,13 @@ export function buildPlant(params: PlantParams): Plant {
       // Child direction = parent tilted by `pitch` toward a yaw-rotated perp axis.
       const perp = add(scale(side, Math.cos(yaw + jitter)), scale(up, Math.sin(yaw + jitter)));
       let childDir = norm(add(scale(dir, Math.cos(pitch)), scale(perp, Math.sin(pitch))));
+      // Spread: bend side branches toward horizontal (stronger higher up) so the
+      // canopy fans out wide, while the leader (c === 0) keeps climbing. We only
+      // damp the upward component, so branches level off but never droop down.
+      if (c > 0 && spread > 0 && childDir.y > 0) {
+        const t = spread * Math.min(1, (level + 1) / 2);
+        childDir = norm({ x: childDir.x, y: childDir.y * (1 - t), z: childDir.z });
+      }
       childDir = wobbleDir(childDir, wobble, rng);
       grow(end, childDir, childBudget, level + 1);
     }
@@ -203,7 +236,24 @@ export function buildPlant(params: PlantParams): Plant {
     segments.push({ start: stemStart, end: stemEnd, depth: 0, radius: baseRadius });
     stemStart = stemEnd;
   }
-  grow(stemStart, stemDir, leafCount, 0);
+  grow(stemStart, stemDir, branchBudget, 0);
+
+  // Hang exactly leafCount leaves on the crown tips. Shuffle the tips
+  // (deterministic) and deal leaves round-robin, so foliage scatters across the
+  // whole canopy and leftover tips stay as bare twigs. More leaves than tips →
+  // a tip carries a small cluster.
+  for (let i = tips.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = tips[i];
+    tips[i] = tips[j];
+    tips[j] = tmp;
+  }
+  const tipCount = tips.length || 1;
+  const perTip = new Array(tipCount).fill(0);
+  for (let i = 0; i < leafCount; i++) perTip[i % tipCount]++;
+  for (let t = 0; t < tipCount; t++) {
+    if (perTip[t] > 0) sprayLeaves(tips[t].center, tips[t].dir, perTip[t]);
+  }
 
   // Rank leaves by height (lowest first) so index 0 = base, last = tip.
   const ordered = leafPts

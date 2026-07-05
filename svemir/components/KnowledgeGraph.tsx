@@ -127,6 +127,14 @@ export default function KnowledgeGraph({
     x: number;
     y: number;
   } | null>(null);
+  // Click-to-focus: the clicked node stays highlighted (it + its neighbours)
+  // until you click empty space - unlike hover, which follows the cursor.
+  const [focusId, setFocusId] = useState<string | null>(null);
+  // Filters: a positive selection of what to SHOW. Empty = show everything;
+  // pick chips and only those stay visible. Keys are channel ids plus the
+  // special CONCEPTS_KEY for the concept layer.
+  const [shownKeys, setShownKeys] = useState<Set<string>>(() => new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     function onResize() {
@@ -224,6 +232,71 @@ export default function KnowledgeGraph({
     return m;
   }, [data]);
 
+  // id → node lookup, used by the filter's link-visibility test.
+  const nodeById = useMemo(() => {
+    const m = new Map<string, GraphNode>();
+    for (const n of data.nodes) m.set(n.id, n);
+    return m;
+  }, [data]);
+
+  // "Well-connected" threshold: roughly the 90th-percentile degree. Nodes at or
+  // above this reveal their label at the lowest zoom; the reveal is scaled
+  // between 0 and this so hubs name themselves first.
+  const hubDeg = useMemo(() => {
+    const degs = data.nodes
+      .map((n) => n.deg ?? 0)
+      .filter((d) => d > 0)
+      .sort((a, b) => a - b);
+    if (degs.length === 0) return 1;
+    const p90 = degs[Math.floor(degs.length * 0.9)] ?? degs[degs.length - 1];
+    return Math.max(1, p90);
+  }, [data]);
+
+  // Nodes sorted by degree (busiest first). The label pass walks this order so
+  // hubs claim their space before smaller nodes - the key to a readable graph.
+  const nodesByDegree = useMemo(
+    () => [...data.nodes].sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0)),
+    [data]
+  );
+
+  // Distinct primary channels (a block's first channel) for the filter chips.
+  // Channel-less blocks collapse into one "No channel" group so they're
+  // toggleable too.
+  const NO_CHANNEL = "__none__";
+  const CONCEPTS_KEY = "__concepts__";
+  const channelList = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; color: string }>();
+    for (const i of items) {
+      const id = i.tagIds[0] ?? NO_CHANNEL;
+      if (m.has(id)) continue;
+      m.set(id, {
+        id,
+        name: id === NO_CHANNEL ? "No channel" : i.tagNames[0] ?? "Channel",
+        color: id === NO_CHANNEL ? BLOCK_NEUTRAL : channelColor(id),
+      });
+    }
+    return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [items]);
+
+  // A node passes the filter when nothing is selected (show all) or when its
+  // key is in the selection. Shared by node + link visibility and focus reset.
+  const isNodeVisible = useMemo(() => {
+    return (n: GraphNode) => {
+      if (shownKeys.size === 0) return true;
+      if (n.type === "concept") return shownKeys.has(CONCEPTS_KEY);
+      const ch = n.tagIds[0] ?? NO_CHANNEL;
+      return shownKeys.has(ch);
+    };
+  }, [shownKeys]);
+
+  // If the focused node gets filtered out, drop the focus so the map doesn't
+  // stay dimmed around something you can no longer see.
+  useEffect(() => {
+    if (focusId === null) return;
+    const n = nodeById.get(focusId);
+    if (!n || !isNodeVisible(n)) setFocusId(null);
+  }, [focusId, nodeById, isNodeVisible]);
+
   // Cross-reference maps for the click card: which concepts a block mentions,
   // and which blocks mention a concept.
   const { blockToConcepts, conceptToBlocks } = useMemo(() => {
@@ -270,10 +343,94 @@ export default function KnowledgeGraph({
     return () => clearTimeout(t);
   }, [data, size.w]);
 
+  // Hover follows the cursor; click "pins" a focus. Hover wins while active so
+  // you can still peek at other nodes without losing your pinned selection.
+  const activeId = hoverId ?? focusId;
+  const anyFilter = shownKeys.size > 0;
+
   return (
     <div ref={containerRef} className="relative h-[calc(100vh-3rem)] w-full">
       <div className="pointer-events-none absolute bottom-3 left-3 z-10 text-xs text-neutral-600">
         {data.nodes.length} nodes · {data.links.length} links
+      </div>
+
+      {/* Filter panel: pick chips to SELECT what's visible (empty = show all).
+          Uses the graph's visibility accessors, so toggling never re-runs the
+          layout. */}
+      <div className="absolute left-3 top-3 z-20 text-xs">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-neutral-300 backdrop-blur transition-colors hover:text-neutral-100"
+        >
+          Filters
+          {anyFilter && (
+            <span className="ml-1 text-neutral-500">· {shownKeys.size}</span>
+          )}
+        </button>
+        {filtersOpen && (
+          <div className="mt-2 max-h-[60vh] w-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl backdrop-blur-md">
+            <div className="mb-1 flex items-center justify-between px-1">
+              <span className="text-neutral-500">
+                {anyFilter ? "Showing selected" : "Showing all"}
+              </span>
+              {anyFilter && (
+                <button
+                  type="button"
+                  onClick={() => setShownKeys(new Set())}
+                  className="text-neutral-500 hover:text-neutral-200"
+                >
+                  Show all
+                </button>
+              )}
+            </div>
+            {(() => {
+              const toggle = (key: string) =>
+                setShownKeys((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(key)) next.delete(key);
+                  else next.add(key);
+                  return next;
+                });
+              // "on" = will render. When nothing is selected everything is on;
+              // once a selection exists, unselected chips read as excluded.
+              const chip = (
+                key: string,
+                name: string,
+                color: string,
+                bold?: boolean
+              ) => {
+                const on = shownKeys.size === 0 || shownKeys.has(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggle(key)}
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left hover:bg-neutral-900"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: color, opacity: on ? 1 : 0.25 }}
+                    />
+                    <span
+                      className={`truncate ${bold ? "font-semibold " : ""}${
+                        on ? "text-neutral-100" : "text-neutral-600"
+                      }`}
+                    >
+                      {name}
+                    </span>
+                  </button>
+                );
+              };
+              return (
+                <>
+                  {chip(CONCEPTS_KEY, "Concepts", CONCEPT_COLOR, true)}
+                  {channelList.map((c) => chip(c.id, c.name, c.color))}
+                </>
+              );
+            })()}
+          </div>
+        )}
       </div>
       {size.w > 0 && size.h > 0 && (
         <ForceGraph2D
@@ -304,12 +461,19 @@ export default function KnowledgeGraph({
             const n = raw as GraphNode | null;
             setHoverId(n ? n.id : null);
           }}
+          linkVisibility={(raw: unknown) => {
+            if (!anyFilter) return true;
+            const l = raw as GraphLink;
+            const s = nodeById.get(linkEndId(l.source));
+            const t = nodeById.get(linkEndId(l.target));
+            return !!s && !!t && isNodeVisible(s) && isNodeVisible(t);
+          }}
           linkColor={(raw: unknown) => {
             const l = raw as GraphLink;
-            if (hoverId) {
+            if (activeId) {
               const touches =
-                linkEndId(l.source) === hoverId ||
-                linkEndId(l.target) === hoverId;
+                linkEndId(l.source) === activeId ||
+                linkEndId(l.target) === activeId;
               if (!touches) return "rgba(255,255,255,0.025)";
               return l.kind === "manual"
                 ? "rgba(255,255,255,0.55)"
@@ -323,9 +487,9 @@ export default function KnowledgeGraph({
             const l = raw as GraphLink;
             const base = l.kind === "manual" ? 1.2 : 0.6;
             if (
-              hoverId &&
-              (linkEndId(l.source) === hoverId ||
-                linkEndId(l.target) === hoverId)
+              activeId &&
+              (linkEndId(l.source) === activeId ||
+                linkEndId(l.target) === activeId)
             ) {
               return base + 0.8;
             }
@@ -336,72 +500,137 @@ export default function KnowledgeGraph({
             const node = raw as GraphNode;
             const ev = event as MouseEvent;
             const rect = containerRef.current?.getBoundingClientRect();
+            // Pin focus on this node (dims all but it + neighbours) and open
+            // its detail card.
+            setFocusId(node.id);
             setSelected({
               node,
               x: rect ? ev.clientX - rect.left : 0,
               y: rect ? ev.clientY - rect.top : 0,
             });
           }}
-          onBackgroundClick={() => setSelected(null)}
+          onBackgroundClick={() => {
+            setSelected(null);
+            setFocusId(null);
+          }}
+          nodeVisibility={(raw: unknown) => {
+            if (!anyFilter) return true;
+            return isNodeVisible(raw as GraphNode);
+          }}
           nodeCanvasObjectMode={() => "replace"}
-          nodeCanvasObject={(
-            raw: unknown,
-            ctx: CanvasRenderingContext2D,
-            globalScale: number
-          ) => {
+          nodeCanvasObject={(raw: unknown, ctx: CanvasRenderingContext2D) => {
             const node = raw as GraphNode & { x?: number; y?: number };
             if (node.x === undefined || node.y === undefined) return;
-            const isConcept = node.type === "concept";
             const r = nodeRadius(node);
 
-            // Hover dimming: when a node is hovered, fade everything that isn't
-            // it or one of its direct neighbours.
+            // Dimming: when a node is hovered or focused (clicked), fade
+            // everything that isn't it or one of its direct neighbours.
             const dim =
-              hoverId !== null &&
-              node.id !== hoverId &&
-              !neighbors.get(hoverId)?.has(node.id);
+              activeId !== null &&
+              node.id !== activeId &&
+              !neighbors.get(activeId)?.has(node.id);
             ctx.globalAlpha = dim ? 0.12 : 1;
 
             // Flat dot - no glow. Blocks in their channel colour, concepts amber.
+            // Labels are drawn separately in onRenderFramePost so we can cull
+            // overlaps globally (Obsidian-style) rather than per-node.
             ctx.beginPath();
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
             ctx.fillStyle = node.color;
             ctx.fill();
 
-            // Labels are white and fade in gradually as you zoom - opacity ramps
-            // from 0 to 1 across a per-type zoom window (concepts appear earlier
-            // than blocks). Font is kept at a constant on-screen size (world font
-            // ÷ zoom). A hovered node and its neighbours are always fully legible.
-            const highlighted = hoverId !== null && !dim;
-            if (!dim) {
-              const fadeStart = isConcept ? 0.4 : 1.1;
-              const fadeEnd = isConcept ? 1.1 : 2.0;
+            ctx.globalAlpha = 1;
+          }}
+          onRenderFramePost={(ctx: CanvasRenderingContext2D, globalScale: number) => {
+            // ── Obsidian-style label pass ────────────────────────────────────
+            // The unreadable version drew every node's label, so hundreds piled
+            // on top of each other. Instead we walk nodes busiest-first and only
+            // draw a label if its box doesn't overlap one already placed - so the
+            // most-connected nodes always win their space and the rest stay
+            // hidden until you zoom in (smaller text ⇒ more labels fit). On
+            // hover/focus we show only that node + its neighbours.
+            const placed: { x0: number; y0: number; x1: number; y1: number }[] =
+              [];
+            const pad = 3 / globalScale; // breathing room between labels (screen px)
+
+            const inActiveSet = (id: string) =>
+              activeId !== null &&
+              (id === activeId || !!neighbors.get(activeId)?.has(id));
+
+            for (const node of nodesByDegree) {
+              const n = node as GraphNode & { x?: number; y?: number };
+              if (n.x === undefined || n.y === undefined) continue;
+              if (anyFilter && !isNodeVisible(n)) continue;
+
+              // When something is active, only its neighbourhood is labelled.
+              if (activeId !== null && !inActiveSet(n.id)) continue;
+
+              const isConcept = n.type === "concept";
+              const highlighted = inActiveSet(n.id);
+
+              // Zoom fade, led earlier for well-connected nodes.
+              const degNorm = Math.min(1, (n.deg ?? 0) / hubDeg);
+              const revealLead = isConcept ? 0.35 : 0.9;
+              const baseStart = isConcept ? 0.4 : 1.1;
+              const baseEnd = isConcept ? 1.1 : 2.0;
+              const fadeStart = Math.max(0.2, baseStart - degNorm * revealLead);
+              const fadeEnd = Math.max(fadeStart + 0.3, baseEnd - degNorm * revealLead);
               const alpha = highlighted
                 ? 1
                 : Math.max(
                     0,
-                    Math.min(
-                      1,
-                      (globalScale - fadeStart) / (fadeEnd - fadeStart)
-                    )
+                    Math.min(1, (globalScale - fadeStart) / (fadeEnd - fadeStart))
                   );
-              if (alpha > 0.02) {
-                const fontSize = (isConcept ? 9 : 7.5) / globalScale;
-                ctx.font = `${
-                  isConcept ? "600 " : ""
-                }${fontSize}px Inter, system-ui, sans-serif`;
-                ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "top";
-                const label =
-                  node.name.length > 36
-                    ? node.name.slice(0, 34) + "…"
-                    : node.name;
-                ctx.fillText(label, node.x, node.y + r + 2 / globalScale);
-              }
-            }
+              if (alpha <= 0.04) continue;
 
-            ctx.globalAlpha = 1;
+              // On-screen px grows with zoom, clamped to a readable band.
+              const maxPx = isConcept ? 24 : 20;
+              const grow = (isConcept ? 6 : 5) * globalScale;
+              const screenPx = Math.min(maxPx, Math.max(11, grow));
+              const fontSize = screenPx / globalScale;
+              ctx.font = `${
+                isConcept ? "600 " : ""
+              }${fontSize}px Inter, system-ui, sans-serif`;
+
+              const label =
+                n.name.length > 36 ? n.name.slice(0, 34) + "…" : n.name;
+              const w = ctx.measureText(label).width;
+              const r = nodeRadius(n);
+              const cx = n.x;
+              const top = n.y + r + 2 / globalScale;
+              const box = {
+                x0: cx - w / 2 - pad,
+                y0: top - pad,
+                x1: cx + w / 2 + pad,
+                y1: top + fontSize + pad,
+              };
+
+              // Collision cull: skip if this label overlaps an already-placed one.
+              let clash = false;
+              for (const p of placed) {
+                if (
+                  box.x0 < p.x1 &&
+                  box.x1 > p.x0 &&
+                  box.y0 < p.y1 &&
+                  box.y1 > p.y0
+                ) {
+                  clash = true;
+                  break;
+                }
+              }
+              if (clash) continue;
+              placed.push(box);
+
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+              // Subtle dark halo so text stays legible over links/dots.
+              ctx.lineWidth = fontSize * 0.22;
+              ctx.strokeStyle = `rgba(16,16,20,${0.85 * alpha})`;
+              ctx.lineJoin = "round";
+              ctx.strokeText(label, cx, top);
+              ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+              ctx.fillText(label, cx, top);
+            }
           }}
           nodePointerAreaPaint={(
             raw: unknown,

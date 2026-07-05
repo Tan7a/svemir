@@ -8,6 +8,8 @@ import type { ItemWithChannels } from "@/lib/types";
 import BlockActions from "./BlockActions";
 import BlockConnections from "./BlockConnections";
 import PaperDetail from "./PaperDetail";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { renameBlock, updateBlockDescription } from "@/app/admin/actions";
 
 type Props = {
@@ -85,6 +87,20 @@ export default function BlockDetail({ block, inModal = false }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   function startEdit() {
+    // Text blocks edit in the full WYSIWYG composer (FloatingAdd listens for
+    // this); other kinds keep the inline title/description edit.
+    if (block.kind === "text") {
+      window.dispatchEvent(
+        new CustomEvent("svemir:edit-text", {
+          detail: {
+            id: block.id,
+            title: block.title,
+            description: block.description ?? "",
+          },
+        })
+      );
+      return;
+    }
     setTitleDraft(block.title);
     setDescriptionDraft(block.description ?? "");
     setError(null);
@@ -199,8 +215,26 @@ export default function BlockDetail({ block, inModal = false }: Props) {
               />
             )
           ) : block.kind === "text" && block.description ? (
-            <article className="prose prose-invert max-w-prose whitespace-pre-wrap text-neutral-200">
-              {block.description}
+            <article className="prose prose-invert max-w-prose text-neutral-200 [&_a]:text-neutral-100 [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-3 [&_ul]:list-disc [&_ul]:pl-5">
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  img: (props) => (
+                    // Rendered markdown image (e.g. pasted into the composer).
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      {...props}
+                      alt={props.alt ?? ""}
+                      className="my-4 max-h-[70vh] max-w-full rounded-lg"
+                    />
+                  ),
+                  a: (props) => (
+                    <a {...props} target="_blank" rel="noopener noreferrer" />
+                  ),
+                }}
+              >
+                {block.description}
+              </Markdown>
             </article>
           ) : (
             <div className="flex h-64 w-full items-center justify-center border border-neutral-800 bg-neutral-900 text-neutral-700">

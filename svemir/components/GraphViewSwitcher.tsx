@@ -63,7 +63,7 @@ export default function GraphViewSwitcher({ gardens, graphProps }: Props) {
               key={v.id}
               type="button"
               onClick={() => setView(v.id)}
-              className={`rounded-full px-3 py-1 transition-colors ${
+              className={`min-w-[5.5rem] rounded-full px-3 py-1 text-center transition-colors ${
                 view === v.id
                   ? "bg-neutral-200 text-neutral-900"
                   : "text-neutral-400 hover:text-neutral-100"

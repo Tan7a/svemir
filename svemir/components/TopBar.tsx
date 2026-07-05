@@ -6,7 +6,7 @@ import MobileNav from "./MobileNav";
 import OrderDropdown from "./OrderDropdown";
 import ResearchOrderDropdown from "./ResearchOrderDropdown";
 import BrandMark from "./BrandMark";
-import AddButton from "./AddButton";
+import ProfileCorner from "./ProfileCorner";
 
 /**
  * Persistent top bar across every page of svemir. Brand mark on the left,
@@ -48,18 +48,10 @@ export default function TopBar() {
         <Suspense fallback={null}>
           <ResearchOrderDropdown />
         </Suspense>
-        {/* Add is desktop/tablet-only - Tanja won't be saving from her phone. */}
-        <span className="hidden md:inline-flex">
-          <Suspense
-            fallback={
-              <span className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200">
-                Add <span className="text-neutral-400">+</span>
-              </span>
-            }
-          >
-            <AddButton />
-          </Suspense>
-        </span>
+        {/* Profile avatar (replaces the old Add button); hovering it peels the
+            page corner to the portfolio. Adding content now lives in the
+            owner-only floating + (bottom-right). */}
+        <ProfileCorner />
         {/* Hamburger - only rendered below 900px (see MobileNav). */}
         <Suspense fallback={null}>
           <MobileNav />

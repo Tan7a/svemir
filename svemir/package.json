@@ -10,12 +10,20 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
+    "@tiptap/extension-image": "^2.27.2",
+    "@tiptap/extension-link": "^2.27.2",
+    "@tiptap/extension-placeholder": "^2.27.2",
+    "@tiptap/react": "^2.27.2",
+    "@tiptap/starter-kit": "^2.27.2",
     "next": "16.2.4",
     "open-graph-scraper": "^6.11.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-force-graph-2d": "^1.29.1",
-    "three": "^0.184.0"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "three": "^0.184.0",
+    "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
