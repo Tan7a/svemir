@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
+      // Some saved blocks have http image URLs; next/image otherwise throws
+      // "hostname not configured" and crashes the whole page. next/image
+      // fetches + optimizes server-side, so the browser still gets https
+      // (no mixed content).
+      { protocol: "http", hostname: "**" },
     ],
     // Next 16 defaults images.qualities to [75]; whitelist 100 so the
     // text-dense screenshot thumbnails can render crisp instead of mushy.
