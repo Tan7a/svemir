@@ -1,7 +1,7 @@
 import TopBar from "@/components/TopBar";
 import GuestbookForm from "@/components/GuestbookForm";
 import { supabase } from "@/lib/supabase-client";
-import { accentDot, rotationFor } from "@/lib/guestbook";
+import { cardBg, rotationFor } from "@/lib/guestbook";
 
 export const revalidate = 30;
 
@@ -47,8 +47,8 @@ export default async function GuestbookPage() {
         <header className="mb-8 max-w-prose">
           <h1 className="text-3xl font-light text-neutral-100">Guestbook</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-neutral-400">
-            Passing through? Leave a note. Pick a colour and a sticker, say hello,
-            share a thought - it&rsquo;ll join the wall below.
+            Passing through? Leave a note. Pick a colour, say hello, share a
+            thought - it&rsquo;ll join the wall below.
           </p>
         </header>
 
@@ -58,21 +58,19 @@ export default async function GuestbookPage() {
 
         {entries.length === 0 ? (
           <p className="text-sm text-neutral-500">
-            No notes yet - be the first to sign ✨
+            No notes yet - be the first to sign.
           </p>
         ) : (
-          <div className="columns-1 gap-6 sm:columns-2 lg:columns-3">
+          <div className="columns-1 gap-6 sm:columns-2">
             {entries.map((e, i) => (
               <div
                 key={e.id}
+                style={{ backgroundColor: cardBg(e.color) }}
                 className={`mb-6 break-inside-avoid rounded-md p-5 font-mono paper-note ${rotationFor(
                   i
                 )}`}
               >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-2xl leading-none" aria-hidden>
-                    {e.sticker ?? "💬"}
-                  </span>
+                <div className="mb-2 flex justify-end">
                   <span className="text-[11px] text-stone-500">
                     {formatDate(e.created_at)}
                   </span>
@@ -80,8 +78,7 @@ export default async function GuestbookPage() {
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#37322a]">
                   {e.message}
                 </p>
-                <p className="mt-4 flex items-center justify-end gap-2 text-xs font-medium text-stone-700">
-                  <span className={`h-2 w-2 rounded-full ${accentDot(e.color)}`} aria-hidden />
+                <p className="mt-4 text-right text-xs font-medium text-stone-700">
                   - {e.name?.trim() || "Anonymous"}
                 </p>
               </div>

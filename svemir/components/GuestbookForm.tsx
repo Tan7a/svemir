@@ -3,25 +3,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signGuestbook } from "@/app/guestbook/actions";
-import {
-  GUESTBOOK_COLORS,
-  GUESTBOOK_STICKERS,
-  DEFAULT_COLOR,
-} from "@/lib/guestbook";
+import { GUESTBOOK_COLORS, DEFAULT_COLOR, cardBg } from "@/lib/guestbook";
 
 /**
- * Public sign-the-guestbook form, styled as a piece of cream paper (monospace
+ * Public sign-the-guestbook form, styled as a piece of paper (monospace
  * "typewriter" ink on the `.paper-note` surface). No character limits; the name
- * is optional. Personalise with an accent colour + an emoji sticker. Submits
- * through the `signGuestbook` server action (validates + rate-limits), then
- * refreshes the wall.
+ * is optional. Personalise with a colour - the chosen colour tints the whole
+ * note. Submits through the `signGuestbook` server action (validates +
+ * rate-limits), then refreshes the wall.
  */
 export default function GuestbookForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [color, setColor] = useState(DEFAULT_COLOR);
-  const [sticker, setSticker] = useState<string>(GUESTBOOK_STICKERS[0]);
   const [website, setWebsite] = useState(""); // honeypot
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -31,7 +26,13 @@ export default function GuestbookForm() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await signGuestbook({ name, message, color, sticker, website });
+      const res = await signGuestbook({
+        name,
+        message,
+        color,
+        sticker: "",
+        website,
+      });
       if (res.success) {
         setDone(true);
         setName("");
@@ -45,9 +46,13 @@ export default function GuestbookForm() {
 
   if (done) {
     return (
-      <div className="paper-note -rotate-1 rounded-md p-6 text-center font-mono">
-        <p className="text-3xl">🎉</p>
-        <p className="mt-2 text-sm">Thanks for signing - your note is on the wall.</p>
+      <div
+        style={{ backgroundColor: cardBg(color) }}
+        className="paper-note -rotate-1 rounded-md p-6 text-center font-mono"
+      >
+        <p className="text-sm text-[#37322a]">
+          Thanks for signing - your note is on the wall.
+        </p>
         <button
           type="button"
           onClick={() => setDone(false)}
@@ -62,34 +67,28 @@ export default function GuestbookForm() {
   return (
     <form
       onSubmit={submit}
+      style={{ backgroundColor: cardBg(color) }}
       className="paper-note relative flex min-h-[16rem] -rotate-1 flex-col rounded-md p-6 font-mono"
     >
-      <div className="mb-3 text-3xl leading-none" aria-hidden>
-        {sticker}
-      </div>
-
       {/* Message - written directly on the paper, no box, no limit. */}
       <textarea
         placeholder="Leave a message, write a poem, draw some ASCII art…"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         aria-label="Your message"
-        rows={3}
+        rows={4}
         className="w-full flex-1 resize-none bg-transparent text-base leading-relaxed text-[#37322a] placeholder:text-stone-500/80 focus:outline-none"
       />
 
       {/* Signature - optional. */}
-      <div className="mt-2 flex items-center gap-2">
-        <span className={`h-2.5 w-2.5 rounded-full ${GUESTBOOK_COLORS.find((c) => c.key === color)?.dot ?? "bg-stone-500"}`} aria-hidden />
-        <input
-          type="text"
-          placeholder="- your name (optional)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          aria-label="Your name (optional)"
-          className="w-full bg-transparent text-sm font-medium text-[#37322a] placeholder:text-stone-500/80 focus:outline-none"
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="- your name (optional)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        aria-label="Your name (optional)"
+        className="mt-2 w-full bg-transparent text-sm font-medium text-[#37322a] placeholder:text-stone-500/80 focus:outline-none"
+      />
 
       {/* Honeypot - hidden from humans, catnip for bots. */}
       <input
@@ -116,25 +115,11 @@ export default function GuestbookForm() {
               aria-pressed={color === c.key}
               onClick={() => setColor(c.key)}
               className={`h-5 w-5 rounded-full ${c.swatch} transition-transform hover:scale-110 ${
-                color === c.key ? "ring-2 ring-stone-700 ring-offset-1 ring-offset-[#f4ecd6]" : ""
+                color === c.key
+                  ? "ring-2 ring-stone-700 ring-offset-1 ring-offset-white/40"
+                  : ""
               }`}
             />
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-0.5">
-          {GUESTBOOK_STICKERS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-label={`sticker ${s}`}
-              aria-pressed={sticker === s}
-              onClick={() => setSticker(s)}
-              className={`flex h-7 w-7 items-center justify-center rounded-lg text-base transition-colors ${
-                sticker === s ? "bg-stone-800/15 ring-1 ring-stone-700" : "hover:bg-stone-800/10"
-              }`}
-            >
-              {s}
-            </button>
           ))}
         </div>
         <button

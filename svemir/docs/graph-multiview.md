@@ -20,8 +20,9 @@ Switcher: `components/GraphViewSwitcher.tsx`. Data fetched in `app/graph/page.ts
 ## Constraints (do not break)
 - **No AI / no embeddings** — cluster by channels + local concept extraction only.
 - **No glow / no bloom** — flat matte materials.
-- **Original code only** — the reference apps (Kat Zhang, personal-use license) are *inspiration only*;
-  never copy their code into this public repo.
+- **Original code only** — the reference apps (Kat Zhang / **poetengineer**, https://x.com/poetengineer__,
+  personal-use license) are *inspiration only*; never copy their code into this public repo. The Garden
+  credits poetengineer in-view (bottom-left pill) and in a header comment in `IdeaGarden.tsx`.
 - Next 16: `ssr:false` only inside client components; `useSearchParams` needs `<Suspense>`. Strict TS.
 - Three.js scenes must fully dispose on unmount (StrictMode double-mounts in dev) — see IdeaGarden cleanup.
 

@@ -44,6 +44,9 @@ type PlantView = {
  * Pure Three.js. Flat matte materials - NO bloom/glow, NO gradients. The entire
  * scene + overlay DOM is built in one effect and fully torn down on cleanup so it
  * is safe under React StrictMode's dev double-mount.
+ *
+ * Visual inspiration: poetengineer (https://x.com/poetengineer__). This is an
+ * original, from-scratch implementation - inspiration only, no copied code.
  */
 export default function IdeaGarden({ gardens }: Props) {
   const router = useRouter();
@@ -74,17 +77,18 @@ export default function IdeaGarden({ gardens }: Props) {
     // lines (no fills, no shading). Per-leaf pastel comes from setColorAt
     // (white·instanceColor). Branches are pale flat "lines" too.
     const branchMat = new THREE.LineBasicMaterial({
-      color: 0xcfcfca,
+      color: 0xe4e4dc,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.95,
     });
     const leafMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-    // Three leaf shapes; each plant picks one. Kept low-poly so the wireframe
-    // stays crisp. Shared across plants, disposed once.
+    // Three leaf shapes; each plant picks one. Small, fine marks so a crown of
+    // many of them reads as delicate stippled foliage (reference line-drawing
+    // trees) rather than a cluster of big geometric blobs. Shared, disposed once.
     const leafGeos: THREE.BufferGeometry[] = [
-      new THREE.IcosahedronGeometry(0.22, 0), // low-poly wire ball
-      new THREE.BoxGeometry(0.3, 0.3, 0.3), // wire cube
-      new THREE.OctahedronGeometry(0.26, 0), // wire diamond
+      new THREE.IcosahedronGeometry(0.13, 0), // low-poly wire ball
+      new THREE.BoxGeometry(0.15, 0.15, 0.15), // wire cube
+      new THREE.OctahedronGeometry(0.14, 0), // wire diamond
     ];
 
     // ── build all plants first (need radii for size-aware spacing) ───────────────
@@ -93,16 +97,18 @@ export default function IdeaGarden({ gardens }: Props) {
       // Per-channel "genome": stable across loads, distinct between channels.
       const vr = mulberry32((seedFromId(channel.id) ^ 0x9e3779b9) >>> 0);
       const variety = {
-        segmentLength: 1.0,
+        segmentLength: 2.8, // internode length; long bare trunk comes from trunkHeight
         baseRadius: 0.05, // thin branches
-        taper: 0.86, // near-uniform thickness
-        branchAngleDeg: 26 + vr() * 16, // 26-42°
-        lengthDecay: 0.78 + vr() * 0.08,
-        apicalBias: vr() * 0.45,
-        pitchJitter: 0.25 + vr() * 0.25,
-        wobble: vr() * 0.1,
-        // tall bare stem; a touch taller for busier channels
-        trunkHeight: 2 + Math.floor(vr() * 3) + Math.min(4, Math.floor(n / 12)),
+        taper: 0.82, // branches thin toward the tips
+        branchAngleDeg: 50 + vr() * 22, // 50-72°: very wide forks
+        lengthDecay: 0.84 + vr() * 0.06, // 0.84-0.90: branches stay long enough to reach out
+        apicalBias: 0.1 + vr() * 0.2, // 0.10-0.30: weak leader → budget spreads sideways
+        spread: 0.72 + vr() * 0.2, // 0.72-0.92: strongly bend crown branches horizontal
+        crownDensity: 1.3 + vr() * 0.4, // 1.3-1.7: full, twiggy crown even for small channels
+        pitchJitter: 0.3 + vr() * 0.25,
+        wobble: 0.05 + vr() * 0.08, // gentle organic waviness in trunk + branches
+        // slender bare trunk in proportion with the (now richer) crown
+        trunkHeight: 5 + Math.floor(vr() * 3) + Math.min(4, Math.floor(n / 14)),
       };
       const plant = buildPlant({ leafCount: n, seed: seedFromId(channel.id), ...variety });
       const shape = Math.floor(vr() * leafGeos.length);
@@ -111,7 +117,9 @@ export default function IdeaGarden({ gardens }: Props) {
 
     // ── size-aware ring placement (phyllotaxis with footprint-scaled step) ───────
     const maxFootprint = built.reduce((m, b) => Math.max(m, b.plant.radius), 1);
-    const spacing = Math.max(6, maxFootprint * 2.4 + 2);
+    // Closer than the crown footprint so canopies interleave → reads as a dense
+    // forest rather than isolated specimens.
+    const spacing = Math.max(8, maxFootprint * 2.2 + 4);
     const positions = built.map((_, k) => {
       const a = k * GOLDEN;
       const r = spacing * Math.sqrt(k);
@@ -265,6 +273,40 @@ export default function IdeaGarden({ gardens }: Props) {
     scene.add(makeMarks(300, triTex, 9, 0.5));
     scene.add(makeMarks(120, starTex, 11, 0.7));
 
+    // ── grass: short splayed blades scattered on the ground (flat line-art) ──────
+    // One LineSegments for all blades (cheap); muted green, low opacity so it
+    // reads as ground cover, not a lawn. Clumped in tufts for an organic look.
+    const GRASS_TUFTS = Math.min(500, Math.max(120, Math.floor(sceneR * 4)));
+    const BLADES = 3;
+    const grassPos = new Float32Array(GRASS_TUFTS * BLADES * 6);
+    let gp = 0;
+    for (let t = 0; t < GRASS_TUFTS; t++) {
+      const a = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * (sceneR + 6);
+      const cx = Math.cos(a) * rad;
+      const cz = Math.sin(a) * rad;
+      for (let b = 0; b < BLADES; b++) {
+        const bx = cx + (b - 1) * 0.12 + (Math.random() - 0.5) * 0.1;
+        const bz = cz + (Math.random() - 0.5) * 0.14;
+        const h = 0.35 + Math.random() * 0.45;
+        const lean = (Math.random() - 0.5) * 0.28;
+        grassPos[gp++] = bx;
+        grassPos[gp++] = 0;
+        grassPos[gp++] = bz;
+        grassPos[gp++] = bx + lean;
+        grassPos[gp++] = h;
+        grassPos[gp++] = bz + lean * 0.5;
+      }
+    }
+    const grassGeo = new THREE.BufferGeometry();
+    grassGeo.setAttribute("position", new THREE.BufferAttribute(grassPos, 3));
+    const grassMat = new THREE.LineBasicMaterial({
+      color: 0x8fa76a,
+      transparent: true,
+      opacity: 0.5,
+    });
+    scene.add(new THREE.LineSegments(grassGeo, grassMat));
+
     // ── bees: faint dashed flight-paths + a bright dot that travels each path ─────
     // Each bee follows a smooth looping curve, drawn as a dashed line (the "trail"),
     // with a single dot riding along it. Paths cross over the garden = pollination.
@@ -275,7 +317,7 @@ export default function IdeaGarden({ gardens }: Props) {
     const pathMat = new THREE.LineDashedMaterial({
       color: 0xbdb89a,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.3,
       dashSize: 0.6,
       gapSize: 0.5,
     });
@@ -299,16 +341,44 @@ export default function IdeaGarden({ gardens }: Props) {
       path.computeLineDistances(); // required for dashes to show
       scene.add(path);
     }
+    // A little bee sprite (pale wings + amber striped body) rides each path.
+    const beeTex = makeMarkTexture((ctx, s) => {
+      const c = s / 2;
+      // wings
+      ctx.fillStyle = "rgba(242,242,228,0.85)";
+      ctx.beginPath();
+      ctx.ellipse(c - s * 0.12, c - s * 0.07, s * 0.16, s * 0.1, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(c + s * 0.12, c - s * 0.07, s * 0.16, s * 0.1, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // body
+      ctx.fillStyle = "#e6b34d";
+      ctx.beginPath();
+      ctx.ellipse(c, c + s * 0.05, s * 0.13, s * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // stripes
+      ctx.strokeStyle = "rgba(40,30,10,0.8)";
+      ctx.lineWidth = s * 0.04;
+      for (const dy of [-0.04, 0.05, 0.14]) {
+        ctx.beginPath();
+        ctx.moveTo(c - s * 0.1, c + s * (0.05 + dy));
+        ctx.lineTo(c + s * 0.1, c + s * (0.05 + dy));
+        ctx.stroke();
+      }
+    });
     const beeGeo = new THREE.BufferGeometry();
     const beePos = new Float32Array(BEE_COUNT * 3);
     beeGeo.setAttribute("position", new THREE.BufferAttribute(beePos, 3));
     const beeMat = new THREE.PointsMaterial({
-      color: 0xfdf6d0,
-      size: 3.4,
+      map: beeTex,
+      color: 0xffffff,
+      size: 14,
       sizeAttenuation: false,
       transparent: true,
       opacity: 0.95,
       depthWrite: false,
+      alphaTest: 0.4,
     });
     scene.add(new THREE.Points(beeGeo, beeMat));
     const beeTmp = new THREE.Vector3();
@@ -603,6 +673,7 @@ export default function IdeaGarden({ gardens }: Props) {
       pathMat.dispose();
       triTex.dispose(); // CanvasTextures aren't freed by scene.traverse
       starTex.dispose();
+      beeTex.dispose();
       overlay.replaceChildren(); // removes svg, pills, hover + scrubber DOM
       renderer.dispose();
       renderer.forceContextLoss();
@@ -613,6 +684,16 @@ export default function IdeaGarden({ gardens }: Props) {
   return (
     <div ref={mountRef} className="relative h-full w-full">
       <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
+      {/* Credit for the garden concept, sitting just above the site's
+          "designed & built by Tanja" pill (bottom-right). */}
+      <a
+        href="https://x.com/poetengineer__"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute bottom-11 right-4 z-40 rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-400 backdrop-blur transition-colors hover:text-neutral-100"
+      >
+        Inspired by Poet Engineer
+      </a>
     </div>
   );
 }

@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Inter, Bebas_Neue } from "next/font/google";
 import "./globals.css";
+import FloatingAdd from "@/components/FloatingAdd";
+import SignInGate from "@/components/SignInGate";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,6 +68,17 @@ export default function RootLayout({
         >
           designed &amp; built by Tanja Radovanovic
         </a>
+        {/* Owner-only quick add (floating +, bottom-right). Self-hides for
+            signed-out visitors; the addItem action re-checks real auth.
+            Wrapped in Suspense - it reads useSearchParams to detect the garden. */}
+        <Suspense fallback={null}>
+          <FloatingAdd />
+        </Suspense>
+        {/* Keeps the sign-in popup reachable via /?signin=1 now that the Add
+            button (its old trigger) is gone. */}
+        <Suspense fallback={null}>
+          <SignInGate />
+        </Suspense>
       </body>
     </html>
   );
