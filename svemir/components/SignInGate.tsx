@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { HINT_COOKIE } from "@/lib/access";
+import { hasHintCookie } from "@/lib/use-authed";
 import SignInModal from "./SignInModal";
 
 /**
@@ -11,16 +11,13 @@ import SignInModal from "./SignInModal";
  * Now that the top-right is the profile avatar, this keeps that flow alive:
  * auto-opens the sign-in modal on "?signin=1" when not already signed in.
  */
-function hasHintCookie(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie.split("; ").some((c) => c === `${HINT_COOKIE}=1`);
-}
-
 export default function SignInGate() {
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // Deferred setState on external URL state ("/?signin=1"); intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (searchParams.get("signin") === "1" && !hasHintCookie()) setOpen(true);
   }, [searchParams]);
 

@@ -44,16 +44,20 @@ export default async function GuestbookPage() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto min-h-[calc(100vh-3rem)] w-full max-w-5xl px-6 py-10">
+      {/* Full-width, left-aligned to the same gutter as Blocks / Research /
+          Design (px-5 sm:px-8), with the same display-title header. */}
+      <main className="min-h-[calc(100vh-3rem)] w-full px-5 py-10 sm:px-8">
         <header className="mb-8 max-w-prose">
-          <h1 className="text-3xl font-light text-neutral-100">Guestbook</h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-neutral-400">
+          <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
+            Guestbook
+          </h1>
+          <p className="mt-4 text-[15px] leading-relaxed text-neutral-300">
             Passing through? Leave a note. Pick a colour, say hello, share a
             thought - it&rsquo;ll join the wall below.
           </p>
         </header>
 
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
           {/* The composer is the first note in the wall - same shape as the
               rest, just editable. */}
           <GuestbookForm />

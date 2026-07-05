@@ -177,11 +177,13 @@ export default function BlockDetail({ block, inModal = false }: Props) {
     <div
       className={
         inModal
-          ? "relative flex flex-col gap-6 px-10 py-8"
-          : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_22rem]"
+          ? "relative grid grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_24rem] md:gap-x-[76px]"
+          : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_24rem] md:gap-x-[76px]"
       }
     >
-      {/* Left column - title + description on top, then image/text, URL, reader. */}
+      {/* Left column - title + description on top, then image/text, URL, reader.
+          Two columns on md+ (image/title left, connections right); stacks on
+          mobile. In the modal the same grid keeps the popup horizontal. */}
       <div className="flex flex-col gap-4">
         <header className={inModal ? "pr-10" : ""}>
           {editing ? (
@@ -190,7 +192,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               disabled={busy}
-              className="w-full border-b border-neutral-500 bg-transparent text-2xl font-light leading-tight text-neutral-100 outline-none"
+              className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-light leading-tight text-neutral-100 outline-none focus:ring-1 focus:ring-neutral-500"
             />
           ) : (
             <h1 className="text-2xl font-light leading-tight text-neutral-100">
@@ -204,7 +206,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
               disabled={busy}
               rows={4}
               placeholder="Add a description…"
-              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 p-2 text-sm leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
+              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm leading-relaxed text-neutral-200 outline-none focus:ring-1 focus:ring-neutral-500"
             />
           ) : block.description && block.kind !== "text" ? (
             <p className="mt-1 text-neutral-400">{block.description}</p>
@@ -391,6 +393,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
             title: b.title,
             image_url: b.image_url,
             kind: b.kind,
+            description: b.description,
           }))}
         />
 

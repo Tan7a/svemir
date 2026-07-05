@@ -42,9 +42,11 @@ export default function Modal({ children }: Props) {
         onClick={() => router.back()}
       />
 
-      {/* Popup - centered rounded card, content-sized up to 88vh then scrolls. */}
+      {/* Popup - centered rounded card, content-sized up to 88vh then scrolls.
+          Wide enough (max-w-6xl) for the block detail's two-column layout with a
+          generous column gap; narrower content just centers within it. */}
       <div
-        className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-neutral-800 bg-background shadow-2xl shadow-black/60"
+        className="relative flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-neutral-800 bg-background shadow-2xl shadow-black/60"
         style={{ animation: "dialog-in 0.12s ease-out" }}
       >
         <button

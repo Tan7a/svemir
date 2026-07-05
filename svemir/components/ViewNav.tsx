@@ -6,42 +6,32 @@ import { VIEW_OPTIONS, type ViewKind } from "./FilterBar";
 
 /**
  * Horizontal view switcher, centered in the TopBar. Channels / Blocks set the
- * ?view= param on the homepage; Graph is its own page. Only rendered on "/" -
- * the view vocabulary is meaningless elsewhere. Absolutely centered so it stays
- * mid-bar regardless of the left (logo + search) and right (order + add) widths.
+ * ?view= param on the homepage; Graph / Research / Design are their own pages.
+ * Rendered on EVERY page (the menu is always reachable, incl. inside a channel
+ * or block). Blocks / Channels highlight only on home; off-home nothing in the
+ * pair is active and clicking one navigates home with a fresh ?view=. Absolutely
+ * centered so it stays mid-bar regardless of the left/right widths.
  */
 export default function ViewNav() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Visible on the home view, the graph page, the concepts page, and the facets
-  // index - all "the main view".
-  if (
-    pathname !== "/" &&
-    pathname !== "/graph" &&
-    pathname !== "/concepts" &&
-    pathname !== "/facets" &&
-    pathname !== "/guestbook" &&
-    pathname !== "/design-system"
-  )
-    return null;
+  const onHome = pathname === "/";
   const onGraph = pathname === "/graph";
-  const onConcepts = pathname === "/concepts";
   const onFacets = pathname === "/facets";
-  const onGuestbook = pathname === "/guestbook";
   const onDesignSystem = pathname === "/design-system";
 
-  const activeView: ViewKind | null =
-    onGraph || onConcepts || onFacets || onGuestbook || onDesignSystem
-      ? null
-      : searchParams.get("view") === "channels"
-        ? "channels"
-        : "blocks";
+  // Blocks / Channels only reflect state on home; elsewhere neither is active.
+  const activeView: ViewKind | null = !onHome
+    ? null
+    : searchParams.get("view") === "channels"
+      ? "channels"
+      : "blocks";
 
   function setView(v: ViewKind) {
-    // From the graph page start fresh; on home preserve order / q.
-    const sp = new URLSearchParams(onGraph ? "" : searchParams.toString());
+    // On home preserve order / q; from any other page start fresh.
+    const sp = new URLSearchParams(onHome ? searchParams.toString() : "");
     sp.set("view", v);
     router.push(`/?${sp.toString()}`, { scroll: false });
   }

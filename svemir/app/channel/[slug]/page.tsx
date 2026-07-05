@@ -101,7 +101,7 @@ export default async function ChannelPage({ params }: { params: Params }) {
     <>
       <TopBar />
       {channel.cover_url && (
-        <div className="relative aspect-[16/5] w-full overflow-hidden border-b border-neutral-900 bg-neutral-900">
+        <div className="relative aspect-[16/5] w-full overflow-hidden bg-neutral-900">
           <Image
             src={channel.cover_url}
             alt=""
@@ -112,7 +112,7 @@ export default async function ChannelPage({ params }: { params: Params }) {
           />
         </div>
       )}
-      <div className="border-b border-neutral-900">
+      <div>
         <div className="px-5 pt-8 pb-6">
           <h1 className="flex items-baseline gap-3">
             <Link

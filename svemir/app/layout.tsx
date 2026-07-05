@@ -4,6 +4,7 @@ import { Inter, Bebas_Neue, Caveat } from "next/font/google";
 import "./globals.css";
 import FloatingAdd from "@/components/FloatingAdd";
 import SignInGate from "@/components/SignInGate";
+import Intro from "@/components/Intro";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -86,6 +87,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <SignInGate />
         </Suspense>
+        {/* First-visit entrance overlay (self-hides once seen; replayable from
+            the BrandMark menu). */}
+        <Intro />
       </body>
     </html>
   );

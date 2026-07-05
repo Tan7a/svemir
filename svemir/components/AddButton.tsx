@@ -3,18 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { HINT_COOKIE } from "@/lib/access";
+import { hasHintCookie, useAuthed } from "@/lib/use-authed";
 import SignInModal from "./SignInModal";
 
 const BUTTON_CLASS =
   "flex items-center gap-1.5 rounded-xl border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-900";
-
-function hasHintCookie(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie
-    .split("; ")
-    .some((c) => c === `${HINT_COOKIE}=1`);
-}
 
 /**
  * The "Add" control. Browsing is public; saving requires sign-in. Reads the
@@ -27,15 +20,14 @@ function hasHintCookie(): boolean {
  */
 export default function AddButton() {
   const searchParams = useSearchParams();
-  const [authed, setAuthed] = useState(false);
+  const authed = useAuthed();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setAuthed(hasHintCookie());
-  }, []);
-
-  useEffect(() => {
+    // Opens the popup when a logged-out deep link lands on "/?signin=1"
+    // (external URL state), so the deferred setState is intentional.
     if (searchParams.get("signin") === "1" && !hasHintCookie()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(true);
     }
   }, [searchParams]);

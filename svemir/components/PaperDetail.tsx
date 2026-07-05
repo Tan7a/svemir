@@ -212,19 +212,22 @@ export default function PaperDetail({ block, inModal = false }: Props) {
     <div
       className={
         inModal
-          ? "relative flex flex-col gap-5 px-10 py-8"
-          : "relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col gap-5 px-6 py-8"
+          ? "relative grid grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_24rem] md:gap-x-[76px]"
+          : "relative grid h-full grid-cols-1 gap-8 px-8 py-8 md:grid-cols-[1fr_24rem] md:gap-x-[76px]"
       }
     >
+      {/* Left column - title/authors/meta, action row, abstract, themes. Two
+          columns on md+ (content left, connections right); stacks on mobile. */}
+      <div className="flex flex-col gap-5">
       {/* Header - title, authors, metadata (on top) */}
-      <header className={`flex flex-col gap-3 ${inModal ? "pr-10" : ""}`}>
+      <header className="flex flex-col gap-3">
         {editing ? (
           <input
             type="text"
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             disabled={busy}
-            className="w-full border-b border-neutral-500 bg-transparent text-2xl font-light leading-tight text-neutral-100 outline-none"
+            className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-light leading-tight text-neutral-100 outline-none focus:ring-1 focus:ring-neutral-500"
           />
         ) : (
           <h1 className="text-2xl font-light leading-tight text-neutral-100">
@@ -356,7 +359,10 @@ export default function PaperDetail({ block, inModal = false }: Props) {
       {fullText.status === "error" && (
         <p className="text-xs text-red-400">{fullText.message}</p>
       )}
+      </div>
 
+      {/* Right column - channels + block connections. */}
+      <aside className="flex flex-col gap-4 text-sm text-neutral-300">
       {/* Connections */}
       <div className="mt-2 border-b border-neutral-800">
         <span className="inline-block border-b-2 border-neutral-200 px-0 py-1.5 text-xs text-neutral-100">
@@ -394,6 +400,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
           title: b.title,
           image_url: b.image_url,
           kind: b.kind,
+          description: b.description,
         }))}
       />
 
@@ -404,6 +411,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
           </Link>
         </div>
       )}
+      </aside>
     </div>
   );
 }

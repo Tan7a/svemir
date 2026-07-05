@@ -95,11 +95,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <TopBar />
-      <div className="border-b border-neutral-900">
+      <div>
         <div className="flex items-baseline justify-between gap-4 px-5 pt-8 pb-4">
           <Link href="/" aria-label="svemir home">
             <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
-              svemir
+              {view === "channels" ? "Channels" : "Blocks"}
             </h1>
           </Link>
           <p className="shrink-0 text-xs text-neutral-500">
