@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * First-visit entrance. A calm, EA-style title card: the wordmark on a matte
- * black field, an "Enter" gate (the click also unlocks audio - browsers block
- * autoplay), then a short cosmic swell + matte dots drifting inward while the
- * explainer fades in. Shown once (localStorage), replayable from the BrandMark
+ * First-visit entrance. A calm, EA-style card: the wordmark on a matte black
+ * field with matte dots drifting inward as the explainer fades in. Opens
+ * straight on the explainer (no "Enter" gate); the "Enter svemir" button then
+ * plays a short cosmic swell - a real click, so browsers allow the audio - and
+ * reveals the site. Shown once (localStorage), replayable from the BrandMark
  * menu via the "svemir:play-intro" event. Strictly flat/matte - NO glow.
  *
  * prefers-reduced-motion: no sound, no drift, text appears instantly.
@@ -14,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const SEEN_KEY = "svemir:intro-seen";
 
-type Phase = "idle" | "title" | "playing" | "leaving";
+type Phase = "idle" | "playing" | "leaving";
 
 type Particle = {
   left: number;
