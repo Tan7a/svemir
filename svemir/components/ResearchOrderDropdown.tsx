@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MenuPanel, MenuItem } from "./ui/Menu";
+import { MenuPanel, MenuItem, MenuCheck } from "./ui/Menu";
 import Chevron from "./ui/Chevron";
 
 /**
@@ -78,16 +78,8 @@ export default function ResearchOrderDropdown() {
                 key={opt.value}
                 selected={active}
                 onClick={() => choose(opt.value)}
-                leading={
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full border ${
-                      active
-                        ? "border-neutral-200 bg-neutral-200"
-                        : "border-neutral-600"
-                    }`}
-                  />
-                }
                 label={opt.label}
+                trailing={active ? <MenuCheck /> : undefined}
               />
             );
           })}

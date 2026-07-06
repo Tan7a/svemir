@@ -56,7 +56,9 @@ export default function SignInModal({ open, onClose }: Props) {
     setPending(false);
     if (res.ok) {
       onClose();
-      router.push("/admin");
+      // Land on Blocks (home) after sign-in, not the retired admin page. The
+      // floating + is where signed-in owners add/manage from now on.
+      router.push("/");
       router.refresh();
     } else {
       setError(res.error);

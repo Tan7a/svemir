@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, tokenMatches } from "@/lib/access";
 
-// Paths that require the admin session cookie. Same set the old Basic Auth gate
-// covered: the /admin UI plus the admin-only helper APIs.
-const GATED_PATHS =
-  /^\/(admin|api\/(scrape|upload-image|parse-bookmarks))(\/|$)/;
+// Paths that require the admin session cookie: the admin-only helper APIs.
+// (The /admin page UI was retired - owners add/manage via the floating +
+// composer, whose server actions re-check auth themselves.)
+const GATED_PATHS = /^\/api\/(scrape|upload-image|parse-bookmarks)(\/|$)/;
 const CORS_PATHS = /^\/api\/v1\//;
 
 function allowedOrigin(origin: string): string {
@@ -20,17 +20,13 @@ export async function proxy(req: NextRequest) {
 
   if (GATED_PATHS.test(pathname)) {
     const authed = await tokenMatches(req.cookies.get(COOKIE_NAME)?.value);
-    if (authed) return NextResponse.next();
-    // Admin APIs answer programmatically; pages bounce home with the popup.
-    // No WWW-Authenticate header — that's what triggered the browser-native
-    // Basic Auth dialog we're replacing with our own sign-in popup.
-    if (pathname.startsWith("/api/")) {
+    // These are all APIs, so answer programmatically (no WWW-Authenticate
+    // header - that's what triggered the browser-native Basic Auth dialog we
+    // replaced with our own sign-in popup).
+    if (!authed) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "signin=1";
-    return NextResponse.redirect(url);
+    return NextResponse.next();
   }
 
   if (CORS_PATHS.test(pathname)) {
@@ -65,7 +61,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/admin/:path*",
     "/api/scrape",
     "/api/upload-image",
     "/api/parse-bookmarks",

@@ -100,14 +100,22 @@ export default function BrandMark() {
       {menu && (
         <div
           role="menu"
-          className="fixed z-50 w-60 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 text-sm shadow-panel"
+          className="glass-panel fixed z-50 w-60 overflow-hidden rounded-xl border border-neutral-800 p-1.5 text-sm"
           style={{ left: menu.x, top: menu.y }}
         >
           {view === "root" && (
             <>
               <MenuItem label="Open homepage" onClick={() => go("/")} />
               <MenuItem label="Open graph" onClick={() => go("/graph")} />
-              <MenuItem label="Add block" onClick={() => go("/admin")} />
+              <MenuItem
+                label="Add block"
+                onClick={() => {
+                  close();
+                  // The floating + composer is the single add surface now;
+                  // it enforces auth (opens sign-in when signed out).
+                  window.dispatchEvent(new Event("svemir:open-composer"));
+                }}
+              />
               <Separator />
               <MenuItem
                 label="Theme"
@@ -177,7 +185,7 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-neutral-200 transition-colors hover:bg-neutral-900"
+      className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-neutral-200 transition-colors hover:bg-neutral-900/60"
     >
       <span className="flex-1">{label}</span>
       {trailing ? (

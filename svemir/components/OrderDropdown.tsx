@@ -9,7 +9,7 @@ import {
   type ViewKind,
 } from "./FilterBar";
 import { supabase } from "@/lib/supabase-client";
-import { MenuPanel, MenuItem } from "./ui/Menu";
+import { MenuPanel, MenuItem, MenuCheck } from "./ui/Menu";
 import Chevron from "./ui/Chevron";
 
 // Sorts that operate on individual blocks (kind / category / source). Offered
@@ -160,6 +160,8 @@ export default function OrderDropdown() {
     sp.set("order", v);
     if (BLOCK_ONLY.has(v)) sp.set("view", "blocks");
     if (v === "random" || v === "vibes") {
+      // Intentional randomness: a fresh shuffle seed, only in this click handler.
+      // eslint-disable-next-line react-hooks/purity
       sp.set("r", Math.random().toString(36).slice(2, 8));
     } else {
       sp.delete("r");
@@ -211,15 +213,6 @@ export default function OrderDropdown() {
                   <MenuItem
                     selected={groupActive}
                     onClick={() => toggleExpand(opt.value)}
-                    leading={
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full border ${
-                          groupActive
-                            ? "border-neutral-200 bg-neutral-200"
-                            : "border-neutral-600"
-                        }`}
-                      />
-                    }
                     label={opt.label}
                     trailing={<Chevron open={isExpanded} className="text-neutral-500" />}
                   />
@@ -230,6 +223,9 @@ export default function OrderDropdown() {
                         onClick={() => choose(opt.value)}
                         label={
                           <span className="text-neutral-400">All, grouped</span>
+                        }
+                        trailing={
+                          current === opt.value && !activeFilter ? <MenuCheck /> : undefined
                         }
                       />
                       {loadingValues && !values && (
@@ -263,16 +259,8 @@ export default function OrderDropdown() {
                 key={opt.value}
                 selected={active}
                 onClick={() => choose(opt.value)}
-                leading={
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full border ${
-                      active
-                        ? "border-neutral-200 bg-neutral-200"
-                        : "border-neutral-600"
-                    }`}
-                  />
-                }
                 label={opt.label}
+                trailing={active ? <MenuCheck /> : undefined}
               />
             );
           })}

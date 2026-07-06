@@ -8,13 +8,25 @@ import {
   addItem,
   renameBlock,
   updateBlockDescription,
+  listItems,
 } from "@/app/admin/actions";
+import { listTokens, type TokenRow } from "@/app/admin/tokens/actions";
+import {
+  listGuestbookEntries,
+  type AdminEntry,
+} from "@/app/admin/guestbook/actions";
 import { signOut } from "@/lib/access-actions";
 import ChannelPicker from "./ChannelPicker";
 import AdminForm from "./AdminForm";
+import ImportForm from "./ImportForm";
+import ManageList from "./ManageList";
+import TokensClient from "@/app/admin/tokens/TokensClient";
+import GuestbookAdminList from "./GuestbookAdminList";
 import SignInModal from "./SignInModal";
+import { MenuPanel, MenuItem, MenuDivider } from "./ui/Menu";
 import { supabase } from "@/lib/supabase-client";
 import type { RecentChannel } from "@/lib/channels";
+import type { ItemWithChannels } from "@/lib/types";
 
 // TipTap pulls in ProseMirror - load it only on the client, only when needed.
 const MarkdownEditor = dynamic(() => import("./MarkdownEditor"), {
@@ -24,14 +36,18 @@ const MarkdownEditor = dynamic(() => import("./MarkdownEditor"), {
   ),
 });
 
-// Admin sections that live on their own pages (heavier tools). Selecting one
-// closes the composer and navigates there, so it isn't hidden behind the glass.
-const ADMIN_SECTIONS = [
-  { label: "Bulk import", href: "/admin/import" },
-  { label: "Manage", href: "/admin/manage" },
-  { label: "Tokens", href: "/admin/tokens" },
-  { label: "Guestbook", href: "/admin/guestbook" },
-];
+// The admin hub tabs, all rendered inline inside this one overlay (no route
+// change). This overlay is the only admin surface now - the old standalone
+// /admin/* pages were retired.
+const MANAGE_TABS = [
+  { id: "add", label: "Add one" },
+  { id: "import", label: "Bulk import" },
+  { id: "manage", label: "Manage" },
+  { id: "tokens", label: "Tokens" },
+  { id: "guestbook", label: "Guestbook" },
+] as const;
+
+type ManageTab = (typeof MANAGE_TABS)[number]["id"];
 
 // Event a text block's "Edit" dispatches to open this composer pre-filled.
 export type EditTextDetail = { id: string; title: string; description: string };
@@ -85,6 +101,46 @@ export default function FloatingAdd() {
   const [editOrigTitle, setEditOrigTitle] = useState("");
   const [mountKey, setMountKey] = useState(0);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // The floating "+" menu (Write / Manage / Onboarding / Log out).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef<HTMLDivElement>(null);
+
+  // Which admin-hub tab is showing in the "more" view.
+  const [manageTab, setManageTab] = useState<ManageTab>("add");
+  // Lazily-loaded data for the three heavier tabs (null = not fetched yet).
+  const [tokens, setTokens] = useState<TokenRow[] | null>(null);
+  const [entries, setEntries] = useState<AdminEntry[] | null>(null);
+  const [manage, setManage] = useState<{
+    items: ItemWithChannels[];
+    page: number;
+    totalPages: number;
+    query: string;
+  } | null>(null);
+  const [tabError, setTabError] = useState<string | null>(null);
+
+  async function loadTokens() {
+    setTabError(null);
+    const r = await listTokens();
+    if ("error" in r) setTabError(r.error);
+    else setTokens(r.tokens);
+  }
+
+  async function loadGuestbook() {
+    setTabError(null);
+    const r = await listGuestbookEntries();
+    if ("error" in r) setTabError(r.error);
+    else setEntries(r.entries);
+  }
+
+  async function loadManage(next?: { page?: number; q?: string }) {
+    const page = next?.page ?? manage?.page ?? 1;
+    const q = next?.q ?? manage?.query ?? "";
+    setTabError(null);
+    const r = await listItems({ page, q });
+    if ("error" in r) setTabError(r.error);
+    else setManage({ ...r, query: q });
+  }
 
   // Auto-grow the title so long titles wrap onto new lines instead of truncating.
   useEffect(() => {
@@ -176,6 +232,54 @@ export default function FloatingAdd() {
       });
   }, [open, recents.length]);
 
+  // Lazy-load a heavy tab's data the first time it's shown in the manage view.
+  // (Fetching data on view is a legitimate effect - synchronizing with the
+  // server, which the load fns own.)
+  useEffect(() => {
+    if (!open || view !== "more") return;
+    const load =
+      manageTab === "tokens" && tokens === null
+        ? loadTokens
+        : manageTab === "guestbook" && entries === null
+          ? loadGuestbook
+          : manageTab === "manage" && manage === null
+            ? loadManage
+            : null;
+    load?.();
+    // Deps are intentionally narrow: the null-checks above make the loaders
+    // idempotent, so re-running on data/loader identity changes isn't needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, view, manageTab]);
+
+  // Close the "+" menu on outside-click or Escape (mirrors the sort/brand menus).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target as Node))
+        setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // "Add block" (BrandMark context menu) opens the same composer as the +,
+  // enforcing auth the same way (sign-in popup when signed out).
+  useEffect(() => {
+    function onOpen() {
+      if (authed) openNew();
+      else setSignInOpen(true);
+    }
+    window.addEventListener("svemir:open-composer", onOpen);
+    return () => window.removeEventListener("svemir:open-composer", onOpen);
+  }, [authed]);
+
   function openNew() {
     setEditId(null);
     setPaperFtId(null);
@@ -189,6 +293,13 @@ export default function FloatingAdd() {
     setView("text");
     setMountKey((k) => k + 1);
     setOpen(true);
+  }
+
+  // Open the overlay straight into the admin hub (Manage view, first tab).
+  function openManage() {
+    openNew();
+    setManageTab("add");
+    setView("more");
   }
 
   async function save() {
@@ -325,15 +436,6 @@ export default function FloatingAdd() {
                   {status === "saved" && (
                     <span className="text-xs text-emerald-400">Saved</span>
                   )}
-                  {!isEditing && !isPaperFt && (
-                    <button
-                      type="button"
-                      onClick={() => setView("more")}
-                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10 hover:text-neutral-100"
-                    >
-                      More options
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={save}
@@ -346,13 +448,6 @@ export default function FloatingAdd() {
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={() => setView("text")}
-                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10 hover:text-neutral-100"
-                >
-                  ← Back to writing
-                </button>
                 <div className="flex-1 text-center text-sm font-medium text-neutral-300">
                   Manage
                 </div>
@@ -413,50 +508,153 @@ export default function FloatingAdd() {
                 )}
               </div>
             ) : (
-              /* Full admin hub - opened in place. "Add one" is inline; the
-                 heavier sections close the overlay and open their own page so
-                 they're never hidden behind the glass. */
-              <div className="mx-auto w-full max-w-2xl px-6 pb-24 pt-6">
+              /* Full admin hub - every tab rendered inline in this one overlay,
+                 switched by state (no route change). */
+              <div className="mx-auto w-full max-w-5xl px-6 pb-24 pt-6">
                 <div className="mb-6 flex flex-wrap justify-center gap-1">
-                  <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-sm text-neutral-900">
-                    Add one
-                  </span>
-                  {ADMIN_SECTIONS.map((s) => (
+                  {MANAGE_TABS.map((t) => (
                     <button
-                      key={s.href}
+                      key={t.id}
                       type="button"
                       onClick={() => {
-                        setOpen(false);
-                        router.push(s.href);
+                        setTabError(null);
+                        setManageTab(t.id);
                       }}
-                      className="rounded-full px-3 py-1.5 text-sm text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
+                      className={
+                        manageTab === t.id
+                          ? "rounded-full bg-neutral-100 px-3 py-1.5 text-sm text-neutral-900"
+                          : "rounded-full px-3 py-1.5 text-sm text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
+                      }
                     >
-                      {s.label}
+                      {t.label}
                     </button>
                   ))}
                 </div>
-                <AdminForm />
+
+                {manageTab === "add" && (
+                  <div className="mx-auto max-w-2xl">
+                    <AdminForm />
+                  </div>
+                )}
+
+                {manageTab === "import" && (
+                  <div className="mx-auto max-w-4xl">
+                    <ImportForm onManage={() => setManageTab("manage")} />
+                  </div>
+                )}
+
+                {manageTab === "manage" && (
+                  <div className="space-y-6 overflow-x-auto">
+                    {tabError ? (
+                      <p className="text-sm text-red-400">{tabError}</p>
+                    ) : manage === null ? (
+                      <p className="text-sm text-neutral-500">Loading…</p>
+                    ) : (
+                      <ManageList
+                        items={manage.items}
+                        page={manage.page}
+                        totalPages={manage.totalPages}
+                        query={manage.query}
+                        onNavigate={(next) => loadManage(next)}
+                        onChanged={() =>
+                          loadManage({ page: manage.page, q: manage.query })
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+
+                {manageTab === "tokens" && (
+                  <div className="mx-auto max-w-3xl">
+                    {tabError ? (
+                      <p className="text-sm text-red-400">{tabError}</p>
+                    ) : tokens === null ? (
+                      <p className="text-sm text-neutral-500">Loading…</p>
+                    ) : (
+                      <TokensClient initialTokens={tokens} onChanged={loadTokens} />
+                    )}
+                  </div>
+                )}
+
+                {manageTab === "guestbook" && (
+                  <div className="mx-auto max-w-4xl">
+                    {tabError ? (
+                      <p className="text-sm text-red-400">{tabError}</p>
+                    ) : entries === null ? (
+                      <p className="text-sm text-neutral-500">Loading…</p>
+                    ) : (
+                      <GuestbookAdminList
+                        entries={entries}
+                        onChanged={loadGuestbook}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Floating + trigger, above the maker-credit pill. Always visible:
-          signed out it opens the sign-in popup, signed in it opens the composer. */}
-      <button
-        type="button"
-        onClick={authed ? openNew : () => setSignInOpen(true)}
-        aria-label={authed ? "Quick add" : "Sign in"}
-        // Liquid-glass: translucent white over a blurred + saturated backdrop
-        // with a hairline rim (no glow, per house rule). Rests at 50% opacity and
-        // clears to full on hover so it stays discoverable without shouting.
-        className={`fixed right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-neutral-100 opacity-50 ring-1 ring-inset ring-white/10 backdrop-blur-md backdrop-saturate-150 transition-all hover:bg-white/15 hover:opacity-100 ${
+      {/* Floating + trigger, above the maker-credit pill. Signed out it opens
+          the sign-in popup; signed in it toggles a small menu (Write / Manage /
+          Onboarding / Log out) that floats above it. */}
+      <div
+        ref={menuWrapRef}
+        className={`fixed right-4 z-40 flex flex-col items-end ${
           isGarden ? "bottom-20" : "bottom-12"
         }`}
       >
-        <span className="-mt-0.5 leading-none">+</span>
-      </button>
+        {authed && menuOpen && (
+          <MenuPanel className="mb-2 w-48">
+            <MenuItem
+              label="Write"
+              onClick={() => {
+                setMenuOpen(false);
+                openNew();
+              }}
+            />
+            <MenuItem
+              label="Manage"
+              onClick={() => {
+                setMenuOpen(false);
+                openManage();
+              }}
+            />
+            <MenuDivider />
+            <MenuItem
+              label="Onboarding"
+              onClick={() => {
+                setMenuOpen(false);
+                window.dispatchEvent(new Event("svemir:play-intro"));
+              }}
+            />
+            <MenuItem
+              label="Log out"
+              danger
+              onClick={() => {
+                setMenuOpen(false);
+                logout();
+              }}
+            />
+          </MenuPanel>
+        )}
+        <button
+          type="button"
+          onClick={
+            authed ? () => setMenuOpen((o) => !o) : () => setSignInOpen(true)
+          }
+          aria-label={authed ? "Quick add menu" : "Sign in"}
+          aria-haspopup={authed ? "menu" : undefined}
+          aria-expanded={authed ? menuOpen : undefined}
+          // Same liquid glass as the menus (.glass-panel: theme-tinted, frosted,
+          // hairline rim - no glow). Rests slightly dimmed and clears to full on
+          // hover so it stays discoverable without shouting.
+          className="glass-panel flex h-11 w-11 items-center justify-center rounded-full border border-neutral-800 text-xl text-neutral-100 opacity-90 transition-opacity hover:opacity-100"
+        >
+          <span className="-mt-0.5 leading-none">+</span>
+        </button>
+      </div>
 
       {!authed && (
         <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />

@@ -21,10 +21,46 @@ type Props = {
   page: number;
   totalPages: number;
   query: string;
+  /**
+   * The admin overlay passes this to drive paging/search through its own state
+   * + listItems() instead of a route change. If ever rendered without it, the
+   * list falls back to plain router navigation.
+   */
+  onNavigate?: (next: { page?: number; q?: string }) => void;
+  /** Lets the admin overlay refetch after a mutation (parallels router.refresh). */
+  onChanged?: () => void;
 };
 
-export default function ManageList({ items, page, totalPages, query }: Props) {
+export default function ManageList({
+  items,
+  page,
+  totalPages,
+  query,
+  onNavigate,
+  onChanged,
+}: Props) {
   const router = useRouter();
+
+  // Inline container callback when provided (the admin overlay always does);
+  // otherwise fall back to plain route navigation.
+  function navigate(next: { page?: number; q?: string }) {
+    if (onNavigate) {
+      onNavigate(next);
+      return;
+    }
+    const sp = new URLSearchParams();
+    if (next.page && next.page > 1) sp.set("page", String(next.page));
+    if (next.q) sp.set("q", next.q);
+    const qs = sp.toString();
+    router.push(`/admin/manage${qs ? "?" + qs : ""}`);
+  }
+
+  // After a mutation: refresh the current route and let the inline container
+  // (admin overlay) refetch its data. Both are safe to call together.
+  function refresh() {
+    router.refresh();
+    onChanged?.();
+  }
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
   const [editTags, setEditTags] = useState<string[]>([]);
@@ -66,6 +102,8 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
   }, []);
 
   useEffect(() => {
+    // Reset transient selection/edit state when the page or query changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelected(new Set());
     setEditing(null);
   }, [page, query]);
@@ -107,7 +145,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     setBusy(null);
     if (r.success) {
       setEditing(null);
-      router.refresh();
+      refresh();
     } else {
       setError(r.error);
     }
@@ -119,7 +157,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     const r = await deleteItem(id);
     setBusy(null);
     if (r.success) {
-      router.refresh();
+      refresh();
     } else {
       setError(r.error);
     }
@@ -133,7 +171,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     setBusy(null);
     if (r.success) {
       setSelected(new Set());
-      router.refresh();
+      refresh();
     } else {
       setError(r.error);
     }
@@ -154,7 +192,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
       }
     }
     setScraping(false);
-    router.refresh();
+    refresh();
   }
 
   async function handleBackfillAll() {
@@ -191,7 +229,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     }
 
     setBackfilling(false);
-    router.refresh();
+    refresh();
   }
 
   async function handleRefetchCovers() {
@@ -228,7 +266,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     }
 
     setRefetching(false);
-    router.refresh();
+    refresh();
   }
 
   async function handleExtractConcepts(force = false) {
@@ -263,7 +301,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
     }
 
     setIndexing(false);
-    router.refresh();
+    refresh();
   }
 
   function addTagChip(raw: string) {
@@ -297,19 +335,12 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
   }, [tagInput, allTagNames, editTags]);
 
   function go(toPage: number) {
-    const sp = new URLSearchParams();
-    if (toPage > 1) sp.set("page", String(toPage));
-    if (query) sp.set("q", query);
-    const qs = sp.toString();
-    router.push(`/admin/manage${qs ? "?" + qs : ""}`);
+    navigate({ page: toPage, q: query });
   }
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
-    const sp = new URLSearchParams();
-    if (searchInput.trim()) sp.set("q", searchInput.trim());
-    const qs = sp.toString();
-    router.push(`/admin/manage${qs ? "?" + qs : ""}`);
+    navigate({ page: 1, q: searchInput.trim() });
   }
 
   return (
@@ -332,7 +363,10 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           {query && (
             <button
               type="button"
-              onClick={() => router.push("/admin/manage")}
+              onClick={() => {
+                setSearchInput("");
+                navigate({ page: 1, q: "" });
+              }}
               className="text-sm text-neutral-500 hover:text-neutral-100"
             >
               Clear
