@@ -21,6 +21,66 @@ import {
   type SuggestionInput,
 } from "@/lib/suggest";
 import { reconcileBlockConcepts } from "@/lib/concepts";
+import type { Item, Channel, ItemWithChannels } from "@/lib/types";
+
+/** Page size for the inline Manage list in the admin overlay. */
+const MANAGE_PAGE_SIZE = 50;
+
+type ManageItemRow = Item & {
+  connections: { channels: unknown }[] | null;
+};
+
+function asChannelList(raw: unknown): Channel[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as Channel[];
+  return [raw as Channel];
+}
+
+/**
+ * Paginated item list for the inline Manage tab in the admin overlay. Guarded;
+ * returns { error } instead of throwing so the caller can show a muted line.
+ */
+export async function listItems(input: {
+  page?: number;
+  q?: string;
+}): Promise<
+  | { items: ItemWithChannels[]; page: number; totalPages: number }
+  | { error: string }
+> {
+  if (!(await isAuthed())) return { error: "Not authorized." };
+  if (!supabaseAdmin) return { error: "Supabase admin not configured." };
+
+  const page = Math.max(1, Number(input.page ?? 1));
+  const q = (input.q ?? "").trim();
+
+  let query = supabaseAdmin
+    .from("items")
+    .select("*, connections(channels(*))", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range((page - 1) * MANAGE_PAGE_SIZE, page * MANAGE_PAGE_SIZE - 1);
+
+  if (q) {
+    query = query.or(
+      `title.ilike.%${q}%,description.ilike.%${q}%,url.ilike.%${q}%`
+    );
+  }
+
+  const { data, error, count } = await query;
+  if (error) return { error: error.message };
+
+  const items: ItemWithChannels[] = (
+    (data ?? []) as unknown as ManageItemRow[]
+  ).map((row) => {
+    const { connections, ...rest } = row;
+    const channels = (connections ?? []).flatMap((c) =>
+      asChannelList(c.channels)
+    );
+    return { ...rest, channels, connected_blocks: [] };
+  });
+
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / MANAGE_PAGE_SIZE));
+  return { items, page, totalPages };
+}
 
 export type AddItemInput = {
   kind: "link" | "image" | "text";

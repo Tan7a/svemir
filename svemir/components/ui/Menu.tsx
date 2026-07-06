@@ -22,7 +22,7 @@ export function MenuPanel({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-panel ${className}`}
+      className={`glass-panel overflow-hidden rounded-xl border border-neutral-800 p-1.5 ${className}`}
     >
       {children}
     </div>
@@ -57,10 +57,10 @@ export function MenuItem({
       aria-current={selected || undefined}
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         danger
-          ? "text-red-400 hover:bg-red-950/50"
+          ? "text-red-400 hover:bg-red-950/60"
           : selected
-            ? "text-neutral-100 hover:bg-neutral-900"
-            : "text-neutral-200 hover:bg-neutral-900"
+            ? "font-medium text-neutral-100 hover:bg-neutral-900/60"
+            : "text-neutral-200 hover:bg-neutral-900/60"
       }`}
     >
       {leading !== undefined && (
@@ -82,6 +82,28 @@ export function MenuItem({
 /** Thin separator between groups of menu rows. */
 export function MenuDivider() {
   return <div className="my-1 border-t border-neutral-800" />;
+}
+
+/**
+ * Right-aligned tick for the active row in a single-select menu (sort orders,
+ * etc.). Pass as a MenuItem's `trailing` when that row is selected - a cleaner
+ * signal than a left-hand radio dot.
+ */
+export function MenuCheck() {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      className="h-3.5 w-3.5 text-neutral-100"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2.5 6.5 5 9l4.5-5.5" />
+    </svg>
+  );
 }
 
 /** Small caps label for a section inside a menu panel (e.g. above an input). */

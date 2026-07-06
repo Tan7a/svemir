@@ -19,7 +19,12 @@ type Status =
   | { kind: "done"; inserted: number; skipped: number }
   | { kind: "error"; message: string };
 
-export default function ImportForm() {
+export default function ImportForm({
+  onManage,
+}: {
+  /** Inline mode (admin overlay): jump to the Manage tab after an import. */
+  onManage?: () => void;
+} = {}) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [excludedFolders, setExcludedFolders] = useState<Set<string>>(new Set());
 
@@ -239,12 +244,15 @@ export default function ImportForm() {
           .
         </p>
         <div className="flex gap-2 pt-2">
-          <Link
-            href="/admin/manage"
-            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
-          >
-            Manage imported items
-          </Link>
+          {onManage && (
+            <button
+              type="button"
+              onClick={onManage}
+              className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+            >
+              Manage imported items
+            </button>
+          )}
           <Link
             href="/"
             className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"

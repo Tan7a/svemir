@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createToken, revokeToken } from "./actions";
+import { createToken, revokeToken, type TokenRow } from "./actions";
 
-export type TokenRow = {
-  id: string;
-  name: string;
-  created_at: string;
-  last_used_at: string | null;
-};
+// Re-exported for convenience; the canonical type now lives with the actions.
+export type { TokenRow };
 
 type Props = {
   initialTokens: TokenRow[];
+  /**
+   * Called after a mutation so the admin overlay can refetch the token list.
+   * (router.refresh() also runs, harmlessly, to refresh the current route.)
+   */
+  onChanged?: () => void;
 };
 
 function relativeOrNever(iso: string | null): string {
@@ -28,7 +29,7 @@ function relativeOrNever(iso: string | null): string {
   return `${Math.floor(mo / 12)} year${Math.floor(mo / 12) === 1 ? "" : "s"} ago`;
 }
 
-export default function TokensClient({ initialTokens }: Props) {
+export default function TokensClient({ initialTokens, onChanged }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,6 +53,7 @@ export default function TokensClient({ initialTokens }: Props) {
       setFresh({ name: name.trim(), token: result.token });
       setName("");
       router.refresh();
+      onChanged?.();
     } else {
       setError(result.error);
     }
@@ -68,6 +70,7 @@ export default function TokensClient({ initialTokens }: Props) {
       setFresh(null);
     }
     router.refresh();
+    onChanged?.();
   }
 
   async function copyToken() {

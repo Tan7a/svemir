@@ -5,6 +5,37 @@ import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { isAuthed } from "@/lib/access-server";
 
+/** Row shape returned to the client (never includes the token hash). */
+export type TokenRow = {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+};
+
+/**
+ * List every personal access token (metadata only). Used by the inline admin
+ * overlay to render the Tokens tab without a full server-component page load.
+ * Guarded like every other action here; returns { error } instead of throwing
+ * so the caller can show a muted error line.
+ */
+export async function listTokens(): Promise<
+  { tokens: TokenRow[] } | { error: string }
+> {
+  if (!(await isAuthed())) {
+    return { error: "Not authorized." };
+  }
+  if (!supabaseAdmin) {
+    return { error: "Supabase admin not configured." };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("api_tokens")
+    .select("id, name, created_at, last_used_at")
+    .order("created_at", { ascending: false });
+  if (error) return { error: error.message };
+  return { tokens: (data ?? []) as TokenRow[] };
+}
+
 /**
  * Mint a fresh personal access token. Plaintext is returned to the caller
  * **exactly once** and never persisted - only its sha256 hash is stored.

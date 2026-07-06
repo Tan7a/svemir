@@ -24,6 +24,12 @@ html[data-theme="dark"] {
   --border: #262626;
   --card-hover: #1a1a1a;
   --shadow-color: rgba(0, 0, 0, 0.6);
+  /* Liquid-glass surface for menus/dropdowns: a translucent tint of the panel
+     colour + a faint top rim highlight. Per-theme so the frosted glass reads
+     correctly on both dark and light backgrounds. NO glow - the rim is a crisp
+     1px inset edge, not a bloom. */
+  --glass-bg: rgba(12, 12, 12, 0.68);
+  --glass-rim: rgba(255, 255, 255, 0.1);
   --selection-bg: #2a2a2a;
   --selection-fg: #fafafa;
 
@@ -48,6 +54,8 @@ html[data-theme="light-white"] {
   --border: #e5e5e5;
   --card-hover: #f5f5f5;
   --shadow-color: rgba(0, 0, 0, 0.14);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-rim: rgba(255, 255, 255, 0.85);
   --selection-bg: #d4d4d4;
   --selection-fg: #0a0a0a;
 
@@ -72,6 +80,8 @@ html[data-theme="cream"] {
   --border: #e0d7c2;
   --card-hover: #efe7d4;
   --shadow-color: rgba(43, 38, 32, 0.16);
+  --glass-bg: rgba(250, 244, 232, 0.72);
+  --glass-rim: rgba(255, 255, 255, 0.7);
   --selection-bg: #d8cdb5;
   --selection-fg: #1c1814;
 
@@ -96,6 +106,8 @@ html[data-theme="funky"] {
   --border: #cfe0f2;
   --card-hover: #dcebfb;
   --shadow-color: rgba(16, 42, 67, 0.16);
+  --glass-bg: rgba(240, 247, 255, 0.7);
+  --glass-rim: rgba(255, 255, 255, 0.75);
   --selection-bg: #b6d6f5;
   --selection-fg: #0a1929;
 
@@ -139,6 +151,21 @@ body {
    `shadow-2xl shadow-black/60`. */
 .shadow-panel {
   box-shadow: 0 25px 50px -12px var(--shadow-color);
+}
+
+/* Liquid glass for menus / dropdowns (components/ui/Menu.tsx + the BrandMark
+   context menu). A translucent, theme-tinted surface that frosts the content
+   behind it (backdrop blur + a touch of saturation), with a crisp 1px inset
+   rim and the same elevation as .shadow-panel. Strictly matte - the rim is a
+   hairline highlight, never a glow. Falls back to an opaque tint where
+   backdrop-filter is unsupported. */
+.glass-panel {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-rim),
+    0 25px 50px -12px var(--shadow-color);
 }
 
 /* Block side-panel slide-in (components/Modal.tsx). */

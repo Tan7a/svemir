@@ -13,8 +13,13 @@ import ProfileCorner from "./ProfileCorner";
  * primary nav (Graph, +Add) on the right.
  */
 export default function TopBar() {
+  // Opaque, NOT backdrop-blurred: a backdrop-filter here would create a
+  // "backdrop root" that traps every menu rendered inside the header (sort,
+  // mobile nav, brand), making their own glass sample differently from the
+  // floating + menu. Keeping the header a plain opaque bar lets all menus
+  // frost the page identically.
   return (
-    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-background/95 px-5 backdrop-blur sm:px-8">
+    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-background px-5 sm:px-8">
       <div className="flex min-w-0 items-center gap-5">
         <BrandMark />
         <Suspense

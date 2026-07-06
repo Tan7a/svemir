@@ -7,26 +7,29 @@ import ConfirmDialog from "./ui/ConfirmDialog";
 import {
   setGuestbookHidden,
   deleteGuestbookEntry,
+  type AdminEntry,
 } from "@/app/admin/guestbook/actions";
 import { accentDot } from "@/lib/guestbook";
 
-export type AdminEntry = {
-  id: string;
-  name: string;
-  message: string;
-  color: string | null;
-  sticker: string | null;
-  hidden: boolean;
-  created_at: string;
-};
+// Re-exported for convenience; the canonical type now lives with the actions.
+export type { AdminEntry };
 
 /**
  * Admin moderation list for the guestbook. Each row can be hidden (soft - keeps
  * the row but removes it from the public wall) or deleted (permanent, confirmed
  * via ConfirmDialog). Actions run through the guarded server actions and refresh
  * the list on success.
+ *
+ * onChanged: lets the admin overlay refetch the list after a mutation
+ * (router.refresh() also runs, harmlessly, to refresh the current route).
  */
-export default function GuestbookAdminList({ entries }: { entries: AdminEntry[] }) {
+export default function GuestbookAdminList({
+  entries,
+  onChanged,
+}: {
+  entries: AdminEntry[];
+  onChanged?: () => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -35,6 +38,7 @@ export default function GuestbookAdminList({ entries }: { entries: AdminEntry[] 
     startTransition(async () => {
       await setGuestbookHidden(e.id, !e.hidden);
       router.refresh();
+      onChanged?.();
     });
   }
 
@@ -45,6 +49,7 @@ export default function GuestbookAdminList({ entries }: { entries: AdminEntry[] 
     startTransition(async () => {
       await deleteGuestbookEntry(id);
       router.refresh();
+      onChanged?.();
     });
   }
 
