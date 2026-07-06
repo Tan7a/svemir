@@ -14,7 +14,7 @@ import ProfileCorner from "./ProfileCorner";
  */
 export default function TopBar() {
   return (
-    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-background/95 px-5 backdrop-blur">
+    <header className="sticky top-0 z-30 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-background/95 px-5 backdrop-blur sm:px-8">
       <div className="flex min-w-0 items-center gap-5">
         <BrandMark />
         <Suspense
@@ -37,7 +37,7 @@ export default function TopBar() {
         {/* Quiet Guestbook link, sitting next to the sort control. */}
         <Link
           href="/guestbook"
-          className="rounded-xl px-2.5 py-1 text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
+          className="rounded-xl px-2.5 py-1 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100"
         >
           Guestbook
         </Link>

@@ -23,6 +23,7 @@ html[data-theme="dark"] {
   --muted: #737373;
   --border: #262626;
   --card-hover: #1a1a1a;
+  --shadow-color: rgba(0, 0, 0, 0.6);
   --selection-bg: #2a2a2a;
   --selection-fg: #fafafa;
 
@@ -46,6 +47,7 @@ html[data-theme="light-white"] {
   --muted: #737373;
   --border: #e5e5e5;
   --card-hover: #f5f5f5;
+  --shadow-color: rgba(0, 0, 0, 0.14);
   --selection-bg: #d4d4d4;
   --selection-fg: #0a0a0a;
 
@@ -69,6 +71,7 @@ html[data-theme="cream"] {
   --muted: #8a7f6a;
   --border: #e0d7c2;
   --card-hover: #efe7d4;
+  --shadow-color: rgba(43, 38, 32, 0.16);
   --selection-bg: #d8cdb5;
   --selection-fg: #1c1814;
 
@@ -92,6 +95,7 @@ html[data-theme="funky"] {
   --muted: #627d98;
   --border: #cfe0f2;
   --card-hover: #dcebfb;
+  --shadow-color: rgba(16, 42, 67, 0.16);
   --selection-bg: #b6d6f5;
   --selection-fg: #0a1929;
 
@@ -127,6 +131,14 @@ body {
 ::selection {
   background: var(--selection-bg);
   color: var(--selection-fg);
+}
+
+/* Theme-aware panel shadow for popovers / modals / menus. Black in the dark
+   theme, softer and hue-matched in the light themes so overlays don't cast a
+   heavy shadow on a light background. Replaces the hardcoded
+   `shadow-2xl shadow-black/60`. */
+.shadow-panel {
+  box-shadow: 0 25px 50px -12px var(--shadow-color);
 }
 
 /* Block side-panel slide-in (components/Modal.tsx). */

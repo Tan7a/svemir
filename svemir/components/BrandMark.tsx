@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { THEMES, type ThemeId, getTheme, setTheme } from "@/lib/themes";
 
@@ -86,20 +85,22 @@ export default function BrandMark() {
         className="flex items-center"
         onContextMenu={openMenu}
       >
-        <Image
-          src="/svemir.svg"
-          alt="svemir"
-          width={40}
-          height={13}
-          priority
-          className="h-auto w-10"
-        />
+        {/* Inline so the mark inherits the theme's foreground via currentColor
+            (text-neutral-100 flips to near-black in the light themes). */}
+        <svg
+          viewBox="0 0 320 100"
+          className="h-auto w-10 text-neutral-100"
+          fill="currentColor"
+          aria-hidden
+        >
+          <ellipse cx="160" cy="50" rx="160" ry="50" />
+        </svg>
       </Link>
 
       {menu && (
         <div
           role="menu"
-          className="fixed z-50 w-60 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 text-sm shadow-2xl shadow-black/60"
+          className="fixed z-50 w-60 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 text-sm shadow-panel"
           style={{ left: menu.x, top: menu.y }}
         >
           {view === "root" && (

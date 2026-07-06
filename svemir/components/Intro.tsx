@@ -238,7 +238,9 @@ export default function Intro() {
           <p className="text-[15px] leading-relaxed text-neutral-300">
             <span className="text-neutral-100">Svemir</span> (свемир) is the word
             for <span className="text-neutral-100">universe</span> in Serbian,
-            Croatian, Bosnian and Montenegrin. From the roots{" "}
+            Croatian, Bosnian and Montenegrin.
+            <br />
+            From the roots{" "}
             <span className="italic">sve</span> (&ldquo;all&rdquo;) and{" "}
             <span className="italic">mir</span>{" "}
             (&ldquo;peace, world&rdquo;).

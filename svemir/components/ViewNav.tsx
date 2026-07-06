@@ -36,8 +36,17 @@ export default function ViewNav() {
     router.push(`/?${sp.toString()}`, { scroll: false });
   }
 
+  // Shared item shape: a rounded pill that fills on hover so every link reads
+  // as interactive. Active = bright text; inactive = muted with a hover fill.
+  // Uses the neutral ramp (not literal white) so the fill inverts per theme.
+  const base = "rounded-lg px-2.5 py-1 transition-colors";
+  const cls = (isActive: boolean) =>
+    isActive
+      ? `${base} text-neutral-100`
+      : `${base} text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100`;
+
   return (
-    <nav className="hidden items-center gap-6 text-sm md:flex">
+    <nav className="hidden items-center gap-1 text-sm md:flex">
       {VIEW_OPTIONS.map((opt) => {
         const active = activeView === opt.value;
         return (
@@ -45,44 +54,19 @@ export default function ViewNav() {
             key={opt.value}
             type="button"
             onClick={() => setView(opt.value)}
-            className={
-              active
-                ? "text-neutral-100"
-                : "text-neutral-400 hover:text-neutral-200"
-            }
+            className={cls(active)}
           >
             {opt.label}
           </button>
         );
       })}
-      <Link
-        href="/graph"
-        className={
-          onGraph
-            ? "text-neutral-100"
-            : "text-neutral-400 hover:text-neutral-100"
-        }
-      >
+      <Link href="/graph" className={cls(onGraph)}>
         Graph
       </Link>
-      <Link
-        href="/facets"
-        className={
-          onFacets
-            ? "text-neutral-100"
-            : "text-neutral-400 hover:text-neutral-100"
-        }
-      >
+      <Link href="/facets" className={cls(onFacets)}>
         Research
       </Link>
-      <Link
-        href="/design-system"
-        className={
-          onDesignSystem
-            ? "text-neutral-100"
-            : "text-neutral-400 hover:text-neutral-100"
-        }
-      >
+      <Link href="/design-system" className={cls(onDesignSystem)}>
         Design
       </Link>
     </nav>

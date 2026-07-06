@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import { forceCollide, forceX, forceY } from "d3-force-3d";
 import { channelColor } from "@/lib/constants";
+import { useThemePalette } from "@/lib/use-theme-palette";
 
 // react-force-graph-2d's TypeScript generics don't survive next/dynamic, so
 // we treat it as a permissive component and rely on our own GraphNode/GraphLink
@@ -135,6 +136,8 @@ export default function KnowledgeGraph({
   // special CONCEPTS_KEY for the concept layer.
   const [shownKeys, setShownKeys] = useState<Set<string>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Canvas colours can't ride the CSS-var ramp, so resolve them per theme.
+  const palette = useThemePalette();
 
   useEffect(() => {
     function onResize() {
@@ -438,7 +441,7 @@ export default function KnowledgeGraph({
           graphData={data}
           width={size.w}
           height={size.h}
-          backgroundColor="#101014"
+          backgroundColor={palette.bg}
           minZoom={0.2}
           maxZoom={8}
           warmupTicks={20}
@@ -474,14 +477,14 @@ export default function KnowledgeGraph({
               const touches =
                 linkEndId(l.source) === activeId ||
                 linkEndId(l.target) === activeId;
-              if (!touches) return "rgba(255,255,255,0.025)";
+              if (!touches) return `rgba(${palette.inkRGB},0.025)`;
               return l.kind === "manual"
-                ? "rgba(255,255,255,0.55)"
-                : "rgba(255,255,255,0.32)";
+                ? `rgba(${palette.inkRGB},0.55)`
+                : `rgba(${palette.inkRGB},0.32)`;
             }
             return l.kind === "manual"
-              ? "rgba(255,255,255,0.3)"
-              : "rgba(255,255,255,0.14)";
+              ? `rgba(${palette.inkRGB},0.3)`
+              : `rgba(${palette.inkRGB},0.14)`;
           }}
           linkWidth={(raw: unknown) => {
             const l = raw as GraphLink;
@@ -625,10 +628,10 @@ export default function KnowledgeGraph({
               ctx.textBaseline = "top";
               // Subtle dark halo so text stays legible over links/dots.
               ctx.lineWidth = fontSize * 0.22;
-              ctx.strokeStyle = `rgba(16,16,20,${0.85 * alpha})`;
+              ctx.strokeStyle = `rgba(${palette.haloRGB},${0.85 * alpha})`;
               ctx.lineJoin = "round";
               ctx.strokeText(label, cx, top);
-              ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+              ctx.fillStyle = `rgba(${palette.inkRGB},${alpha})`;
               ctx.fillText(label, cx, top);
             }
           }}
@@ -704,7 +707,7 @@ export default function KnowledgeGraph({
                         <li key={b.id} className="truncate">
                           <Link
                             href={`/block/${b.id}`}
-                            className="text-neutral-300 hover:text-white hover:underline"
+                            className="text-neutral-300 hover:text-neutral-100 hover:underline"
                           >
                             {b.title || "Untitled"}
                           </Link>
@@ -720,7 +723,7 @@ export default function KnowledgeGraph({
                   {node.slug && (
                     <Link
                       href={`/concept/${node.slug}`}
-                      className="text-neutral-400 hover:text-white"
+                      className="text-neutral-400 hover:text-neutral-100"
                     >
                       Open concept →
                     </Link>
@@ -771,7 +774,7 @@ export default function KnowledgeGraph({
                   )}
                   <Link
                     href={`/block/${node.id}`}
-                    className="text-neutral-400 hover:text-white"
+                    className="text-neutral-400 hover:text-neutral-100"
                   >
                     Open block →
                   </Link>

@@ -78,7 +78,7 @@ export default function SignInModal({ open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Sign in"
-        className="relative w-full max-w-sm rounded-xl border border-neutral-800 bg-background p-6 shadow-2xl shadow-black/60"
+        className="relative w-full max-w-sm rounded-xl border border-neutral-800 bg-background p-6 shadow-panel"
         style={{ animation: "dialog-in 0.18s ease-out" }}
       >
         <button
@@ -130,7 +130,7 @@ export default function SignInModal({ open, onClose }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="mt-1 rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
+            className="mt-1 rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
           >
             {pending ? "Signing in…" : "Sign in"}
           </button>

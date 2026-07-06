@@ -172,7 +172,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
         type="button"
         onClick={save}
         disabled={busy}
-        className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-white`}
+        className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-neutral-50`}
       >
         {busy ? "Saving…" : "Save"}
       </button>
@@ -202,7 +202,7 @@ export default function PaperDetail({ block, inModal = false }: Props) {
       type="button"
       onClick={openFullText}
       disabled={fullText.status === "loading"}
-      className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-white`}
+      className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-neutral-50`}
     >
       {fullText.status === "loading" ? "Loading…" : "Read full text"}
     </button>

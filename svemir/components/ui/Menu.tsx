@@ -22,7 +22,7 @@ export function MenuPanel({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl shadow-black/60 ${className}`}
+      className={`overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-panel ${className}`}
     >
       {children}
     </div>

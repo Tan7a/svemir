@@ -194,7 +194,7 @@ export default function ImportForm() {
             type="button"
             onClick={handleImport}
             disabled={filteredCount === 0}
-            className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+            className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-50"
           >
             Import {filteredCount} bookmarks
           </button>
@@ -241,7 +241,7 @@ export default function ImportForm() {
         <div className="flex gap-2 pt-2">
           <Link
             href="/admin/manage"
-            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
+            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
           >
             Manage imported items
           </Link>

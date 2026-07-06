@@ -338,7 +338,7 @@ export default function FloatingAdd() {
                     type="button"
                     onClick={save}
                     disabled={status === "saving"}
-                    className="rounded-lg bg-neutral-100 px-4 py-1.5 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
+                    className="rounded-lg bg-neutral-100 px-4 py-1.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
                   >
                     {status === "saving" ? "Saving…" : "Save"}
                   </button>

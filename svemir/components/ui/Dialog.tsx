@@ -50,7 +50,7 @@ export default function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        className={`relative w-full max-w-sm rounded-2xl border border-neutral-800 bg-background p-6 shadow-2xl shadow-black/60 ${className}`}
+        className={`relative w-full max-w-sm rounded-2xl border border-neutral-800 bg-background p-6 shadow-panel ${className}`}
         style={{ animation: "dialog-in 0.18s ease-out" }}
       >
         {children}

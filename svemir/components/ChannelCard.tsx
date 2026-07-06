@@ -34,7 +34,7 @@ export default function ChannelCard({ channel }: Props) {
     .map(([c]) => c);
 
   return (
-    <div className="group relative flex flex-col rounded-[34px] border border-neutral-800 transition-colors hover:border-white">
+    <div className="group relative flex flex-col rounded-[34px] border border-neutral-800 transition-colors hover:border-neutral-100">
       {/* Top-left - title + meta. The after:inset-0 overlay makes the whole card
           a link to the channel (stretched-link). */}
       <Link

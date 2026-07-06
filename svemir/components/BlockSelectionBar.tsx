@@ -128,7 +128,7 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
     <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
       {/* Channel picker pops up above the bar. */}
       {picking && (
-        <div className="mb-2 w-72 rounded-xl border border-neutral-800 bg-[#0f0f0f] p-2 shadow-2xl shadow-black/60">
+        <div className="mb-2 w-72 rounded-xl border border-neutral-800 bg-[#0f0f0f] p-2 shadow-panel">
           <input
             ref={inputRef}
             type="text"
@@ -171,7 +171,7 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
         </div>
       )}
 
-      <div className="flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#141414]/95 px-3 py-2 shadow-2xl shadow-black/60 backdrop-blur">
+      <div className="flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#141414]/95 px-3 py-2 shadow-panel backdrop-blur">
         <span className="pl-1 text-sm font-medium text-neutral-100">
           {ids.length} selected
         </span>
