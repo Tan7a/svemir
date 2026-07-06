@@ -38,10 +38,10 @@ function makeParticles(n: number): Particle[] {
     return {
       left,
       top,
-      size: 1 + Math.random() * 2.5,
+      size: 1.5 + Math.random() * 3.5,
       dx: -towardCenterX * 6,
       dy: -towardCenterY * 6,
-      peak: 0.2 + Math.random() * 0.4,
+      peak: 0.45 + Math.random() * 0.45,
       delay: Math.random() * 0.6,
       dur: 2.4 + Math.random() * 1.8,
     };
@@ -108,7 +108,7 @@ export default function Intro() {
   // click, where a real user gesture lets the sound actually play. Defined
   // above the mount effect so it can safely sit in that effect's deps.
   const enter = useCallback(() => {
-    if (motionRef.current) setParticles(makeParticles(44));
+    if (motionRef.current) setParticles(makeParticles(64));
     setPhase("playing");
   }, []);
 
@@ -199,7 +199,7 @@ export default function Intro() {
           {particles.map((p, i) => (
             <span
               key={i}
-              className="intro-particle absolute rounded-full bg-neutral-500"
+              className="intro-particle absolute rounded-full bg-neutral-300"
               style={{
                 left: `${p.left}%`,
                 top: `${p.top}%`,
