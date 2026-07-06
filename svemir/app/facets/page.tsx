@@ -29,47 +29,49 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
           the page left-aligns and the papers grid can use the full BlocksView
           card size. Header + themes sit in the same gutter as the grid. */}
       <main className="min-h-[calc(100vh-3rem)] w-full py-10">
-        <header className="max-w-prose px-5 sm:px-8">
-          <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
+        <header className="flex flex-col gap-6 px-5 sm:flex-row sm:items-start sm:gap-10 sm:px-8">
+          <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
             Research
           </h1>
-          <div className="mt-4 flex flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
-            <p>
-              I&rsquo;m finishing a PhD on{" "}
-              <span className="text-neutral-100">user control in AI interfaces</span>.
-              I surveyed 360 people across 46 countries and reviewed a decade of
-              AI-UX research; the resulting papers are now under peer review at top
-              HCI journals. The recurring finding: people want{" "}
-              <span className="text-neutral-100">
-                clarity, refinement tools, and better personalization
-              </span>{" "}
-              - insight that shapes everything I design, including the product I
-              lead,{" "}
-              <a
-                href="https://flero.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-100 underline decoration-neutral-700 underline-offset-2 hover:decoration-neutral-400"
-              >
-                flero.ai
-              </a>
-              .
-            </p>
-            <p className="text-neutral-400">
-              This is the reading behind that work - every paper I&rsquo;ve
-              collected, mapped across five dimensions of AI-UX research. Browse by
-              theme to see what each means, or switch the lens to read the papers
-              as a grid. More about me at{" "}
-              <a
-                href="https://tanjaradovanovic.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-200 underline decoration-neutral-700 underline-offset-2 hover:decoration-neutral-400"
-              >
-                tanjaradovanovic.com
-              </a>
-              .
-            </p>
+          <div className="sm:flex-1">
+            <div className="ml-auto flex max-w-2xl flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
+              <p>
+                I&rsquo;m finishing a PhD on{" "}
+                <span className="text-neutral-100">user control in AI interfaces</span>.
+                I surveyed 360 people across 46 countries and reviewed a decade of
+                AI-UX research; the resulting papers are now under peer review at top
+                HCI journals. The recurring finding: people want{" "}
+                <span className="text-neutral-100">
+                  clarity, refinement tools, and better personalization
+                </span>{" "}
+                - insight that shapes everything I design, including the product I
+                lead,{" "}
+                <a
+                  href="https://flero.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neutral-100 underline decoration-neutral-700 underline-offset-2 hover:decoration-neutral-400"
+                >
+                  flero.ai
+                </a>
+                .
+              </p>
+              <p className="text-neutral-400">
+                This is the reading behind that work - every paper I&rsquo;ve
+                collected, mapped across five dimensions of AI-UX research. Browse by
+                theme to see what each means, or switch the lens to read the papers
+                as a grid. More about me at{" "}
+                <a
+                  href="https://tanjaradovanovic.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neutral-200 underline decoration-neutral-700 underline-offset-2 hover:decoration-neutral-400"
+                >
+                  tanjaradovanovic.com
+                </a>
+                .
+              </p>
+            </div>
           </div>
         </header>
 
