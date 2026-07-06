@@ -453,24 +453,27 @@ export default function DesignSystemCatalogue() {
     <div className="flex flex-col gap-10 pb-24">
       {/* Header + live theme switcher */}
       <header className="flex flex-col gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-5xl tracking-wider text-neutral-100">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-10">
+          <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
             Design system
           </h1>
-          {/* Matches the Research page intro: same max-w-prose width, 15px
-              body, gap, and neutral tones so the two pages read identically. */}
-          <div className="mt-4 flex max-w-prose flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
-            <p>
-              svemir is my personal universe of references: blocks, channels, a
-              knowledge graph, and a research layer for papers.
-            </p>
-            <p className="text-neutral-400">
-              This is the system it runs on. A tight set of primitives sits over
-              a single token layer, so nothing is hardcoded and every screen
-              re-themes on command. Change one token and the whole product
-              follows. Everything below is the real code, composed atoms to
-              organisms.
-            </p>
+          {/* Headline left; intro lives in a column that fills the free space,
+              with the text block pushed to the right of that column (text
+              itself stays left-aligned). */}
+          <div className="sm:flex-1">
+            <div className="ml-auto flex max-w-2xl flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
+              <p>
+                svemir is my personal universe of references: blocks, channels, a
+                knowledge graph, and a research layer for papers.
+              </p>
+              <p className="text-neutral-400">
+                This is the system it runs on. A tight set of primitives sits over
+                a single token layer, so nothing is hardcoded and every screen
+                re-themes on command. Change one token and the whole product
+                follows. Everything below is the real code, composed atoms to
+                organisms.
+              </p>
+            </div>
           </div>
         </div>
 

@@ -83,12 +83,9 @@ export default function BrandMark() {
       <Link
         href="/"
         aria-label="svemir home"
-        className="flex items-center gap-2"
+        className="flex items-center"
         onContextMenu={openMenu}
       >
-        <span className="font-[family-name:var(--font-display)] text-xl leading-none tracking-wider text-neutral-100">
-          svemir
-        </span>
         <Image
           src="/svemir.svg"
           alt="svemir"

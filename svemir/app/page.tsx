@@ -95,19 +95,26 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <TopBar />
-      <div>
-        <div className="flex items-baseline justify-between gap-4 px-5 pt-8 pb-4">
-          <Link href="/" aria-label="svemir home">
-            <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
-              {view === "channels" ? "Channels" : "Blocks"}
-            </h1>
-          </Link>
-          <p className="shrink-0 text-xs text-neutral-500">
-            {blockCount ?? 0} blocks · {channelCount ?? 0} channels ·{" "}
-            {blockCount ?? 0} nodes
-          </p>
+      <header className="flex flex-col gap-6 px-5 pt-8 pb-4 sm:flex-row sm:items-start sm:gap-10 sm:px-8">
+        <Link href="/" aria-label="svemir home">
+          <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
+            {view === "channels" ? "Channels" : "Blocks"}
+          </h1>
+        </Link>
+        <div className="sm:flex-1">
+          <div className="ml-auto max-w-2xl text-[15px] leading-relaxed text-neutral-300">
+            <p>
+              {view === "channels"
+                ? "Channels group related blocks by theme or project, and a block can belong to several at once."
+                : "Blocks are the smallest pieces of svemir: links, images, notes and papers I’ve collected."}
+            </p>
+            <p className="mt-2 text-right text-xs text-neutral-500">
+              {blockCount ?? 0} blocks · {channelCount ?? 0} channels ·{" "}
+              {blockCount ?? 0} nodes
+            </p>
+          </div>
         </div>
-      </div>
+      </header>
 
       <main>
         {q ? (
