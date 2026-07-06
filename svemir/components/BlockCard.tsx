@@ -79,8 +79,8 @@ export default function BlockCard({
         <div
           className={`relative aspect-square w-full overflow-hidden rounded-3xl border bg-neutral-900 transition-colors duration-300 ${
             selected
-              ? "border-white ring-2 ring-white"
-              : "border-neutral-800 group-hover:border-white"
+              ? "border-neutral-100 ring-2 ring-neutral-100"
+              : "border-neutral-800 group-hover:border-neutral-100"
           }`}
         >
           {isPaper ? (

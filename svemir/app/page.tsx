@@ -95,14 +95,14 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <TopBar />
-      <header className="flex flex-col gap-6 px-5 pt-8 pb-4 sm:flex-row sm:items-start sm:gap-10 sm:px-8">
+      <header className="flex flex-col gap-6 px-5 pt-4 pb-4 sm:flex-row sm:items-start sm:gap-10 sm:px-8">
         <Link href="/" aria-label="svemir home">
           <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
             {view === "channels" ? "Channels" : "Blocks"}
           </h1>
         </Link>
         <div className="sm:flex-1">
-          <div className="ml-auto max-w-2xl text-[15px] leading-relaxed text-neutral-300">
+          <div className="ml-auto max-w-md text-[15px] leading-relaxed text-neutral-300">
             <p>
               {view === "channels"
                 ? "Channels group related blocks by theme or project, and a block can belong to several at once."
@@ -533,7 +533,7 @@ async function SearchRoute({ q }: { q: string }) {
               <li key={c.id}>
                 <Link
                   href={`/concept/${c.slug}`}
-                  className="inline-flex items-baseline gap-1.5 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-600 hover:text-white"
+                  className="inline-flex items-baseline gap-1.5 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 text-sm text-neutral-200 hover:border-neutral-600 hover:text-neutral-100"
                 >
                   {c.term}
                   <span className="text-xs text-neutral-500">
@@ -556,7 +556,7 @@ async function SearchRoute({ q }: { q: string }) {
               <li key={c.id} className="flex items-baseline gap-2">
                 <Link
                   href={`/channel/${c.slug}`}
-                  className="text-neutral-200 hover:text-white hover:underline"
+                  className="text-neutral-200 hover:text-neutral-100 hover:underline"
                 >
                   {c.title}
                 </Link>

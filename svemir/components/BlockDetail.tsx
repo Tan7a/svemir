@@ -145,7 +145,7 @@ export default function BlockDetail({ block, inModal = false }: Props) {
         type="button"
         onClick={save}
         disabled={busy}
-        className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-white`}
+        className={`${btn} border-neutral-200 bg-neutral-100 text-neutral-900 hover:bg-neutral-50`}
       >
         {busy ? "Saving…" : "Save"}
       </button>

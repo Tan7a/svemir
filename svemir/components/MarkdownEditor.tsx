@@ -52,8 +52,8 @@ function ToolButton({
       onClick={onClick}
       className={`min-w-7 rounded-md px-1.5 py-1 text-xs transition-colors disabled:opacity-40 ${
         active
-          ? "bg-white/15 text-neutral-50"
-          : "text-neutral-400 hover:bg-white/10 hover:text-neutral-100"
+          ? "bg-neutral-500/25 text-neutral-50"
+          : "text-neutral-400 hover:bg-neutral-500/15 hover:text-neutral-100"
       }`}
     >
       {children}
@@ -147,20 +147,20 @@ export default function MarkdownEditor({
   return (
     <div>
       {/* Placeholder styling for TipTap's empty state. */}
-      <style>{`.tiptap-content p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:#525252;pointer-events:none;height:0;}
+      <style>{`.tiptap-content p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:var(--color-neutral-500);pointer-events:none;height:0;}
         .tiptap-content h1{font-size:1.6em;font-weight:600;margin:.6em 0 .3em;}
         .tiptap-content h2{font-size:1.35em;font-weight:600;margin:.6em 0 .3em;}
         .tiptap-content h3{font-size:1.15em;font-weight:600;margin:.5em 0 .25em;}
         .tiptap-content p{margin:.5em 0;}
         .tiptap-content ul{list-style:disc;padding-left:1.4em;margin:.5em 0;}
         .tiptap-content ol{list-style:decimal;padding-left:1.4em;margin:.5em 0;}
-        .tiptap-content blockquote{border-left:2px solid #525252;padding-left:1em;font-style:italic;margin:.6em 0;color:#d4d4d4;}
-        .tiptap-content a{color:#fafafa;text-decoration:underline;text-underline-offset:2px;}
-        .tiptap-content code{background:rgba(255,255,255,.1);padding:.1em .3em;border-radius:.25em;font-size:.9em;}
+        .tiptap-content blockquote{border-left:2px solid var(--color-neutral-700);padding-left:1em;font-style:italic;margin:.6em 0;color:var(--color-neutral-300);}
+        .tiptap-content a{color:var(--color-neutral-50);text-decoration:underline;text-underline-offset:2px;}
+        .tiptap-content code{background:var(--color-neutral-800);padding:.1em .3em;border-radius:.25em;font-size:.9em;}
         .tiptap-content img{max-height:70vh;max-width:100%;border-radius:.5rem;margin:1rem 0;}`}</style>
 
       {/* Formatting toolbar - drives the editor (shows live state). */}
-      <div className="mb-3 flex flex-wrap items-center gap-0.5 border-b border-white/10 pb-2">
+      <div className="mb-3 flex flex-wrap items-center gap-0.5 border-b border-neutral-800 pb-2">
         <ToolButton title="Bold" active={e?.isActive("bold")} onClick={() => e?.chain().focus().toggleBold().run()}>
           <span className="font-bold">B</span>
         </ToolButton>
@@ -170,7 +170,7 @@ export default function MarkdownEditor({
         <ToolButton title="Strikethrough" active={e?.isActive("strike")} onClick={() => e?.chain().focus().toggleStrike().run()}>
           <span className="line-through">S</span>
         </ToolButton>
-        <span className="mx-1 h-4 w-px bg-white/10" />
+        <span className="mx-1 h-4 w-px bg-neutral-800" />
         <ToolButton title="Heading 1" active={e?.isActive("heading", { level: 1 })} onClick={() => e?.chain().focus().toggleHeading({ level: 1 }).run()}>
           H1
         </ToolButton>
@@ -180,7 +180,7 @@ export default function MarkdownEditor({
         <ToolButton title="Heading 3" active={e?.isActive("heading", { level: 3 })} onClick={() => e?.chain().focus().toggleHeading({ level: 3 }).run()}>
           H3
         </ToolButton>
-        <span className="mx-1 h-4 w-px bg-white/10" />
+        <span className="mx-1 h-4 w-px bg-neutral-800" />
         <ToolButton title="Quote" active={e?.isActive("blockquote")} onClick={() => e?.chain().focus().toggleBlockquote().run()}>
           ❝
         </ToolButton>

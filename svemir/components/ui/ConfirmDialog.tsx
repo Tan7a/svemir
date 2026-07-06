@@ -77,7 +77,7 @@ export default function ConfirmDialog({
           type="button"
           autoFocus
           onClick={onConfirm}
-          className="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-white"
+          className="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
         >
           {confirmLabel}
           <span aria-hidden className="text-neutral-500">

@@ -27,7 +27,7 @@ export default function SelectionCircle({
       onClick={onClick}
       className={`flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-all ${
         selected
-          ? "border-white bg-white text-black"
+          ? "border-neutral-100 bg-neutral-100 text-neutral-900"
           : "border-white/80 bg-black/50 text-transparent hover:bg-black/70"
       } ${className}`}
     >

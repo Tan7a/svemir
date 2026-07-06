@@ -681,12 +681,12 @@ export default function DesignSystemCatalogue() {
             <Spec
               id="f-elevation"
               name="Elevation"
-              usage="shadow-xl (light) · shadow-2xl shadow-black/60 (overlays)"
+              usage="shadow-xl (light) · shadow-panel (overlays)"
             >
               <div className="flex h-16 w-32 items-center justify-center rounded-xl border border-neutral-800 bg-neutral-950 text-xs text-neutral-400 shadow-xl">
                 shadow-xl
               </div>
-              <div className="flex h-16 w-32 items-center justify-center rounded-xl border border-neutral-800 bg-neutral-950 text-xs text-neutral-400 shadow-2xl shadow-black/60">
+              <div className="flex h-16 w-32 items-center justify-center rounded-xl border border-neutral-800 bg-neutral-950 text-xs text-neutral-400 shadow-panel">
                 shadow-2xl
               </div>
             </Spec>

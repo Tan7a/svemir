@@ -19,7 +19,7 @@ export default function DesignSystemPage() {
       {/* Full-width, left-aligned to the same gutter as Blocks / Channels /
           Research (px-5 sm:px-8) rather than a centered max-width, so the pages
           share one side margin. */}
-      <main className="min-h-[calc(100vh-3rem)] w-full px-5 py-10 sm:px-8">
+      <main className="min-h-[calc(100vh-3rem)] w-full px-5 pb-10 pt-5 sm:px-8">
         <DesignSystemCatalogue />
       </main>
     </>

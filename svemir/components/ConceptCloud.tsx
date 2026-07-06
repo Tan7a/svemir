@@ -39,7 +39,7 @@ export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] })
         <li key={c.id}>
           <Link
             href={`/concept/${c.slug}`}
-            className="text-neutral-300 transition-colors hover:text-white"
+            className="text-neutral-300 transition-colors hover:text-neutral-100"
             style={{ fontSize: `${sizeRem(c.count)}rem` }}
             title={`${c.count} block${c.count === 1 ? "" : "s"}`}
           >

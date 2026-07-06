@@ -55,7 +55,7 @@ export default function ChannelInfoModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl shadow-black/60"
+        className="relative w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <button

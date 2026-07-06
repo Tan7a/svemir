@@ -102,7 +102,7 @@ export default function TokensClient({ initialTokens }: Props) {
             type="button"
             onClick={handleCreate}
             disabled={busy || !name.trim()}
-            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-60"
+            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
           >
             {busy ? "Minting…" : "Create"}
           </button>

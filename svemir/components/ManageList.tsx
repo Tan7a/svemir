@@ -352,7 +352,7 @@ export default function ManageList({ items, page, totalPages, query }: Props) {
           type="button"
           onClick={handleBackfillAll}
           disabled={scraping || backfilling || indexing || refetching}
-          className="rounded-xl border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 hover:bg-white disabled:opacity-50"
+          className="rounded-xl border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 hover:bg-neutral-50 disabled:opacity-50"
           title="Scrape image/description for ALL items in the archive that are missing them"
         >
           {backfilling

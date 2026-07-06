@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -52,11 +52,63 @@ export default function IdeaGarden({ gardens }: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  // The scene is imperative Three.js, so it can't ride the CSS-var ramp. Track
+  // the active theme and rebuild the garden (via the effect dep below) when it
+  // flips, re-deriving the sky, line-art and control chrome from the palette.
+  // Read the real theme at init (safe: themeKey drives the effect, not the JSX,
+  // so there's no hydration mismatch) to avoid building the scene dark-first.
+  const [themeKey, setThemeKey] = useState(() =>
+    typeof document === "undefined"
+      ? "dark"
+      : document.documentElement.dataset.theme || "dark"
+  );
+  useEffect(() => {
+    const obs = new MutationObserver(() =>
+      setThemeKey(document.documentElement.dataset.theme || "dark")
+    );
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const mount = mountRef.current;
     const overlay = overlayRef.current;
     if (!mount || !overlay) return;
+
+    // Theme-derived palette for the scene + overlay chrome. Dark = pale line-art
+    // on a near-black sky; light themes = dark line-art on the theme background.
+    const isDark = (document.documentElement.dataset.theme || "dark") === "dark";
+    const skyColor = new THREE.Color(
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--background")
+        .trim() || (isDark ? "#060606" : "#ffffff")
+    );
+    const lineColor = new THREE.Color(isDark ? "#e4e4dc" : "#3a3a3a");
+    const leafColor = new THREE.Color(isDark ? "#ffffff" : "#2f2f2f");
+    const chrome = isDark
+      ? {
+          bg: "rgba(10,10,10,.72)",
+          border: "#222",
+          text: "#bdbdbd",
+          accent: "#cfcfcf",
+          tipBg: "#111",
+          tipBorder: "#333",
+          tipText: "#fff",
+          date: "#9a9a9a",
+        }
+      : {
+          bg: "rgba(255,255,255,.82)",
+          border: "#ddd",
+          text: "#444",
+          accent: "#666",
+          tipBg: "#fff",
+          tipBorder: "#ddd",
+          tipText: "#171717",
+          date: "#777",
+        };
 
     const width = mount.clientWidth || 1;
     const height = mount.clientHeight || 1;
@@ -65,7 +117,7 @@ export default function IdeaGarden({ gardens }: Props) {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
-    renderer.setClearColor(0x060606, 1);
+    renderer.setClearColor(skyColor, 1);
     mount.appendChild(renderer.domElement);
 
     // ── scene ────────────────────────────────────────────────────────────────────
@@ -77,11 +129,11 @@ export default function IdeaGarden({ gardens }: Props) {
     // lines (no fills, no shading). Per-leaf pastel comes from setColorAt
     // (white·instanceColor). Branches are pale flat "lines" too.
     const branchMat = new THREE.LineBasicMaterial({
-      color: 0xe4e4dc,
+      color: lineColor,
       transparent: true,
       opacity: 0.95,
     });
-    const leafMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+    const leafMat = new THREE.MeshBasicMaterial({ color: leafColor, wireframe: true });
     // Three leaf shapes; each plant picks one. Small, fine marks so a crown of
     // many of them reads as delicate stippled foliage (reference line-drawing
     // trees) rather than a cluster of big geometric blobs. Shared, disposed once.
@@ -442,12 +494,12 @@ export default function IdeaGarden({ gardens }: Props) {
     // ── hover tooltip (single, reused) ───────────────────────────────────────────
     const hover = document.createElement("div");
     hover.style.cssText =
-      "position:absolute;transform:translate(-50%,calc(-100% - 12px));background:#111;" +
-      "border:1px solid #333;color:#fff;padding:6px 10px;border-radius:8px;max-width:280px;" +
+      `position:absolute;transform:translate(-50%,calc(-100% - 12px));background:${chrome.tipBg};` +
+      `border:1px solid ${chrome.tipBorder};color:${chrome.tipText};padding:6px 10px;border-radius:8px;max-width:280px;` +
       "white-space:nowrap;pointer-events:none;display:none;font:12px/1.35 Inter,system-ui,sans-serif";
     const hoverTitle = document.createElement("div");
     const hoverDate = document.createElement("div");
-    hoverDate.style.cssText = "color:#9a9a9a;margin-top:2px;font-size:11px";
+    hoverDate.style.cssText = `color:${chrome.date};margin-top:2px;font-size:11px`;
     hover.appendChild(hoverTitle);
     hover.appendChild(hoverDate);
     overlay.appendChild(hover);
@@ -494,17 +546,17 @@ export default function IdeaGarden({ gardens }: Props) {
     const scrubWrap = document.createElement("div");
     scrubWrap.style.cssText =
       "position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;" +
-      "align-items:center;gap:12px;pointer-events:auto;background:rgba(10,10,10,.72);" +
-      "border:1px solid #222;border-radius:999px;padding:7px 16px;backdrop-filter:blur(6px)";
+      `align-items:center;gap:12px;pointer-events:auto;background:${chrome.bg};` +
+      `border:1px solid ${chrome.border};border-radius:999px;padding:7px 16px;backdrop-filter:blur(6px)`;
     const slider = document.createElement("input");
     slider.type = "range";
     slider.min = "0";
     slider.max = "1000";
     slider.value = "1000";
-    slider.style.cssText = "width:240px;accent-color:#cfcfcf;cursor:pointer";
+    slider.style.cssText = `width:240px;accent-color:${chrome.accent};cursor:pointer`;
     const dateLabel = document.createElement("div");
     dateLabel.style.cssText =
-      "font:12px/1 Inter,system-ui,sans-serif;color:#bdbdbd;min-width:104px;text-align:right;letter-spacing:.03em";
+      `font:12px/1 Inter,system-ui,sans-serif;color:${chrome.text};min-width:104px;text-align:right;letter-spacing:.03em`;
     dateLabel.textContent = fmtDate(scrubMs);
     const onScrub = () => {
       scrubMs = minMs + (Number(slider.value) / 1000) * (maxMs - minMs);
@@ -679,7 +731,7 @@ export default function IdeaGarden({ gardens }: Props) {
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [gardens, router]);
+  }, [gardens, router, themeKey]);
 
   return (
     <div ref={mountRef} className="relative h-full w-full">

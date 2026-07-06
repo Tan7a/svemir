@@ -28,7 +28,7 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
       {/* Full-width like the Blocks / Channels pages (no centered max-width) so
           the page left-aligns and the papers grid can use the full BlocksView
           card size. Header + themes sit in the same gutter as the grid. */}
-      <main className="min-h-[calc(100vh-3rem)] w-full py-10">
+      <main className="min-h-[calc(100vh-3rem)] w-full pb-10 pt-5">
         <header className="flex flex-col gap-6 px-5 sm:flex-row sm:items-start sm:gap-10 sm:px-8">
           <h1 className="font-[family-name:var(--font-display)] text-6xl tracking-wider text-neutral-100">
             Research
@@ -36,7 +36,7 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
           <div className="sm:flex-1">
             <div className="ml-auto flex max-w-2xl flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
               <p>
-                I&rsquo;m finishing a PhD on{" "}
+                I&rsquo;m a PhD candidate on the topic of{" "}
                 <span className="text-neutral-100">user control in AI interfaces</span>.
                 I surveyed 360 people across 46 countries and reviewed a decade of
                 AI-UX research; the resulting papers are now under peer review at top
