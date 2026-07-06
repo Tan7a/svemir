@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ChannelTag, Item } from "@/lib/types";
 import SelectionCircle from "./ui/SelectionCircle";
+import ChannelChip from "./ui/ChannelChip";
 
 type Props = {
   block: Item & { channels?: ChannelTag[] };
@@ -145,13 +146,7 @@ export default function BlockCard({
       {channels.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1 px-0.5">
           {channels.slice(0, 3).map((c) => (
-            <Link
-              key={c.slug}
-              href={`/channel/${c.slug}`}
-              className="rounded-full border border-neutral-800 bg-neutral-900 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:border-neutral-600 hover:text-neutral-100"
-            >
-              {c.title}
-            </Link>
+            <ChannelChip key={c.slug} slug={c.slug} title={c.title} />
           ))}
           {channels.length > 3 && (
             <span className="px-1 py-0.5 text-[9px] text-neutral-500">

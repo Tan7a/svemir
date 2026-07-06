@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import ChannelChip from "./ui/ChannelChip";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ItemWithChannels } from "@/lib/types";
@@ -371,18 +372,11 @@ export default function BlockDetail({ block, inModal = false }: Props) {
           {block.channels.length === 0 ? (
             <p className="text-neutral-600">No channels yet.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {block.channels.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/channel/${c.slug}`}
-                    className="text-neutral-200 hover:underline"
-                  >
-                    {c.title}
-                  </Link>
-                </li>
+                <ChannelChip key={c.id} slug={c.slug} title={c.title} />
               ))}
-            </ul>
+            </div>
           )}
         </div>
 
