@@ -91,9 +91,15 @@ export async function uploadScreenshot(
   const random = Math.random().toString(36).slice(2, 8);
   const path = `${stamp}-${random}.${ext}`;
 
+  // Upload as a Blob, NOT a raw Buffer. supabase-js sends a Buffer/Uint8Array
+  // as a plain fetch body, which Vercel's runtime UTF-8-decodes and corrupts
+  // (binary bytes turn into replacement chars, producing undecodable files).
+  // A Blob forces the multipart/form-data path, where the bytes travel as a
+  // binary file part and stay intact.
+  const body = new Blob([new Uint8Array(data)], { type: contentType });
   const { error: uploadErr } = await supabaseAdmin.storage
     .from(BUCKET)
-    .upload(path, data, { contentType, upsert: false });
+    .upload(path, body, { contentType, upsert: false });
   if (uploadErr) {
     return { ok: false, error: `Upload failed: ${uploadErr.message}` };
   }
