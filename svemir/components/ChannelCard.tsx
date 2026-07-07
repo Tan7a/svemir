@@ -87,7 +87,6 @@ export default function ChannelCard({ channel }: Props) {
                   alt={b.title}
                   fill
                   sizes="(min-width: 768px) 280px, 50vw"
-                  quality={100}
                   className="object-cover transition-opacity hover:opacity-90"
                 />
               ) : b.kind === "text" && b.description ? (
