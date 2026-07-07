@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { buildPlant, mulberry32, seedFromId } from "@/lib/lsystem";
+import { pickSpecies, speciesParams } from "@/lib/tree-species";
 
 export type GardenLeaf = { id: string; title: string; createdAt: string };
 export type GardenChannel = {
@@ -48,6 +49,119 @@ type PlantView = {
  * Visual inspiration: poetengineer (https://x.com/poetengineer__). This is an
  * original, from-scratch implementation - inspiration only, no copied code.
  */
+type ForestAudio = { stop: () => void };
+
+// Procedural forest ambience (Web Audio, no external asset): a soft wind bed
+// (brownish noise through a slowly-modulated lowpass) + occasional synthesized
+// birdsong that echoes the on-screen birds. Created on a user gesture (the Sound
+// toggle), so it satisfies browser autoplay rules. Fades in/out gently.
+function startForestAudio(): ForestAudio {
+  const ctx = new AudioContext();
+  void ctx.resume();
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+  const t0 = ctx.currentTime;
+  master.gain.setValueAtTime(0, t0);
+  master.gain.linearRampToValueAtTime(0.5, t0 + 1.5); // gentle fade-in
+
+  // Wind bed: 2s of brownish noise, looped.
+  const len = Math.floor(2 * ctx.sampleRate);
+  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    const white = Math.random() * 2 - 1;
+    last = (last + 0.02 * white) / 1.02; // integrate -> brown-ish (soft, low)
+    data[i] = last * 3.2;
+  }
+  const wind = ctx.createBufferSource();
+  wind.buffer = buffer;
+  wind.loop = true;
+  const windFilter = ctx.createBiquadFilter();
+  windFilter.type = "lowpass";
+  windFilter.frequency.value = 480;
+  const windGain = ctx.createGain();
+  windGain.gain.value = 0.22;
+  wind.connect(windFilter).connect(windGain).connect(master);
+  wind.start();
+
+  // Slow LFOs so the wind breathes (filter sweep + gain swell).
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.06;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 220;
+  lfo.connect(lfoGain).connect(windFilter.frequency);
+  const lfo2 = ctx.createOscillator();
+  lfo2.frequency.value = 0.09;
+  const lfo2Gain = ctx.createGain();
+  lfo2Gain.gain.value = 0.1;
+  lfo2.connect(lfo2Gain).connect(windGain.gain);
+  lfo.start();
+  lfo2.start();
+
+  // Birdsong: little chirp bursts at random intervals, panned across the field.
+  let stopped = false;
+  let timer = 0;
+  const chirp = () => {
+    if (stopped) return;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.6 - 0.8;
+    pan.connect(master);
+    const notes = 1 + Math.floor(Math.random() * 3);
+    const base = 1900 + Math.random() * 2200;
+    const start = ctx.currentTime + 0.02;
+    for (let n = 0; n < notes; n++) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      const g = ctx.createGain();
+      const nt = start + n * (0.09 + Math.random() * 0.09);
+      const f = base * (0.9 + Math.random() * 0.3);
+      osc.frequency.setValueAtTime(f, nt);
+      osc.frequency.exponentialRampToValueAtTime(f * (1.25 + Math.random() * 0.5), nt + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.85, nt + 0.12);
+      g.gain.setValueAtTime(0.0001, nt);
+      g.gain.linearRampToValueAtTime(0.09, nt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0006, nt + 0.16); // never ramp to exactly 0
+      osc.connect(g).connect(pan);
+      osc.start(nt);
+      osc.stop(nt + 0.2);
+    }
+    // release this burst's panner once its notes have finished (avoid piling up
+    // idle nodes on master over a long session).
+    window.setTimeout(() => {
+      try {
+        pan.disconnect();
+      } catch {
+        // context closed; ignore
+      }
+    }, 1200);
+    timer = window.setTimeout(chirp, 2500 + Math.random() * 4500);
+  };
+  timer = window.setTimeout(chirp, 700);
+
+  return {
+    stop: () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
+      master.gain.linearRampToValueAtTime(0, t + 0.6); // fade-out
+      window.setTimeout(() => {
+        try {
+          wind.stop();
+          lfo.stop();
+          lfo2.stop();
+          void ctx.close();
+        } catch {
+          // context already closing; ignore
+        }
+      }, 700);
+    },
+  };
+}
+
 export default function IdeaGarden({ gardens }: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
@@ -62,6 +176,13 @@ export default function IdeaGarden({ gardens }: Props) {
       ? "dark"
       : document.documentElement.dataset.theme || "dark"
   );
+  // Show/hide the channel labels (pills + leader lines). The render loop reads the
+  // ref every frame; the state just drives the button + keeps the ref in sync.
+  const [showLabels, setShowLabels] = useState(true);
+  const showLabelsRef = useRef(true);
+  // Forest ambience (off by default; created on first toggle = user gesture).
+  const [soundOn, setSoundOn] = useState(false);
+  const audioRef = useRef<ForestAudio | null>(null);
   useEffect(() => {
     const obs = new MutationObserver(() =>
       setThemeKey(document.documentElement.dataset.theme || "dark")
@@ -72,6 +193,28 @@ export default function IdeaGarden({ gardens }: Props) {
     });
     return () => obs.disconnect();
   }, []);
+
+  useEffect(() => {
+    showLabelsRef.current = showLabels;
+  }, [showLabels]);
+
+  // Start/stop the ambience when the toggle flips.
+  useEffect(() => {
+    if (soundOn && !audioRef.current) audioRef.current = startForestAudio();
+    else if (!soundOn && audioRef.current) {
+      audioRef.current.stop();
+      audioRef.current = null;
+    }
+  }, [soundOn]);
+
+  // Stop any audio when the garden unmounts (e.g. switching views).
+  useEffect(
+    () => () => {
+      audioRef.current?.stop();
+      audioRef.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -146,24 +289,16 @@ export default function IdeaGarden({ gardens }: Props) {
     // ── build all plants first (need radii for size-aware spacing) ───────────────
     const built = gardens.map((channel) => {
       const n = channel.leaves.length;
-      // Per-channel "genome": stable across loads, distinct between channels.
-      const vr = mulberry32((seedFromId(channel.id) ^ 0x9e3779b9) >>> 0);
-      const variety = {
-        segmentLength: 2.8, // internode length; long bare trunk comes from trunkHeight
-        baseRadius: 0.05, // thin branches
-        taper: 0.82, // branches thin toward the tips
-        branchAngleDeg: 50 + vr() * 22, // 50-72°: very wide forks
-        lengthDecay: 0.84 + vr() * 0.06, // 0.84-0.90: branches stay long enough to reach out
-        apicalBias: 0.1 + vr() * 0.2, // 0.10-0.30: weak leader → budget spreads sideways
-        spread: 0.72 + vr() * 0.2, // 0.72-0.92: strongly bend crown branches horizontal
-        crownDensity: 1.3 + vr() * 0.4, // 1.3-1.7: full, twiggy crown even for small channels
-        pitchJitter: 0.3 + vr() * 0.25,
-        wobble: 0.05 + vr() * 0.08, // gentle organic waviness in trunk + branches
-        // slender bare trunk in proportion with the (now richer) crown
-        trunkHeight: 5 + Math.floor(vr() * 3) + Math.min(4, Math.floor(n / 14)),
-      };
-      const plant = buildPlant({ leafCount: n, seed: seedFromId(channel.id), ...variety });
-      const shape = Math.floor(vr() * leafGeos.length);
+      // Seed everything shape-related from the topic name, so a topic always
+      // renders as the same tree. One of ten species is picked by the name; a
+      // name-seeded rng adds small within-species jitter (stable across loads).
+      const name = channel.title || channel.slug || channel.id;
+      const seed = seedFromId(name);
+      const species = pickSpecies(name);
+      const vr = mulberry32((seed ^ 0x9e3779b9) >>> 0);
+      const variety = speciesParams(species, vr, n);
+      const plant = buildPlant({ leafCount: n, seed, ...variety });
+      const shape = species.leafShape;
       return { channel, plant, shape, n };
     });
 
@@ -211,10 +346,13 @@ export default function IdeaGarden({ gardens }: Props) {
       // Leaves → one InstancedMesh per plant; one pastel hue, subtle per-leaf jitter.
       const inst = new THREE.InstancedMesh(leafGeos[shape], leafMat, n);
       const lr = mulberry32((seedFromId(channel.id) ^ 0x85ebca6b) >>> 0);
+      // Leaf size scales with the crown footprint so foliage reads as mass at any
+      // tree size (crowns are much larger than the 0.13u base leaf geometry).
+      const leafScale = Math.max(1, plant.radius * 0.16);
       const meta: GardenLeaf[] = new Array(n);
       for (let i = 0; i < n; i++) {
         const lp = plant.leaves[i].position;
-        const s = 0.8 + lr() * 0.45; // per-leaf size variance
+        const s = leafScale * (0.7 + lr() * 0.5); // per-leaf size variance
         tmpMatrix.makeScale(s, s, s);
         tmpMatrix.setPosition(lp.x, lp.y, lp.z);
         inst.setMatrixAt(i, tmpMatrix);
@@ -267,9 +405,8 @@ export default function IdeaGarden({ gardens }: Props) {
       });
     });
 
-    // ── dust marks: gray triangles + cream sparkles drifting through the scene ────
-    // Point sprites need a texture to be anything but a square, so we paint each
-    // mark shape onto a tiny canvas and use it as the points' map.
+    // Point sprites (bees, grass dots) need a texture to be anything but a square,
+    // so we paint each mark shape onto a tiny canvas and use it as the points' map.
     const makeMarkTexture = (draw: (ctx: CanvasRenderingContext2D, s: number) => void) => {
       const cv = document.createElement("canvas");
       cv.width = cv.height = 64;
@@ -277,53 +414,56 @@ export default function IdeaGarden({ gardens }: Props) {
       if (ctx) draw(ctx, 64);
       return new THREE.CanvasTexture(cv);
     };
-    const triTex = makeMarkTexture((ctx, s) => {
-      ctx.fillStyle = "#cfcabb";
-      ctx.beginPath();
-      ctx.moveTo(s * 0.5, s * 0.18);
-      ctx.lineTo(s * 0.84, s * 0.82);
-      ctx.lineTo(s * 0.16, s * 0.82);
-      ctx.closePath();
-      ctx.fill();
-    });
-    const starTex = makeMarkTexture((ctx, s) => {
-      ctx.fillStyle = "#f3edcf";
-      const c = s / 2;
-      const o = s * 0.46; // point reach
-      const w = s * 0.1; // waist
-      ctx.beginPath();
-      ctx.moveTo(c, c - o);
-      ctx.quadraticCurveTo(c + w, c - w, c + o, c);
-      ctx.quadraticCurveTo(c + w, c + w, c, c + o);
-      ctx.quadraticCurveTo(c - w, c + w, c - o, c);
-      ctx.quadraticCurveTo(c - w, c - w, c, c - o);
-      ctx.closePath();
-      ctx.fill();
-    });
-    const makeMarks = (count: number, tex: THREE.Texture, size: number, opacity: number) => {
-      const arr = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const r = Math.sqrt(Math.random()) * (sceneR + 8);
-        arr[i * 3] = Math.cos(a) * r;
-        arr[i * 3 + 1] = Math.random() * (maxH + 6) - 1; // spread at all heights
-        arr[i * 3 + 2] = Math.sin(a) * r;
+    // ── crystals: faceted line-art gems on slender stalks ───────────────────────
+    // Reworked from the old floating sprite cloud into thin OUTLINE gems drawn in
+    // the same pale line colour as the branches, each rooted on the ground on a
+    // vertical stalk - so they read "in lines" and match the trees' line-art look
+    // (little crystal plants standing among the trees) instead of a random haze.
+    const crystalSeg: number[] = [];
+    const pushSeg = (
+      ax: number, ay: number, az: number, bx: number, by: number, bz: number
+    ) => crystalSeg.push(ax, ay, az, bx, by, bz);
+    const CRYSTALS = Math.min(60, Math.max(20, Math.floor(sceneR * 0.9)));
+    for (let i = 0; i < CRYSTALS; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * (sceneR + 6);
+      const cx = Math.cos(a) * rad;
+      const cz = Math.sin(a) * rad;
+      const th = Math.random() * Math.PI; // horizontal facing of the gem's width axis
+      const ux = Math.cos(th);
+      const uz = Math.sin(th);
+      const stalkH = 3 + Math.random() * (5 + maxH * 0.08);
+      pushSeg(cx, 0, cz, cx, stalkH, cz); // slender vertical stalk
+      const gems = Math.random() < 0.5 ? 1 : 2;
+      let baseY = stalkH;
+      for (let g = 0; g < gems; g++) {
+        const w = 1.3 + Math.random() * 1.4; // half-width (big enough to read at fit-all)
+        const hh = w * (1.5 + Math.random() * 0.5); // half-height (tall faceted gem)
+        const cy = baseY + hh;
+        const rx = cx + ux * w;
+        const rz = cz + uz * w; // right vertex
+        const lx = cx - ux * w;
+        const lz = cz - uz * w; // left vertex
+        // rhombus outline + a vertical facet line through it
+        pushSeg(cx, cy + hh, cz, rx, cy, rz);
+        pushSeg(rx, cy, rz, cx, cy - hh, cz);
+        pushSeg(cx, cy - hh, cz, lx, cy, lz);
+        pushSeg(lx, cy, lz, cx, cy + hh, cz);
+        pushSeg(cx, cy + hh, cz, cx, cy - hh, cz);
+        baseY = cy + hh + 0.12;
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
-      const mat = new THREE.PointsMaterial({
-        map: tex,
-        size,
-        sizeAttenuation: false,
-        transparent: true,
-        opacity,
-        depthWrite: false,
-        alphaTest: 0.4,
-      });
-      return new THREE.Points(geo, mat);
-    };
-    scene.add(makeMarks(300, triTex, 9, 0.5));
-    scene.add(makeMarks(120, starTex, 11, 0.7));
+    }
+    const crystalGeo = new THREE.BufferGeometry();
+    crystalGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(crystalSeg), 3)
+    );
+    const crystalMat = new THREE.LineBasicMaterial({
+      color: lineColor,
+      transparent: true,
+      opacity: 0.42,
+    });
+    scene.add(new THREE.LineSegments(crystalGeo, crystalMat));
 
     // ── grass: short splayed blades scattered on the ground (flat line-art) ──────
     // One LineSegments for all blades (cheap); muted green, low opacity so it
@@ -334,7 +474,8 @@ export default function IdeaGarden({ gardens }: Props) {
     let gp = 0;
     for (let t = 0; t < GRASS_TUFTS; t++) {
       const a = Math.random() * Math.PI * 2;
-      const rad = Math.sqrt(Math.random()) * (sceneR + 6);
+      // center-weighted (pow > 0.5) so blades cluster toward the middle
+      const rad = Math.pow(Math.random(), 1.5) * (sceneR + 6);
       const cx = Math.cos(a) * rad;
       const cz = Math.sin(a) * rad;
       for (let b = 0; b < BLADES; b++) {
@@ -359,91 +500,145 @@ export default function IdeaGarden({ gardens }: Props) {
     });
     scene.add(new THREE.LineSegments(grassGeo, grassMat));
 
-    // ── bees: faint dashed flight-paths + a bright dot that travels each path ─────
-    // Each bee follows a smooth looping curve, drawn as a dashed line (the "trail"),
-    // with a single dot riding along it. Paths cross over the garden = pollination.
-    const BEE_COUNT = Math.min(16, Math.max(7, built.length + 4));
-    const beeCurves: THREE.CatmullRomCurve3[] = [];
-    const beeSpeed: number[] = [];
-    const beePhase: number[] = [];
-    const pathMat = new THREE.LineDashedMaterial({
-      color: 0xbdb89a,
-      transparent: true,
-      opacity: 0.3,
-      dashSize: 0.6,
-      gapSize: 0.5,
+    // ── grass dots: fine ground stipple, densest at the centre and thinning out ──
+    // toward the edge, so the grass spreads gradually from the middle of the forest.
+    const dotTex = makeMarkTexture((ctx, s) => {
+      ctx.fillStyle = "#9bb173";
+      ctx.beginPath();
+      ctx.arc(s / 2, s / 2, s * 0.26, 0, Math.PI * 2);
+      ctx.fill();
     });
-    for (let i = 0; i < BEE_COUNT; i++) {
+    const GRASS_DOTS = Math.min(5000, Math.max(1000, Math.floor(sceneR * 4)));
+    const dotPos = new Float32Array(GRASS_DOTS * 3);
+    for (let i = 0; i < GRASS_DOTS; i++) {
+      const a = Math.random() * Math.PI * 2;
+      // pow > 0.5 biases toward the centre -> density falls off with radius
+      const rad = Math.pow(Math.random(), 1.7) * (sceneR + 4);
+      dotPos[i * 3] = Math.cos(a) * rad;
+      dotPos[i * 3 + 1] = Math.random() * 0.22; // hug the ground
+      dotPos[i * 3 + 2] = Math.sin(a) * rad;
+    }
+    const dotGeo = new THREE.BufferGeometry();
+    dotGeo.setAttribute("position", new THREE.BufferAttribute(dotPos, 3));
+    const dotMat = new THREE.PointsMaterial({
+      map: dotTex,
+      color: 0xffffff,
+      size: 4,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      alphaTest: 0.4,
+    });
+    scene.add(new THREE.Points(dotGeo, dotMat));
+
+    // ── birds: line-art gulls that glide along looping paths and flap ────────────
+    // Each bird is a little "M" silhouette (two elbowed wings + a beak) drawn in
+    // the same pale line colour as the branches. It's oriented along its flight
+    // direction (so it flies forward, beak first) and its wings beat up and down
+    // every frame - reads clearly as a bird, not a dot. No trails (that was the
+    // bee "pollination path" idea); birds just fly around and above the canopy.
+    const BIRD_COUNT = Math.min(26, Math.max(12, built.length + 8));
+    const birdCurves: THREE.CatmullRomCurve3[] = [];
+    const birdSpeed: number[] = [];
+    const birdPhase: number[] = [];
+    const flapPhase: number[] = [];
+    const flapW: number[] = [];
+    for (let i = 0; i < BIRD_COUNT; i++) {
+      // Flight tiers so the whole space above the forest reads as a living dome:
+      // some birds skim the canopy, some cross above the labels, some soar high.
+      const t = Math.random();
+      let yLo: number;
+      let ySpan: number;
+      let rLo: number;
+      let rSpan: number;
+      let soar = false;
+      if (t < 0.4) {
+        yLo = maxH * 0.5; ySpan = maxH * 0.45; rLo = 0.35; rSpan = 0.65; // canopy level
+      } else if (t < 0.72) {
+        yLo = maxH * 1.05; ySpan = maxH * 0.65; rLo = 0.4; rSpan = 0.65; // above the labels
+      } else {
+        yLo = maxH * 1.7; ySpan = maxH * 0.8; rLo = 0.5; rSpan = 0.65; soar = true; // high dome
+      }
       const ctrl: THREE.Vector3[] = [];
       const loops = 4 + Math.floor(Math.random() * 3);
       for (let p = 0; p < loops; p++) {
         const a = Math.random() * Math.PI * 2;
-        const r = (0.25 + Math.random() * 0.9) * sceneR;
-        const y = 0.6 + Math.random() * Math.max(2, maxH * 0.7);
+        const r = (rLo + Math.random() * rSpan) * sceneR;
+        const y = yLo + Math.random() * ySpan;
         ctrl.push(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r));
       }
-      const curve = new THREE.CatmullRomCurve3(ctrl, true, "catmullrom", 0.5);
-      beeCurves.push(curve);
-      beeSpeed.push(0.004 + Math.random() * 0.007);
-      beePhase.push(Math.random());
-      const path = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(curve.getPoints(90)),
-        pathMat
-      );
-      path.computeLineDistances(); // required for dashes to show
-      scene.add(path);
+      birdCurves.push(new THREE.CatmullRomCurve3(ctrl, true, "catmullrom", 0.5));
+      // high soarers drift a little slower (gliding); low birds a bit livelier
+      birdSpeed.push(soar ? 0.004 + Math.random() * 0.004 : 0.006 + Math.random() * 0.008);
+      birdPhase.push(Math.random());
+      flapPhase.push(Math.random() * Math.PI * 2);
+      flapW.push((1.6 + Math.random() * 1.1) * Math.PI * 2); // ~1.6-2.7 wingbeats / sec
     }
-    // A little bee sprite (pale wings + amber striped body) rides each path.
-    const beeTex = makeMarkTexture((ctx, s) => {
-      const c = s / 2;
-      // wings
-      ctx.fillStyle = "rgba(242,242,228,0.85)";
-      ctx.beginPath();
-      ctx.ellipse(c - s * 0.12, c - s * 0.07, s * 0.16, s * 0.1, -0.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(c + s * 0.12, c - s * 0.07, s * 0.16, s * 0.1, 0.5, 0, Math.PI * 2);
-      ctx.fill();
-      // body
-      ctx.fillStyle = "#e6b34d";
-      ctx.beginPath();
-      ctx.ellipse(c, c + s * 0.05, s * 0.13, s * 0.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // stripes
-      ctx.strokeStyle = "rgba(40,30,10,0.8)";
-      ctx.lineWidth = s * 0.04;
-      for (const dy of [-0.04, 0.05, 0.14]) {
-        ctx.beginPath();
-        ctx.moveTo(c - s * 0.1, c + s * (0.05 + dy));
-        ctx.lineTo(c + s * 0.1, c + s * (0.05 + dy));
-        ctx.stroke();
-      }
-    });
-    const beeGeo = new THREE.BufferGeometry();
-    const beePos = new Float32Array(BEE_COUNT * 3);
-    beeGeo.setAttribute("position", new THREE.BufferAttribute(beePos, 3));
-    const beeMat = new THREE.PointsMaterial({
-      map: beeTex,
-      color: 0xffffff,
-      size: 14,
-      sizeAttenuation: false,
+
+    // One LineSegments for all birds: 5 segments each (2 per wing + 1 beak) = 10
+    // vertices, rewritten every frame from each bird's position, heading and flap.
+    const BIRD_SEGS = 5;
+    const birdGeo = new THREE.BufferGeometry();
+    const birdPos = new Float32Array(BIRD_COUNT * BIRD_SEGS * 2 * 3);
+    birdGeo.setAttribute("position", new THREE.BufferAttribute(birdPos, 3));
+    const birdMat = new THREE.LineBasicMaterial({
+      color: lineColor,
       transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      alphaTest: 0.4,
+      opacity: 0.9,
     });
-    scene.add(new THREE.Points(beeGeo, beeMat));
-    const beeTmp = new THREE.Vector3();
-    const updateBees = (time: number) => {
-      for (let i = 0; i < BEE_COUNT; i++) {
-        let u = beePhase[i] + time * beeSpeed[i];
+    scene.add(new THREE.LineSegments(birdGeo, birdMat));
+
+    const birdSpan = Math.max(5, Math.min(13, maxH * 0.13)); // wingspan (world units)
+    const bPos = new THREE.Vector3();
+    const bFwd = new THREE.Vector3();
+    const bSide = new THREE.Vector3();
+    const bUp = new THREE.Vector3();
+    const WORLD_UP = new THREE.Vector3(0, 1, 0);
+    const updateBirds = (time: number) => {
+      let o = 0;
+      const put = (x: number, y: number, z: number) => {
+        birdPos[o++] = x;
+        birdPos[o++] = y;
+        birdPos[o++] = z;
+      };
+      for (let i = 0; i < BIRD_COUNT; i++) {
+        let u = birdPhase[i] + time * birdSpeed[i];
         u -= Math.floor(u); // wrap into [0,1)
-        beeCurves[i].getPoint(u, beeTmp);
-        beePos[i * 3] = beeTmp.x;
-        beePos[i * 3 + 1] = beeTmp.y;
-        beePos[i * 3 + 2] = beeTmp.z;
+        birdCurves[i].getPoint(u, bPos);
+        birdCurves[i].getTangent(u, bFwd).normalize(); // heading
+        bSide.crossVectors(bFwd, WORLD_UP);
+        if (bSide.lengthSq() < 1e-6) bSide.set(1, 0, 0);
+        bSide.normalize();
+        bUp.crossVectors(bSide, bFwd).normalize();
+
+        const flap = Math.sin(time * flapW[i] + flapPhase[i]); // -1..1 wingbeat
+        // Permanent gull dihedral (elbow up, tip lower = a clear "M") PLUS the
+        // flap on top, so it reads as a bird through the whole wingbeat, not a
+        // flat dash at mid-stroke. Tips travel most.
+        const midY = birdSpan * 0.18 + flap * birdSpan * 0.22;
+        const tipY = birdSpan * 0.04 + flap * birdSpan * 0.5;
+        const cx = bPos.x;
+        const cy = bPos.y;
+        const cz = bPos.z;
+        // beak: a short segment forward along the flight direction
+        put(cx, cy, cz);
+        put(cx + bFwd.x * birdSpan * 0.5, cy + bFwd.y * birdSpan * 0.5, cz + bFwd.z * birdSpan * 0.5);
+        // each wing: centre -> elbow (mid) -> tip, spread out to the sides
+        for (const s of [-1, 1]) {
+          const mx = cx + bSide.x * s * birdSpan * 0.5 + bUp.x * midY;
+          const my = cy + bSide.y * s * birdSpan * 0.5 + bUp.y * midY;
+          const mz = cz + bSide.z * s * birdSpan * 0.5 + bUp.z * midY;
+          const tx = cx + bSide.x * s * birdSpan + bUp.x * tipY;
+          const ty = cy + bSide.y * s * birdSpan + bUp.y * tipY;
+          const tz = cz + bSide.z * s * birdSpan + bUp.z * tipY;
+          put(cx, cy, cz);
+          put(mx, my, mz);
+          put(mx, my, mz);
+          put(tx, ty, tz);
+        }
       }
-      beeGeo.attributes.position.needsUpdate = true;
+      birdGeo.attributes.position.needsUpdate = true;
     };
 
     // ── orthographic camera (low-angle field view) + controls ───────────────────
@@ -572,6 +767,13 @@ export default function IdeaGarden({ gardens }: Props) {
     // ── balloon labels: float each channel name above its own crown ──────────────
     const projV = new THREE.Vector3();
     const updateLabels = (time: number) => {
+      if (!showLabelsRef.current) {
+        for (const pv of plantViews) {
+          pv.pill.style.display = "none";
+          pv.line.style.display = "none";
+        }
+        return;
+      }
       const w = mount.clientWidth || 1;
       const h = mount.clientHeight || 1;
       for (let i = 0; i < plantViews.length; i++) {
@@ -693,7 +895,7 @@ export default function IdeaGarden({ gardens }: Props) {
       raf = requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
       controls.update();
-      updateBees(time);
+      updateBirds(time);
       updateHover();
       updateLabels(time);
       renderer.render(scene, camera);
@@ -722,10 +924,7 @@ export default function IdeaGarden({ gardens }: Props) {
       leafGeos.forEach((g) => g.dispose());
       branchMat.dispose();
       leafMat.dispose();
-      pathMat.dispose();
-      triTex.dispose(); // CanvasTextures aren't freed by scene.traverse
-      starTex.dispose();
-      beeTex.dispose();
+      dotTex.dispose(); // CanvasTextures aren't freed by scene.traverse
       overlay.replaceChildren(); // removes svg, pills, hover + scrubber DOM
       renderer.dispose();
       renderer.forceContextLoss();
@@ -733,9 +932,30 @@ export default function IdeaGarden({ gardens }: Props) {
     };
   }, [gardens, router, themeKey]);
 
+  const toggleClass =
+    "rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-xs backdrop-blur transition-colors";
   return (
     <div ref={mountRef} className="relative h-full w-full">
       <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
+      {/* Garden controls: hide/show labels + forest ambience (top-left). */}
+      <div className="absolute left-4 top-4 z-40 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setShowLabels((v) => !v)}
+          aria-pressed={showLabels}
+          className={`${toggleClass} ${showLabels ? "text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
+        >
+          {showLabels ? "Hide labels" : "Show labels"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSoundOn((v) => !v)}
+          aria-pressed={soundOn}
+          className={`${toggleClass} ${soundOn ? "text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
+        >
+          {soundOn ? "Sound on" : "Sound off"}
+        </button>
+      </div>
       {/* Credit for the garden concept, sitting just above the site's
           "designed & built by Tanja" pill (bottom-right). */}
       <a
