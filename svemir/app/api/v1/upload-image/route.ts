@@ -1,38 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireBearerToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { ALLOWED, MAX_BYTES, uploadScreenshot } from "@/lib/upload-image";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-
-const BUCKET = "screenshots";
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-  "image/webp",
-]);
-
-let bucketEnsured = false;
-
-async function ensureBucket(): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!supabaseAdmin) return { ok: false, error: "Admin client not configured" };
-  if (bucketEnsured) return { ok: true };
-  const { data: buckets, error: listErr } = await supabaseAdmin.storage.listBuckets();
-  if (listErr) return { ok: false, error: listErr.message };
-  if (!buckets?.some((b) => b.name === BUCKET)) {
-    const { error: createErr } = await supabaseAdmin.storage.createBucket(BUCKET, {
-      public: true,
-      fileSizeLimit: MAX_BYTES,
-      allowedMimeTypes: [...ALLOWED],
-    });
-    if (createErr) return { ok: false, error: createErr.message };
-  }
-  bucketEnsured = true;
-  return { ok: true };
-}
 
 export async function POST(req: NextRequest) {
   const auth = await requireBearerToken(req);
@@ -44,11 +16,6 @@ export async function POST(req: NextRequest) {
       { error: "Server not configured (SUPABASE_SERVICE_ROLE_KEY missing)" },
       { status: 500 }
     );
-  }
-
-  const ensured = await ensureBucket();
-  if (!ensured.ok) {
-    return NextResponse.json({ error: ensured.error }, { status: 500 });
   }
 
   try {
@@ -71,30 +38,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ext = type.split("/")[1] || "png";
-    const stamp = new Date()
-      .toISOString()
-      .replace(/[:.]/g, "-")
-      .replace(/Z$/, "");
-    const random = Math.random().toString(36).slice(2, 8);
-    const path = `${stamp}-${random}.${ext}`;
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(path, buffer, {
-        contentType: type,
-        upsert: false,
-      });
-    if (uploadErr) {
-      return NextResponse.json(
-        { error: `Upload failed: ${uploadErr.message}` },
-        { status: 500 }
-      );
+    const result = await uploadScreenshot(buffer, type);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
-
-    const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
-    return NextResponse.json({ url: pub.publicUrl });
+    return NextResponse.json({ url: result.url });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Upload failed";
     return NextResponse.json({ error: message }, { status: 500 });

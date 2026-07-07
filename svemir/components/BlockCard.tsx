@@ -109,7 +109,6 @@ export default function BlockCard({
               alt={block.title}
               fill
               sizes="(min-width: 1280px) 18vw, (min-width: 768px) 24vw, 48vw"
-              quality={100}
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
           ) : block.kind === "text" && block.description ? (

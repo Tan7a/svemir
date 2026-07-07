@@ -6,17 +6,19 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
   images: {
+    // Do NOT use Vercel's metered Image Optimization service (5k transforms/mo
+    // on the free tier). We optimize uploaded screenshots ourselves at upload
+    // time (see lib/upload-image.ts), and external OG images are already small.
+    // next/image is kept for its lazy-loading and layout stability.
+    unoptimized: true,
     remotePatterns: [
+      // Still needed so next/image will render arbitrary remote hosts.
       { protocol: "https", hostname: "**" },
-      // Some saved blocks have http image URLs; next/image otherwise throws
-      // "hostname not configured" and crashes the whole page. next/image
-      // fetches + optimizes server-side, so the browser still gets https
-      // (no mixed content).
+      // Legacy blocks with http image URLs. The CSP below adds
+      // upgrade-insecure-requests so the browser fetches them over https
+      // (no mixed content) now that Vercel no longer proxies them.
       { protocol: "http", hostname: "**" },
     ],
-    // Next 16 defaults images.qualities to [75]; whitelist 100 so the
-    // text-dense screenshot thumbnails can render crisp instead of mushy.
-    qualities: [75, 100],
   },
   experimental: {
     // Hold dynamic and static segments in the client router cache longer so
@@ -39,7 +41,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "frame-ancestors 'none'",
+            // upgrade-insecure-requests: auto-upgrade any http image URL to
+            // https so legacy blocks don't break as mixed content now that
+            // next/image serves them directly (unoptimized) instead of via
+            // Vercel's optimizer.
+            value: "frame-ancestors 'none'; upgrade-insecure-requests",
           },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
