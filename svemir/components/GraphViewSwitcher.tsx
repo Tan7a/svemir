@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import KnowledgeGraph, {
-  type GraphItem,
-  type GraphConcept,
-  type BlockConceptLink,
-  type ManualEdge,
+import type {
+  GraphItem,
+  GraphConcept,
+  BlockConceptLink,
+  ManualEdge,
 } from "./KnowledgeGraph";
 import ConceptCloud from "./ConceptCloud";
 import type { GardenChannel } from "./IdeaGarden";
@@ -18,6 +18,18 @@ const IdeaGarden = dynamic(() => import("./IdeaGarden"), {
   loading: () => (
     <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
       Growing garden…
+    </div>
+  ),
+});
+
+// Same treatment for the Map: it pulls in three, three-spritetext and
+// d3-force-3d, which shouldn't ride along in the shared chunk for people who
+// only ever open Garden or Concepts.
+const KnowledgeGraph = dynamic(() => import("./KnowledgeGraph"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
+      Loading galaxy…
     </div>
   ),
 });
@@ -51,7 +63,9 @@ export default function GraphViewSwitcher({ gardens, graphProps }: Props) {
   const view: View = raw === "topologies" || raw === "concepts" ? raw : "garden";
 
   function setView(v: View) {
-    router.push(`/graph?view=${v}`, { scroll: false });
+    // replace, not push: tab clicks shouldn't stack history entries, otherwise
+    // Back walks the tab history instead of leaving /graph.
+    router.replace(`/graph?view=${v}`, { scroll: false });
   }
 
   return (
