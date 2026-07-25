@@ -4,18 +4,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
-import { forceCollide, forceX, forceY } from "d3-force-3d";
+import * as THREE from "three";
+import SpriteText from "three-spritetext";
+import { forceCollide, forceX, forceY, forceZ } from "d3-force-3d";
 import { channelColor } from "@/lib/constants";
 import { useThemePalette } from "@/lib/use-theme-palette";
 
-// react-force-graph-2d's TypeScript generics don't survive next/dynamic, so
+// react-force-graph-3d's TypeScript generics don't survive next/dynamic, so
 // we treat it as a permissive component and rely on our own GraphNode/GraphLink
 // types inside callbacks.
-const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
-      Loading graph…
+      Loading galaxy…
     </div>
   ),
 }) as ComponentType<Record<string, unknown>>;
@@ -106,6 +108,48 @@ function linkEndId(end: unknown): string {
     : String(end);
 }
 
+/** Escape a title for the hover-tooltip HTML string. */
+function escapeHTML(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ── cozy.im-style node discs ──────────────────────────────────────────────────
+// Flat matte billboard textures, drawn once and shared. Nodes are sprites
+// (always face the camera), so the galaxy reads as quiet monochrome discs -
+// hierarchy comes from size, not colour. Hubs wear a darker rim ring.
+let plainDiscTex: THREE.Texture | null = null;
+let rimDiscTex: THREE.Texture | null = null;
+
+function discTexture(withRim: boolean): THREE.Texture {
+  const cached = withRim ? rimDiscTex : plainDiscTex;
+  if (cached) return cached;
+  const S = 128;
+  const c = document.createElement("canvas");
+  c.width = c.height = S;
+  const ctx = c.getContext("2d")!;
+  if (withRim) {
+    // Dark "washer" ring with a light core disc - flat, no gradient/glow.
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
+    ctx.fillStyle = "#3f3f46";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 38, 0, 2 * Math.PI);
+    ctx.fillStyle = "#d6d6dc";
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
+    ctx.fillStyle = "#ffffff"; // tinted per node via material colour
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (withRim) rimDiscTex = tex;
+  else plainDiscTex = tex;
+  return tex;
+}
+
 // World-space radius of a node's dot - scales with its link count (degree), so
 // well-connected hubs read bigger. Shared by the painter, the click hit-area,
 // and the collision force so spacing matches what's drawn.
@@ -132,9 +176,21 @@ export default function KnowledgeGraph({
       | undefined;
     d3ReheatSimulation?: () => void;
     zoomToFit?: (ms?: number, padding?: number) => void;
-    centerAt?: (x?: number, y?: number, ms?: number) => void;
-    zoom?: (k?: number, ms?: number) => void;
+    cameraPosition?: (
+      pos: { x: number; y: number; z: number },
+      lookAt?: { x: number; y: number; z: number },
+      ms?: number
+    ) => void;
+    controls?: () => {
+      autoRotate?: boolean;
+      autoRotateSpeed?: number;
+      addEventListener?: (ev: string, cb: () => void) => void;
+    };
+    scene?: () => THREE.Scene;
   } | null>(null);
+  // Ref attachment doesn't re-render, and the 3D module loads lazily - this
+  // flag re-runs the setup effects once the graph instance actually exists.
+  const [fgReady, setFgReady] = useState(false);
   const [size, setSize] = useState({ w: 0, h: 0 });
   // The node the cursor is over - drives Obsidian-style neighbour highlighting.
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -288,10 +344,12 @@ export default function KnowledgeGraph({
     }
     for (const n of nodes) n.deg = deg.get(n.id) ?? 0;
 
-    // ── constellation seeding ────────────────────────────────────────────────
-    // Hubs on a ring (alphabetical, so adding blocks doesn't reshuffle), sized
-    // so neighbouring hubs start ~40 world-units apart.
-    type Seeded = GraphNode & { x?: number; y?: number };
+    // ── galaxy seeding ───────────────────────────────────────────────────────
+    // Hubs on a ring in the z=0 plane (alphabetical, so adding blocks doesn't
+    // reshuffle); everything else scatters near its home with a little
+    // vertical jitter, so the archive settles into a flattened galactic disc
+    // (a forceZ toward 0 keeps it that way). Deterministic via hash01.
+    type Seeded = GraphNode & { x?: number; y?: number; z?: number };
     const hubs = [...channelMeta.keys()].sort((a, b) =>
       (channelMeta.get(a)!.name).localeCompare(channelMeta.get(b)!.name)
     );
@@ -306,12 +364,14 @@ export default function KnowledgeGraph({
         const a = hubAngle.get(n.tagIds[0]) ?? 0;
         n.x = Math.cos(a) * R;
         n.y = Math.sin(a) * R;
+        n.z = 0;
       } else if (n.type === "concept") {
         // Concepts bridge channels, so they start near the centre.
         const a = hash01(n.id, 1) * 2 * Math.PI;
         const d = hash01(n.id, 2) * R * 0.35;
         n.x = Math.cos(a) * d;
         n.y = Math.sin(a) * d;
+        n.z = (hash01(n.id, 6) - 0.5) * 50;
       } else if (n.tagIds[0]) {
         // Blocks scatter around their primary channel's hub.
         const a = hubAngle.get(n.tagIds[0]) ?? 0;
@@ -319,32 +379,19 @@ export default function KnowledgeGraph({
         const jd = 12 + hash01(n.id, 4) * 36;
         n.x = Math.cos(a) * R + Math.cos(ja) * jd;
         n.y = Math.sin(a) * R + Math.sin(ja) * jd;
+        n.z = (hash01(n.id, 6) - 0.5) * 30;
       } else {
         // Channel-less blocks start on a wider ring - they would drift there
         // anyway; seeding makes it deliberate and stable.
         const a = hash01(n.id, 5) * 2 * Math.PI;
         n.x = Math.cos(a) * R * 1.35;
         n.y = Math.sin(a) * R * 1.35;
+        n.z = (hash01(n.id, 6) - 0.5) * 40;
       }
     }
 
     return { nodes, links };
   }, [items, concepts, blockConceptLinks, manualEdges]);
-
-  // Adjacency for hover highlighting: id → set of directly-linked ids. Built from
-  // the raw link endpoints (ids), so it survives the simulation mutating them.
-  const neighbors = useMemo(() => {
-    const m = new Map<string, Set<string>>();
-    for (const l of data.links) {
-      const s = linkEndId(l.source);
-      const t = linkEndId(l.target);
-      if (!m.has(s)) m.set(s, new Set());
-      if (!m.has(t)) m.set(t, new Set());
-      m.get(s)!.add(t);
-      m.get(t)!.add(s);
-    }
-    return m;
-  }, [data]);
 
   // id → node lookup, used by the filter's link-visibility test.
   const nodeById = useMemo(() => {
@@ -352,26 +399,6 @@ export default function KnowledgeGraph({
     for (const n of data.nodes) m.set(n.id, n);
     return m;
   }, [data]);
-
-  // "Well-connected" threshold: roughly the 90th-percentile degree. Nodes at or
-  // above this reveal their label at the lowest zoom; the reveal is scaled
-  // between 0 and this so hubs name themselves first.
-  const hubDeg = useMemo(() => {
-    const degs = data.nodes
-      .map((n) => n.deg ?? 0)
-      .filter((d) => d > 0)
-      .sort((a, b) => a - b);
-    if (degs.length === 0) return 1;
-    const p90 = degs[Math.floor(degs.length * 0.9)] ?? degs[degs.length - 1];
-    return Math.max(1, p90);
-  }, [data]);
-
-  // Nodes sorted by degree (busiest first). The label pass walks this order so
-  // hubs claim their space before smaller nodes - the key to a readable graph.
-  const nodesByDegree = useMemo(
-    () => [...data.nodes].sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0)),
-    [data]
-  );
 
   // Distinct primary channels (a block's first channel) for the filter chips.
   // Channel-less blocks collapse into one "No channel" group so they're
@@ -430,10 +457,19 @@ export default function KnowledgeGraph({
   useEffect(() => setMatchIdx(0), [query]);
 
   const jumpToMatch = (idx: number) => {
-    const n = matches[idx] as (GraphNode & { x?: number; y?: number }) | undefined;
+    const n = matches[idx] as
+      | (GraphNode & { x?: number; y?: number; z?: number })
+      | undefined;
     if (!n || n.x === undefined || n.y === undefined) return;
-    fgRef.current?.centerAt?.(n.x, n.y, 600);
-    fgRef.current?.zoom?.(3, 600);
+    // Fly the camera to a point just outside the node, looking at it.
+    const z = n.z ?? 0;
+    const dist = Math.hypot(n.x, n.y, z) || 1;
+    const ratio = 1 + 90 / dist;
+    fgRef.current?.cameraPosition?.(
+      { x: n.x * ratio, y: n.y * ratio, z: z * ratio + 50 },
+      { x: n.x, y: n.y, z },
+      1200
+    );
     setFocusId(n.id);
   };
 
@@ -503,13 +539,73 @@ export default function KnowledgeGraph({
         .radius((n: { deg?: number }) => nodeRadius(n) + 4)
         .strength(1)
     );
-    fg.d3Force("x", forceX(0).strength(0.06));
-    fg.d3Force("y", forceY(0).strength(0.06));
+    fg.d3Force("x", forceX(0).strength(0.05));
+    fg.d3Force("y", forceY(0).strength(0.05));
+    // The galaxy flattener: a pull toward the z=0 plane keeps the cloud
+    // disc-shaped (clusters still puff a little, which reads as depth when
+    // orbiting). 0.12 was too weak: charge pushed whole clusters off-plane.
+    fg.d3Force("z", forceZ(0).strength(0.32));
 
     fg.d3ReheatSimulation?.();
-    const t = setTimeout(() => fg.zoomToFit?.(600, 70), 1400);
+    const t = setTimeout(() => fg.zoomToFit?.(800, 60), 1600);
     return () => clearTimeout(t);
-  }, [data, size.w]);
+  }, [data, size.w, fgReady]);
+
+  // Galaxy dressing + motion, once the 3D scene exists: a matte starfield
+  // shell far behind the graph (tiny flat points, NO glow/bloom - hard rule),
+  // and a slow auto-orbit that stops the moment you grab the view.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || size.w === 0) return;
+
+    const scene = fg.scene?.();
+    if (scene && !scene.getObjectByName("starfield")) {
+      const N = 1200;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        // Uniform direction, distance well beyond the graph so stars never
+        // mix with nodes while orbiting.
+        const u = hash01(String(i), 7) * 2 - 1;
+        const th = hash01(String(i), 8) * 2 * Math.PI;
+        const r = 1600 + hash01(String(i), 9) * 1800;
+        const s = Math.sqrt(1 - u * u);
+        pos[i * 3] = s * Math.cos(th) * r;
+        pos[i * 3 + 1] = s * Math.sin(th) * r;
+        pos[i * 3 + 2] = u * r;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0x84848c,
+        size: 1.2,
+        sizeAttenuation: false,
+        transparent: true,
+        opacity: 0.3,
+      });
+      const stars = new THREE.Points(geo, mat);
+      stars.name = "starfield";
+      scene.add(stars);
+    }
+
+    const controls = fg.controls?.();
+    if (controls) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.4;
+      controls.addEventListener?.("start", () => {
+        controls.autoRotate = false;
+      });
+    }
+
+    return () => {
+      const sc = fg.scene?.();
+      const stars = sc?.getObjectByName("starfield") as THREE.Points | undefined;
+      if (stars) {
+        sc?.remove(stars);
+        stars.geometry.dispose();
+        (stars.material as THREE.Material).dispose();
+      }
+    };
+  }, [data, size.w, fgReady]);
 
   // Hover follows the cursor; click "pins" a focus. Hover wins while active so
   // you can still peek at other nodes without losing your pinned selection.
@@ -645,16 +741,18 @@ export default function KnowledgeGraph({
         )}
       </div>
       {size.w > 0 && size.h > 0 && (
-        <ForceGraph2D
-          ref={fgRef}
+        <ForceGraph3D
+          ref={(inst: unknown) => {
+            fgRef.current = inst as (typeof fgRef)["current"];
+            if (inst) setFgReady(true);
+          }}
           graphData={data}
           width={size.w}
           height={size.h}
           backgroundColor={palette.bg}
-          minZoom={0.2}
-          maxZoom={8}
-          warmupTicks={20}
-          cooldownTicks={200}
+          showNavInfo={false}
+          warmupTicks={30}
+          cooldownTicks={250}
           d3VelocityDecay={0.3}
           enableNodeDrag={true}
           onNodeDragEnd={(raw: unknown) => {
@@ -663,19 +761,29 @@ export default function KnowledgeGraph({
             const n = raw as GraphNode & {
               x?: number;
               y?: number;
+              z?: number;
               fx?: number;
               fy?: number;
+              fz?: number;
             };
             n.fx = n.x;
             n.fy = n.y;
+            n.fz = n.z;
           }}
           onNodeHover={(raw: unknown) => {
             const n = raw as GraphNode | null;
             setHoverId(n ? n.id : null);
           }}
           linkVisibility={(raw: unknown) => {
-            if (!anyFilter) return true;
             const l = raw as GraphLink;
+            const touchesActive =
+              activeId !== null &&
+              (linkEndId(l.source) === activeId ||
+                linkEndId(l.target) === activeId);
+            // Concept cross-ties are the tangle: in 3D they only appear
+            // around the node you're hovering/inspecting.
+            if (l.kind === "concept" && !touchesActive) return false;
+            if (!anyFilter) return true;
             const s = nodeById.get(linkEndId(l.source));
             const t = nodeById.get(linkEndId(l.target));
             return !!s && !!t && isNodeVisible(s) && isNodeVisible(t);
@@ -686,32 +794,17 @@ export default function KnowledgeGraph({
               const touches =
                 linkEndId(l.source) === activeId ||
                 linkEndId(l.target) === activeId;
-              if (!touches) return `rgba(${palette.inkRGB},0.02)`;
+              if (!touches) return `rgba(${palette.inkRGB},0.03)`;
               return l.kind === "manual"
                 ? `rgba(${palette.inkRGB},0.6)`
-                : `rgba(${palette.inkRGB},0.4)`;
+                : `rgba(${palette.inkRGB},0.42)`;
             }
-            // All grey at rest. Concept cross-ties are the visual tangle, so
-            // they stay near-invisible until you hover/focus a node.
-            if (l.kind === "concept") return `rgba(${palette.inkRGB},0.03)`;
+            // Whisper-faint grey at rest, cozy.im style.
             return l.kind === "manual"
-              ? `rgba(${palette.inkRGB},0.28)`
-              : `rgba(${palette.inkRGB},0.1)`;
+              ? `rgba(${palette.inkRGB},0.24)`
+              : `rgba(${palette.inkRGB},0.09)`;
           }}
-          linkWidth={(raw: unknown) => {
-            const l = raw as GraphLink;
-            const base =
-              l.kind === "manual" ? 1.2 : l.kind === "channel" ? 0.8 : 0.5;
-            if (
-              activeId &&
-              (linkEndId(l.source) === activeId ||
-                linkEndId(l.target) === activeId)
-            ) {
-              return base + 0.8;
-            }
-            return base;
-          }}
-          linkCurvature={0}
+          linkOpacity={1}
           onNodeClick={(raw: unknown, event: unknown) => {
             const node = raw as GraphNode;
             const ev = event as MouseEvent;
@@ -730,137 +823,45 @@ export default function KnowledgeGraph({
             setFocusId(null);
           }}
           nodeVisibility={(raw: unknown) => isNodeVisible(raw as GraphNode)}
-          nodeCanvasObjectMode={() => "replace"}
-          nodeCanvasObject={(raw: unknown, ctx: CanvasRenderingContext2D) => {
-            const node = raw as GraphNode & { x?: number; y?: number };
-            if (node.x === undefined || node.y === undefined) return;
-            const r = nodeRadius(node);
-
-            // Dimming: when a node is hovered or focused (clicked), fade
-            // everything that isn't it or one of its direct neighbours.
-            const dim =
-              activeId !== null &&
-              node.id !== activeId &&
-              !neighbors.get(activeId)?.has(node.id);
-            ctx.globalAlpha = dim ? 0.12 : 1;
-
-            // Flat dot - no glow. Blocks in their channel colour, concepts amber.
-            // Labels are drawn separately in onRenderFramePost so we can cull
-            // overlaps globally (Obsidian-style) rather than per-node.
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-            ctx.fillStyle = node.color;
-            ctx.fill();
-
-            ctx.globalAlpha = 1;
+          nodeLabel={(raw: unknown) => {
+            const n = raw as GraphNode;
+            return `<div style="font:12px Inter,system-ui,sans-serif;padding:3px 8px;border-radius:8px;background:rgba(12,12,14,0.88);color:#e5e5ea;max-width:260px">${escapeHTML(
+              n.name
+            )}</div>`;
           }}
-          onRenderFramePost={(ctx: CanvasRenderingContext2D, globalScale: number) => {
-            // ── Obsidian-style label pass ────────────────────────────────────
-            // The unreadable version drew every node's label, so hundreds piled
-            // on top of each other. Instead we walk nodes busiest-first and only
-            // draw a label if its box doesn't overlap one already placed - so the
-            // most-connected nodes always win their space and the rest stay
-            // hidden until you zoom in (smaller text ⇒ more labels fit). On
-            // hover/focus we show only that node + its neighbours.
-            const placed: { x0: number; y0: number; x1: number; y1: number }[] =
-              [];
-            const pad = 3 / globalScale; // breathing room between labels (screen px)
-
-            const inActiveSet = (id: string) =>
-              activeId !== null &&
-              (id === activeId || !!neighbors.get(activeId)?.has(id));
-
-            for (const node of nodesByDegree) {
-              const n = node as GraphNode & { x?: number; y?: number };
-              if (n.x === undefined || n.y === undefined) continue;
-              if (!isNodeVisible(n)) continue;
-
-              // When something is active, only its neighbourhood is labelled.
-              if (activeId !== null && !inActiveSet(n.id)) continue;
-
-              const isConcept = n.type === "concept";
-              const isChannel = n.type === "channel";
-              const highlighted = inActiveSet(n.id);
-
-              // Zoom fade, led earlier for well-connected nodes. Channels name
-              // themselves first (they're the wayfinding layer), then concepts,
-              // then blocks as you zoom in.
-              const degNorm = Math.min(1, (n.deg ?? 0) / hubDeg);
-              const revealLead = isChannel ? 0.2 : isConcept ? 0.35 : 0.9;
-              const baseStart = isChannel ? 0.22 : isConcept ? 0.4 : 1.1;
-              const baseEnd = isChannel ? 0.7 : isConcept ? 1.1 : 2.0;
-              const fadeStart = Math.max(0.2, baseStart - degNorm * revealLead);
-              const fadeEnd = Math.max(fadeStart + 0.3, baseEnd - degNorm * revealLead);
-              const alpha = highlighted
-                ? 1
-                : Math.max(
-                    0,
-                    Math.min(1, (globalScale - fadeStart) / (fadeEnd - fadeStart))
-                  );
-              if (alpha <= 0.04) continue;
-
-              // On-screen px grows with zoom, clamped to a readable band.
-              const maxPx = isChannel ? 26 : isConcept ? 24 : 20;
-              const grow = (isChannel ? 7 : isConcept ? 6 : 5) * globalScale;
-              const screenPx = Math.min(maxPx, Math.max(11, grow));
-              const fontSize = screenPx / globalScale;
-              ctx.font = `${
-                isChannel || isConcept ? "600 " : ""
-              }${fontSize}px Inter, system-ui, sans-serif`;
-
-              const label =
-                n.name.length > 36 ? n.name.slice(0, 34) + "…" : n.name;
-              const w = ctx.measureText(label).width;
-              const r = nodeRadius(n);
-              const cx = n.x;
-              const top = n.y + r + 2 / globalScale;
-              const box = {
-                x0: cx - w / 2 - pad,
-                y0: top - pad,
-                x1: cx + w / 2 + pad,
-                y1: top + fontSize + pad,
-              };
-
-              // Collision cull: skip if this label overlaps an already-placed one.
-              let clash = false;
-              for (const p of placed) {
-                if (
-                  box.x0 < p.x1 &&
-                  box.x1 > p.x0 &&
-                  box.y0 < p.y1 &&
-                  box.y1 > p.y0
-                ) {
-                  clash = true;
-                  break;
-                }
-              }
-              if (clash) continue;
-              placed.push(box);
-
-              ctx.textAlign = "center";
-              ctx.textBaseline = "top";
-              // Subtle dark halo so text stays legible over links/dots.
-              ctx.lineWidth = fontSize * 0.22;
-              ctx.strokeStyle = `rgba(${palette.haloRGB},${0.85 * alpha})`;
-              ctx.lineJoin = "round";
-              ctx.strokeText(label, cx, top);
-              ctx.fillStyle = `rgba(${palette.inkRGB},${alpha})`;
-              ctx.fillText(label, cx, top);
-            }
-          }}
-          nodePointerAreaPaint={(
-            raw: unknown,
-            color: string,
-            ctx: CanvasRenderingContext2D
-          ) => {
-            // Defines the clickable/hoverable disc for each node (needed because
-            // we fully custom-paint nodes above).
-            const node = raw as GraphNode & { x?: number; y?: number };
-            if (node.x === undefined || node.y === undefined) return;
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, nodeRadius(node) + 2, 0, 2 * Math.PI);
-            ctx.fillStyle = color;
-            ctx.fill();
+          nodeThreeObject={(raw: unknown) => {
+            // cozy.im-style monochrome discs: flat billboard sprites, sized by
+            // connectedness. Channel hubs are big light discs with a dark rim;
+            // blocks are small dim dots; concepts sit between. Channel names
+            // float above their hub; other names show in the hover tooltip.
+            const n = raw as GraphNode;
+            const isHub = n.type === "channel";
+            const isConcept = n.type === "concept";
+            const r = 4 * Math.cbrt(Math.min(60, Math.max(1, n.deg ?? 1)));
+            const d = isHub ? r * 2.6 : r * 2;
+            const sprite = new THREE.Sprite(
+              new THREE.SpriteMaterial({
+                map: discTexture(isHub),
+                color: isHub ? 0xffffff : isConcept ? 0x93939b : 0x6f6f77,
+                transparent: true,
+                depthWrite: false,
+              })
+            );
+            sprite.scale.set(d, d, 1);
+            if (!isHub) return sprite;
+            const group = new THREE.Group();
+            group.add(sprite);
+            const label =
+              n.name.length > 28 ? n.name.slice(0, 26) + "…" : n.name;
+            const text = new SpriteText(label);
+            text.textHeight = 6.5;
+            text.color = "#c9c9d0";
+            text.fontWeight = "600";
+            text.fontFace = "Inter, system-ui, sans-serif";
+            text.material.depthWrite = false;
+            text.position.y = d / 2 + 7;
+            group.add(text);
+            return group;
           }}
         />
       )}
