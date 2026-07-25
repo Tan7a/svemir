@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import * as THREE from "three";
 import SpriteText from "three-spritetext";
-import { forceCollide, forceX, forceY, forceZ } from "d3-force-3d";
+import { forceCollide, forceRadial } from "d3-force-3d";
 import { channelColor } from "@/lib/constants";
 import { useThemePalette } from "@/lib/use-theme-palette";
 
@@ -90,6 +90,14 @@ const CONCEPT_HEX = "#f59e0b"; // detail-card accent
 const conceptNodeId = (id: string) => `concept:${id}`;
 const channelNodeId = (id: string) => `channel:${id}`;
 
+// Golden angle in radians - fibonacci-lattice spacing for the hub sphere.
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+
+/** Sphere radius sized so ~K hubs get comfortable spacing on its surface. */
+function sphereRadius(hubCount: number): number {
+  return Math.max(180, 28 * Math.sqrt(Math.max(1, hubCount)));
+}
+
 /** Deterministic [0,1) from a string - keeps the constellation seeding stable. */
 function hash01(s: string, salt = 0): number {
   let h = 2166136261 ^ salt;
@@ -113,40 +121,25 @@ function escapeHTML(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// ── cozy.im-style node discs ──────────────────────────────────────────────────
-// Flat matte billboard textures, drawn once and shared. Nodes are sprites
-// (always face the camera), so the galaxy reads as quiet monochrome discs -
-// hierarchy comes from size, not colour. Hubs wear a darker rim ring.
+// ── node disc texture ─────────────────────────────────────────────────────────
+// One flat matte disc, drawn once and shared; every node tints it via its
+// sprite material colour + opacity. Billboard sprites always face the camera,
+// so the sphere reads as layered translucent particles. No gradients/glow.
 let plainDiscTex: THREE.Texture | null = null;
-let rimDiscTex: THREE.Texture | null = null;
 
-function discTexture(withRim: boolean): THREE.Texture {
-  const cached = withRim ? rimDiscTex : plainDiscTex;
-  if (cached) return cached;
+function discTexture(): THREE.Texture {
+  if (plainDiscTex) return plainDiscTex;
   const S = 128;
   const c = document.createElement("canvas");
   c.width = c.height = S;
   const ctx = c.getContext("2d")!;
-  if (withRim) {
-    // Dark "washer" ring with a light core disc - flat, no gradient/glow.
-    ctx.beginPath();
-    ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
-    ctx.fillStyle = "#3f3f46";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(S / 2, S / 2, 38, 0, 2 * Math.PI);
-    ctx.fillStyle = "#d6d6dc";
-    ctx.fill();
-  } else {
-    ctx.beginPath();
-    ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
-    ctx.fillStyle = "#ffffff"; // tinted per node via material colour
-    ctx.fill();
-  }
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
+  ctx.fillStyle = "#ffffff"; // tinted per node via material colour
+  ctx.fill();
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  if (withRim) rimDiscTex = tex;
-  else plainDiscTex = tex;
+  plainDiscTex = tex;
   return tex;
 }
 
@@ -344,49 +337,75 @@ export default function KnowledgeGraph({
     }
     for (const n of nodes) n.deg = deg.get(n.id) ?? 0;
 
-    // ── galaxy seeding ───────────────────────────────────────────────────────
-    // Hubs on a ring in the z=0 plane (alphabetical, so adding blocks doesn't
-    // reshuffle); everything else scatters near its home with a little
-    // vertical jitter, so the archive settles into a flattened galactic disc
-    // (a forceZ toward 0 keeps it that way). Deterministic via hash01.
-    type Seeded = GraphNode & { x?: number; y?: number; z?: number };
+    // ── sphere seeding ───────────────────────────────────────────────────────
+    // Hubs spread evenly over a sphere surface via a fibonacci lattice
+    // (alphabetical order, so adding blocks doesn't reshuffle); blocks
+    // scatter around their hub, concepts fill an inner ball, orphans dust a
+    // wider shell. A forceRadial in the forces effect keeps the shell shape.
+    // Deterministic via hash01.
+    type Seeded = GraphNode & {
+      x?: number;
+      y?: number;
+      z?: number;
+      fx?: number;
+      fy?: number;
+      fz?: number;
+    };
     const hubs = [...channelMeta.keys()].sort((a, b) =>
       (channelMeta.get(a)!.name).localeCompare(channelMeta.get(b)!.name)
     );
-    const R = Math.max(200, (hubs.length * 40) / (2 * Math.PI));
-    const hubAngle = new Map<string, number>();
+    const R = sphereRadius(hubs.length);
+    const hubPos = new Map<string, { x: number; y: number; z: number }>();
     hubs.forEach((id, i) => {
-      const a = (i / hubs.length) * 2 * Math.PI - Math.PI / 2;
-      hubAngle.set(id, a);
+      // Fibonacci sphere: uniform-ish coverage for any point count.
+      const y = 1 - ((i + 0.5) * 2) / hubs.length;
+      const rr = Math.sqrt(Math.max(0, 1 - y * y));
+      const phi = i * GOLDEN;
+      hubPos.set(id, {
+        x: Math.cos(phi) * rr * R,
+        y: y * R,
+        z: Math.sin(phi) * rr * R,
+      });
     });
+    // Deterministic unit vector from a node id, for jitter directions.
+    const dir = (id: string, salt: number) => {
+      const u = hash01(id, salt) * 2 - 1;
+      const th = hash01(id, salt + 1) * 2 * Math.PI;
+      const s = Math.sqrt(Math.max(0, 1 - u * u));
+      return { x: s * Math.cos(th), y: s * Math.sin(th), z: u };
+    };
     for (const n of nodes as Seeded[]) {
       if (n.type === "channel") {
-        const a = hubAngle.get(n.tagIds[0]) ?? 0;
-        n.x = Math.cos(a) * R;
-        n.y = Math.sin(a) * R;
-        n.z = 0;
+        // Hubs are PINNED to their lattice spot: they are the fixed anchor
+        // stars that guarantee the sphere shape (links would otherwise drag
+        // every cluster into one cap). Dragging a hub re-pins it elsewhere.
+        const p = hubPos.get(n.tagIds[0])!;
+        n.x = n.fx = p.x;
+        n.y = n.fy = p.y;
+        n.z = n.fz = p.z;
       } else if (n.type === "concept") {
-        // Concepts bridge channels, so they start near the centre.
-        const a = hash01(n.id, 1) * 2 * Math.PI;
-        const d = hash01(n.id, 2) * R * 0.35;
-        n.x = Math.cos(a) * d;
-        n.y = Math.sin(a) * d;
-        n.z = (hash01(n.id, 6) - 0.5) * 50;
+        // Concepts bridge channels: they fill the inner ball, so the core of
+        // the sphere stays alive.
+        const v = dir(n.id, 1);
+        const d = hash01(n.id, 3) * R * 0.45;
+        n.x = v.x * d;
+        n.y = v.y * d;
+        n.z = v.z * d;
       } else if (n.tagIds[0]) {
         // Blocks scatter around their primary channel's hub.
-        const a = hubAngle.get(n.tagIds[0]) ?? 0;
-        const ja = hash01(n.id, 3) * 2 * Math.PI;
-        const jd = 12 + hash01(n.id, 4) * 36;
-        n.x = Math.cos(a) * R + Math.cos(ja) * jd;
-        n.y = Math.sin(a) * R + Math.sin(ja) * jd;
-        n.z = (hash01(n.id, 6) - 0.5) * 30;
+        const p = hubPos.get(n.tagIds[0]) ?? { x: 0, y: 0, z: 0 };
+        const v = dir(n.id, 5);
+        const jd = 10 + hash01(n.id, 7) * 34;
+        n.x = p.x + v.x * jd;
+        n.y = p.y + v.y * jd;
+        n.z = p.z + v.z * jd;
       } else {
-        // Channel-less blocks start on a wider ring - they would drift there
-        // anyway; seeding makes it deliberate and stable.
-        const a = hash01(n.id, 5) * 2 * Math.PI;
-        n.x = Math.cos(a) * R * 1.35;
-        n.y = Math.sin(a) * R * 1.35;
-        n.z = (hash01(n.id, 6) - 0.5) * 40;
+        // Channel-less blocks dust a wider shell around the sphere.
+        const v = dir(n.id, 9);
+        const d = R * (1.25 + hash01(n.id, 11) * 0.2);
+        n.x = v.x * d;
+        n.y = v.y * d;
+        n.z = v.z * d;
       }
     }
 
@@ -508,7 +527,7 @@ export default function KnowledgeGraph({
     if (!fg || size.w === 0) return;
 
     const charge = fg.d3Force("charge");
-    if (charge?.strength) charge.strength(-55);
+    if (charge?.strength) charge.strength(-45);
     const link = fg.d3Force("link");
     // Channel links are the structural layer: strong, with spoke length
     // scaled to the hub's size so a 90-block channel gets a proportionally
@@ -539,12 +558,23 @@ export default function KnowledgeGraph({
         .radius((n: { deg?: number }) => nodeRadius(n) + 4)
         .strength(1)
     );
-    fg.d3Force("x", forceX(0).strength(0.05));
-    fg.d3Force("y", forceY(0).strength(0.05));
-    // The galaxy flattener: a pull toward the z=0 plane keeps the cloud
-    // disc-shaped (clusters still puff a little, which reads as depth when
-    // orbiting). 0.12 was too weak: charge pushed whole clusters off-plane.
-    fg.d3Force("z", forceZ(0).strength(0.32));
+    // Clear the old planar-gravity forces (matters during hot reload, when
+    // the running simulation survives the code swap).
+    fg.d3Force("x", null);
+    fg.d3Force("y", null);
+    fg.d3Force("z", null);
+    // The sphere keeper: pull channel hubs and their blocks toward a shell
+    // of radius R, concepts toward an inner ball, so the archive holds its
+    // planet shape instead of collapsing into a blob or a plane.
+    const R = sphereRadius(
+      data.nodes.filter((n) => n.type === "channel").length
+    );
+    fg.d3Force(
+      "radial",
+      forceRadial((n: unknown) =>
+        (n as GraphNode).type === "concept" ? R * 0.45 : R
+      ).strength(0.3)
+    );
 
     fg.d3ReheatSimulation?.();
     const t = setTimeout(() => fg.zoomToFit?.(800, 60), 1600);
@@ -830,20 +860,23 @@ export default function KnowledgeGraph({
             )}</div>`;
           }}
           nodeThreeObject={(raw: unknown) => {
-            // cozy.im-style monochrome discs: flat billboard sprites, sized by
-            // connectedness. Channel hubs are big light discs with a dark rim;
-            // blocks are small dim dots; concepts sit between. Channel names
-            // float above their hub; other names show in the hover tooltip.
+            // Fine translucent particles, striking-and-mysterious style: flat
+            // billboard discs in the node's channel colour with real opacity,
+            // so overlapping particles build density instead of solid balls.
+            // Blocks are small dust, hubs are larger soft blobs, concepts sit
+            // between. Channel names float above their hub; other names show
+            // in the hover tooltip. Flat matte throughout - no glow.
             const n = raw as GraphNode;
             const isHub = n.type === "channel";
             const isConcept = n.type === "concept";
             const r = 4 * Math.cbrt(Math.min(60, Math.max(1, n.deg ?? 1)));
-            const d = isHub ? r * 2.6 : r * 2;
+            const d = isHub ? r * 2.4 : isConcept ? r * 1.6 : r * 1.4;
             const sprite = new THREE.Sprite(
               new THREE.SpriteMaterial({
-                map: discTexture(isHub),
-                color: isHub ? 0xffffff : isConcept ? 0x93939b : 0x6f6f77,
+                map: discTexture(),
+                color: new THREE.Color(n.color),
                 transparent: true,
+                opacity: isHub ? 0.85 : isConcept ? 0.55 : 0.7,
                 depthWrite: false,
               })
             );
@@ -855,7 +888,7 @@ export default function KnowledgeGraph({
               n.name.length > 28 ? n.name.slice(0, 26) + "…" : n.name;
             const text = new SpriteText(label);
             text.textHeight = 6.5;
-            text.color = "#c9c9d0";
+            text.color = "#d6d6dc";
             text.fontWeight = "600";
             text.fontFace = "Inter, system-ui, sans-serif";
             text.material.depthWrite = false;
