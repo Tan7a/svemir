@@ -462,12 +462,13 @@ export default function KnowledgeGraph({
     };
   }, [shownKeys, hideUnconnected]);
 
-  // If the focused node gets filtered out, drop the focus so the map doesn't
-  // stay dimmed around something you can no longer see.
-  useEffect(() => {
-    if (focusId === null) return;
+  // If the focused node gets filtered out, ignore the focus so the map doesn't
+  // stay dimmed around something you can no longer see. Derived during render
+  // rather than reset in an effect (which would cascade an extra render).
+  const visibleFocusId = useMemo(() => {
+    if (focusId === null) return null;
     const n = nodeById.get(focusId);
-    if (!n || !isNodeVisible(n)) setFocusId(null);
+    return n && isNodeVisible(n) ? focusId : null;
   }, [focusId, nodeById, isNodeVisible]);
 
   // Search: type 2+ characters, Enter jumps to (and pins focus on) each match
@@ -481,13 +482,15 @@ export default function KnowledgeGraph({
       (n) => isNodeVisible(n) && n.name.toLowerCase().includes(q)
     );
   }, [query, data, isNodeVisible]);
-  useEffect(() => setMatchIdx(0), [query]);
 
   const jumpToMatch = (idx: number) => {
     const n = matches[idx] as
       | (GraphNode & { x?: number; y?: number; z?: number })
       | undefined;
     if (!n || n.x === undefined || n.y === undefined) return;
+    // Searching before the layout settles would otherwise be undone by the
+    // settle-fit; claim the fit so the flight below wins.
+    didFitRef.current = true;
     // Fly the camera to a point just outside the node, looking at it.
     const z = n.z ?? 0;
     const dist = Math.hypot(n.x, n.y, z) || 1;
@@ -682,7 +685,7 @@ export default function KnowledgeGraph({
 
   // Hover follows the cursor; click "pins" a focus. Hover wins while active so
   // you can still peek at other nodes without losing your pinned selection.
-  const activeId = hoverId ?? focusId;
+  const activeId = hoverId ?? visibleFocusId;
   const anyFilter = shownKeys.size > 0;
 
   return (
@@ -702,7 +705,10 @@ export default function KnowledgeGraph({
         )}
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setMatchIdx(0); // new query, start cycling from the first match
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && matches.length > 0) {
               jumpToMatch(matchIdx % matches.length);
