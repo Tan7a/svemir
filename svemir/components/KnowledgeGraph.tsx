@@ -183,6 +183,7 @@ export default function KnowledgeGraph({
       addEventListener?: (ev: string, cb: () => void) => void;
     };
     scene?: () => THREE.Scene;
+    camera?: () => THREE.Camera;
   } | null>(null);
   // Ref attachment doesn't re-render, and the 3D module loads lazily - this
   // flag re-runs the setup effects once the graph instance actually exists.
@@ -619,51 +620,35 @@ export default function KnowledgeGraph({
         sizeAttenuation: false,
         transparent: true,
         opacity: 0.3,
+        fog: false, // deep space stays visible behind the fogged orb
       });
       const stars = new THREE.Points(geo, mat);
       stars.name = "starfield";
       scene.add(stars);
     }
 
-    // Celestial wireframe: faint meridians + parallels at the shell radius,
-    // so the dust cloud unmistakably reads as an orb (thin matte lines, the
-    // same language as the garden's line-art; no glow). Rotates with the
-    // scene, giving a strong 3D cue while orbiting.
-    if (scene && !scene.getObjectByName("spheregrid")) {
-      const globe = new THREE.Group();
-      globe.name = "spheregrid";
-      const R =
-        sphereRadius(data.nodes.filter((n) => n.type === "channel").length) *
-        1.04; // sit just outside the dust shell
-      const gridMat = new THREE.LineBasicMaterial({
-        color: 0x9a9aa4,
-        transparent: true,
-        opacity: 0.16,
-      });
-      const circle = (radius: number, segments = 96) => {
-        const pts: THREE.Vector3[] = [];
-        for (let i = 0; i < segments; i++) {
-          const a = (i / segments) * 2 * Math.PI;
-          pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
-        }
-        return new THREE.BufferGeometry().setFromPoints(pts);
-      };
-      // Meridians: great circles through the poles, fanned around Y.
-      for (let k = 0; k < 6; k++) {
-        const line = new THREE.LineLoop(circle(R), gridMat);
-        line.rotation.y = (k / 6) * Math.PI;
-        globe.add(line);
-      }
-      // Parallels: latitude rings, equator strongest by being longest.
-      for (const lat of [-60, -30, 0, 30, 60]) {
-        const rad = (lat * Math.PI) / 180;
-        const line = new THREE.LineLoop(circle(R * Math.cos(rad)), gridMat);
-        line.rotation.x = Math.PI / 2; // lie flat in the XZ plane
-        line.position.y = R * Math.sin(rad);
-        globe.add(line);
-      }
-      scene.add(globe);
+    // Depth cue: aerial-perspective fog. Particles fade toward the background
+    // the further they are from the camera, so the far hemisphere dims and
+    // dust brightens as it rotates toward you - a matte fade, no glow. The
+    // range is re-tied to the camera distance every frame (a fixed range
+    // over-fogs when zoomed out and under-fogs up close).
+    const R = sphereRadius(
+      data.nodes.filter((n) => n.type === "channel").length
+    );
+    if (scene && !scene.fog) {
+      scene.fog = new THREE.Fog(new THREE.Color(palette.bg), 800, 3000);
     }
+    let fogRaf = 0;
+    const updateFog = () => {
+      fogRaf = requestAnimationFrame(updateFog);
+      const cam = fg.camera?.();
+      const f = fg.scene?.()?.fog as THREE.Fog | undefined;
+      if (!cam || !f) return;
+      const dist = cam.position.length();
+      f.near = Math.max(40, dist - R * 1.1); // near hemisphere stays vivid
+      f.far = dist + R * 2.4; // far side fades most of the way out
+    };
+    updateFog();
 
     const controls = fg.controls?.();
     if (controls) {
@@ -675,26 +660,17 @@ export default function KnowledgeGraph({
     }
 
     return () => {
+      cancelAnimationFrame(fogRaf);
       const sc = fg.scene?.();
+      if (sc) sc.fog = null;
       const stars = sc?.getObjectByName("starfield") as THREE.Points | undefined;
       if (stars) {
         sc?.remove(stars);
         stars.geometry.dispose();
         (stars.material as THREE.Material).dispose();
       }
-      const globe = sc?.getObjectByName("spheregrid") as THREE.Group | undefined;
-      if (globe) {
-        sc?.remove(globe);
-        const mats = new Set<THREE.Material>();
-        globe.traverse((o) => {
-          const line = o as THREE.LineLoop;
-          if (line.geometry) line.geometry.dispose();
-          if (line.material) mats.add(line.material as THREE.Material);
-        });
-        mats.forEach((m) => m.dispose());
-      }
     };
-  }, [data, size.w, fgReady]);
+  }, [data, size.w, fgReady, palette.bg]);
 
   // Dev-only escape hatch: the graph handle on window, for scene/camera
   // inspection from the console (stripped from production bundles).
