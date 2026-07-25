@@ -121,25 +121,28 @@ function escapeHTML(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// ── node disc texture ─────────────────────────────────────────────────────────
-// One flat matte disc, drawn once and shared; every node tints it via its
-// sprite material colour + opacity. Billboard sprites always face the camera,
-// so the sphere reads as layered translucent particles. No gradients/glow.
-let plainDiscTex: THREE.Texture | null = null;
+// ── stardust speck texture ────────────────────────────────────────────────────
+// One soft-edged dust mote, drawn once and shared; every node tints it via its
+// sprite material colour + opacity. Solid core with a short alpha falloff at
+// the rim - edge softness on the particle itself (same idea as the garden's
+// grass dots), NOT a halo: normal blending, nothing radiates onto neighbours.
+let dustTex: THREE.Texture | null = null;
 
-function discTexture(): THREE.Texture {
-  if (plainDiscTex) return plainDiscTex;
+function dustTexture(): THREE.Texture {
+  if (dustTex) return dustTex;
   const S = 128;
   const c = document.createElement("canvas");
   c.width = c.height = S;
   const ctx = c.getContext("2d")!;
-  ctx.beginPath();
-  ctx.arc(S / 2, S / 2, 56, 0, 2 * Math.PI);
-  ctx.fillStyle = "#ffffff"; // tinted per node via material colour
-  ctx.fill();
+  const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.55, "rgba(255,255,255,1)"); // solid core
+  g.addColorStop(1, "rgba(255,255,255,0)"); // soft rim
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  plainDiscTex = tex;
+  dustTex = tex;
   return tex;
 }
 
@@ -184,6 +187,10 @@ export default function KnowledgeGraph({
   // Ref attachment doesn't re-render, and the 3D module loads lazily - this
   // flag re-runs the setup effects once the graph instance actually exists.
   const [fgReady, setFgReady] = useState(false);
+  // One camera fit per data load, fired when the simulation settles (the
+  // timer-based fit raced the lazy module + intro overlay and could leave
+  // the camera inside the sphere).
+  const didFitRef = useRef(false);
   const [size, setSize] = useState({ w: 0, h: 0 });
   // The node the cursor is over - drives Obsidian-style neighbour highlighting.
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -395,7 +402,7 @@ export default function KnowledgeGraph({
         // Blocks scatter around their primary channel's hub.
         const p = hubPos.get(n.tagIds[0]) ?? { x: 0, y: 0, z: 0 };
         const v = dir(n.id, 5);
-        const jd = 10 + hash01(n.id, 7) * 34;
+        const jd = 8 + hash01(n.id, 7) * 24;
         n.x = p.x + v.x * jd;
         n.y = p.y + v.y * jd;
         n.z = p.z + v.z * jd;
@@ -552,11 +559,13 @@ export default function KnowledgeGraph({
         const k = (l as GraphLink).kind;
         return k === "channel" ? 0.8 : k === "manual" ? 0.7 : 0.05;
       });
+    // Dust packs tight: much smaller personal space than the old discs, so
+    // clusters read as dense sparkling puffs instead of spaced-out balls.
     fg.d3Force(
       "collide",
       forceCollide()
-        .radius((n: { deg?: number }) => nodeRadius(n) + 4)
-        .strength(1)
+        .radius((n: { deg?: number }) => nodeRadius(n) * 0.5 + 1.5)
+        .strength(0.9)
     );
     // Clear the old planar-gravity forces (matters during hot reload, when
     // the running simulation survives the code swap).
@@ -577,8 +586,7 @@ export default function KnowledgeGraph({
     );
 
     fg.d3ReheatSimulation?.();
-    const t = setTimeout(() => fg.zoomToFit?.(800, 60), 1600);
-    return () => clearTimeout(t);
+    didFitRef.current = false; // allow one fresh camera fit per data load
   }, [data, size.w, fgReady]);
 
   // Galaxy dressing + motion, once the 3D scene exists: a matte starfield
@@ -783,6 +791,11 @@ export default function KnowledgeGraph({
           showNavInfo={false}
           warmupTicks={30}
           cooldownTicks={250}
+          onEngineStop={() => {
+            if (didFitRef.current) return;
+            didFitRef.current = true;
+            fgRef.current?.zoomToFit?.(800, 70);
+          }}
           d3VelocityDecay={0.3}
           enableNodeDrag={true}
           onNodeDragEnd={(raw: unknown) => {
@@ -870,13 +883,16 @@ export default function KnowledgeGraph({
             const isHub = n.type === "channel";
             const isConcept = n.type === "concept";
             const r = 4 * Math.cbrt(Math.min(60, Math.max(1, n.deg ?? 1)));
-            const d = isHub ? r * 2.4 : isConcept ? r * 1.6 : r * 1.4;
+            // Stardust scale: blocks are tiny motes, hubs stay modest and let
+            // their floating label do the identifying. Density comes from many
+            // overlapping specks, not from big shapes.
+            const d = isHub ? r * 1.5 : isConcept ? r * 0.9 : r * 0.8;
             const sprite = new THREE.Sprite(
               new THREE.SpriteMaterial({
-                map: discTexture(),
+                map: dustTexture(),
                 color: new THREE.Color(n.color),
                 transparent: true,
-                opacity: isHub ? 0.85 : isConcept ? 0.55 : 0.7,
+                opacity: isHub ? 0.9 : isConcept ? 0.5 : 0.85,
                 depthWrite: false,
               })
             );
