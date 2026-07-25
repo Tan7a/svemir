@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ChannelTag, Item } from "@/lib/types";
+import type { CardItem, ChannelTag } from "@/lib/types";
 import { supabase } from "@/lib/supabase-client";
 import { addChannelToBlock, bulkDeleteItems } from "@/app/admin/actions";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { IconFolder, IconDownload, IconTrash } from "@/components/ui/icons";
 
-type SelBlock = Item & { channels?: ChannelTag[] };
+type SelBlock = CardItem & { channels?: ChannelTag[] };
 
 type Props = {
   /** The currently-selected blocks (full objects, so Export has metadata). */

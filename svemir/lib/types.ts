@@ -20,6 +20,30 @@ export type Item = {
   paper_full_text_path?: string | null;
 };
 
+/**
+ * The columns card grids/strips actually render - notably EXCLUDES body_text
+ * (full extracted article text) and search_tsv (its generated search vector),
+ * which together dominate row size. Keep in sync with ITEM_CARD_COLUMNS.
+ */
+export type CardItem = Pick<
+  Item,
+  | "id"
+  | "url"
+  | "title"
+  | "description"
+  | "image_url"
+  | "source_name"
+  | "kind"
+  | "categories"
+  | "created_at"
+  | "paper_authors"
+  | "paper_year"
+>;
+
+/** PostgREST select list matching CardItem - use in every list query. */
+export const ITEM_CARD_COLUMNS =
+  "id, url, title, description, image_url, source_name, kind, categories, created_at, paper_authors, paper_year";
+
 export type Channel = {
   id: string;
   slug: string;
@@ -39,14 +63,14 @@ export type ItemWithChannels = Item & {
 export type ChannelTag = { slug: string; title: string };
 
 /** A block carrying the channels (topics) it belongs to, for the Blocks grid. */
-export type BlockWithChannelTags = Item & { channels: ChannelTag[] };
+export type BlockWithChannelTags = CardItem & { channels: ChannelTag[] };
 
 /**
  * A channel paired with its first N blocks - used by the Channels view to
  * render the horizontal thumb strip.
  */
 export type ChannelWithBlocks = Channel & {
-  blocks: Item[];
+  blocks: CardItem[];
   block_count: number;
 };
 

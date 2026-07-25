@@ -3,7 +3,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
 import BlocksView from "@/components/BlocksView";
-import type { Item } from "@/lib/types";
+import { ITEM_CARD_COLUMNS } from "@/lib/types";
+import type { CardItem } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -39,20 +40,20 @@ export default async function ConceptPage({ params }: { params: Params }) {
 
   const { data: conceptRow } = await client
     .from("concepts")
-    .select("id, slug, term, block_count, block_concepts(tf, items(*))")
+    .select(`id, slug, term, block_count, block_concepts(tf, items(${ITEM_CARD_COLUMNS}))`)
     .eq("slug", slug)
     .maybeSingle();
 
   if (!conceptRow) notFound();
   const concept = conceptRow as unknown as ConceptWithBlocks;
 
-  const blocks: Item[] = (concept.block_concepts ?? [])
+  const blocks: CardItem[] = (concept.block_concepts ?? [])
     .map((row) => {
       const it = row.items;
       const item = Array.isArray(it) ? it[0] : it;
-      return { tf: row.tf, item: item as Item | undefined };
+      return { tf: row.tf, item: item as CardItem | undefined };
     })
-    .filter((r): r is { tf: number; item: Item } => !!r.item)
+    .filter((r): r is { tf: number; item: CardItem } => !!r.item)
     .sort((a, b) => b.tf - a.tf)
     .map((r) => r.item);
 

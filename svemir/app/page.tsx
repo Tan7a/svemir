@@ -5,14 +5,15 @@ import { type ViewKind, type OrderKind } from "@/components/FilterBar";
 import BlocksView from "@/components/BlocksView";
 import BlocksVibeView from "@/components/BlocksVibeView";
 import ChannelsView from "@/components/ChannelsView";
-import { lastConnectedAt, compareChannelRecency } from "@/lib/channels";
+import { compareChannelRecency } from "@/lib/channels";
 import { paperIdsForFacet } from "@/lib/queries";
+import { ITEM_CARD_COLUMNS } from "@/lib/types";
 import type {
   Channel,
   ChannelWithBlocks,
   ChannelTag,
   BlockWithChannelTags,
-  Item,
+  CardItem,
 } from "@/lib/types";
 
 export const revalidate = 60;
@@ -86,10 +87,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     );
   }
 
-  // Counts for the Info column - cheap with head + exact count.
+  // Counts for the Info column. "estimated" answers from planner statistics
+  // instead of scanning the table - exact at small scale, and a decorative
+  // stats line (already up to 60s stale from revalidate) tolerates drift.
   const [{ count: blockCount }, { count: channelCount }] = await Promise.all([
-    supabase.from("items").select("id", { count: "exact", head: true }),
-    supabase.from("channels").select("id", { count: "exact", head: true }),
+    supabase.from("items").select("id", { count: "estimated", head: true }),
+    supabase.from("channels").select("id", { count: "estimated", head: true }),
   ]);
 
   return (
@@ -168,9 +171,10 @@ async function BlocksRoute({
   // fall back to newest-first so the URL is always honoured visually. The
   // embedded connections(channels(...)) gives each block its topic tags in one
   // round-trip (still one row per item - PostgREST nests the channels).
+  // Card columns only: body_text + search_tsv would dominate the payload.
   let query = supabase
     .from("items")
-    .select("*, connections(channels(slug, title))")
+    .select(`${ITEM_CARD_COLUMNS}, connections(channels(slug, title))`)
     .limit(500);
   if (facetIds) {
     // Empty list → match nothing (sentinel id) rather than everything.
@@ -289,11 +293,12 @@ async function BlocksRoute({
 /**
  * Server component fetching channels + their connected blocks.
  *
- * Previously this fanned out N×2 queries (8 blocks + exact count) per
- * channel - at ~50 channels that's 100 Supabase round-trips through a
- * single HTTPS pool. Collapsing into one nested select trades bandwidth
- * (we transfer every connection row instead of 8) for latency. At
- * personal scale (~1k blocks across ~50 channels) the payload is small.
+ * One request, three aliased embeds of the same connections relation:
+ * `covers` carries only the 8 position-ordered cards each strip renders,
+ * `meta` the true block count, `latest` the most recent connected_at for
+ * the "Recently updated" order. Unlike the previous items(*) nested
+ * select, payload no longer grows with total connections - each channel
+ * contributes at most 8 slim cards + 2 numbers.
  */
 async function ChannelsRoute({ order }: { order: OrderKind }) {
   if (!supabase) return null;
@@ -301,7 +306,16 @@ async function ChannelsRoute({ order }: { order: OrderKind }) {
 
   const { data: chData, error: chErr } = await client
     .from("channels")
-    .select("*, connections(position, connected_at, items(*))")
+    .select(
+      `*,
+       covers:connections(position, items(${ITEM_CARD_COLUMNS})),
+       meta:connections(count),
+       latest:connections(connected_at)`
+    )
+    .order("position", { referencedTable: "covers", ascending: true })
+    .limit(8, { referencedTable: "covers" })
+    .order("connected_at", { referencedTable: "latest", ascending: false })
+    .limit(1, { referencedTable: "latest" })
     .limit(500);
 
   if (chErr) {
@@ -312,34 +326,28 @@ async function ChannelsRoute({ order }: { order: OrderKind }) {
     );
   }
 
-  type ChannelWithConns = Channel & {
-    connections:
-      | { position: number; connected_at: string | null; items: unknown }[]
-      | null;
+  type ChannelRow = Channel & {
+    covers: { position: number; items: CardItem | CardItem[] | null }[] | null;
+    meta: { count: number }[] | null;
+    latest: { connected_at: string | null }[] | null;
   };
   // Carry last_connected_at alongside the card data so we can order by it.
   type EnrichedChannel = ChannelWithBlocks & { last_connected_at: string | null };
 
-  const enriched: EnrichedChannel[] = ((chData ?? []) as ChannelWithConns[]).map(
-    (c) => {
-      const { connections, ...rest } = c;
-      const conns = connections ?? [];
-      const all = conns
-        .map((row) => {
-          const it = row.items;
-          const item = Array.isArray(it) ? it[0] : it;
-          return { position: row.position, item: item as Item | undefined };
-        })
-        .filter((row): row is { position: number; item: Item } => !!row.item)
-        .sort((a, b) => a.position - b.position);
-      return {
-        ...rest,
-        blocks: all.slice(0, 8).map((r) => r.item),
-        block_count: all.length,
-        last_connected_at: lastConnectedAt(conns),
-      };
-    }
-  );
+  const enriched: EnrichedChannel[] = (
+    (chData ?? []) as unknown as ChannelRow[]
+  ).map((c) => {
+    const { covers, meta, latest, ...rest } = c;
+    const blocks = (covers ?? [])
+      .map((row) => (Array.isArray(row.items) ? row.items[0] : row.items))
+      .filter((it): it is CardItem => !!it);
+    return {
+      ...rest,
+      blocks, // already position-ordered and capped server-side
+      block_count: meta?.[0]?.count ?? 0,
+      last_connected_at: latest?.[0]?.connected_at ?? null,
+    };
+  });
 
   sortChannels(enriched, order);
 
@@ -347,7 +355,7 @@ async function ChannelsRoute({ order }: { order: OrderKind }) {
 }
 
 /** A raw items row with the embedded channels join. */
-type BlockRow = Item & { connections: { channels: unknown }[] | null };
+type BlockRow = CardItem & { connections: { channels: unknown }[] | null };
 
 /** Flatten a row's embedded connections into a unique list of channel tags. */
 function channelsFromRow(row: BlockRow): ChannelTag[] {
@@ -387,7 +395,7 @@ function dedupeBlocks(rows: BlockRow[]): BlockWithChannelTags[] {
         }
       }
     } else {
-      byKey.set(key, { ...(item as Item), channels: chans });
+      byKey.set(key, { ...(item as CardItem), channels: chans });
       order.push(key);
     }
   }
@@ -405,7 +413,7 @@ function shuffle<T>(arr: T[]): void {
 // "By type" - group by kind (links, then images, then text). Array.sort is
 // stable, so within each group the created_at-desc order is preserved.
 const KIND_RANK: Record<string, number> = { link: 0, image: 1, text: 2 };
-function orderByType(blocks: Item[]): void {
+function orderByType(blocks: CardItem[]): void {
   blocks.sort((a, b) => (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9));
 }
 
@@ -474,21 +482,27 @@ async function SearchRoute({ q }: { q: string }) {
   const pattern = `%${safe}%`;
 
   // Full-text block search first; fall back to ilike when empty/unavailable.
-  let blocks: Item[] = [];
-  const ftsRes = await client.rpc("search_blocks", { q: q.trim(), lim: 100 });
+  // search_block_cards (0011) returns card columns only; if that RPC isn't
+  // deployed yet, the original search_blocks (0006) keeps ranked FTS working.
+  let blocks: CardItem[] = [];
+  let ftsRes = await client.rpc("search_block_cards", { q: q.trim(), lim: 100 });
+  if (ftsRes.error) {
+    ftsRes = await client.rpc("search_blocks", { q: q.trim(), lim: 100 });
+  }
   if (!ftsRes.error && Array.isArray(ftsRes.data)) {
-    blocks = ftsRes.data as Item[];
+    blocks = ftsRes.data as CardItem[];
   }
   if (blocks.length === 0) {
     const { data } = await client
       .from("items")
-      .select("*")
+      // Filtering on body_text while not selecting it is fine in PostgREST.
+      .select(ITEM_CARD_COLUMNS)
       .or(
         `title.ilike.${pattern},description.ilike.${pattern},url.ilike.${pattern},source_name.ilike.${pattern},body_text.ilike.${pattern}`
       )
       .order("created_at", { ascending: false })
       .limit(100);
-    blocks = (data ?? []) as Item[];
+    blocks = (data ?? []) as unknown as CardItem[];
   }
 
   const [conceptsRes, channelsRes] = await Promise.all([

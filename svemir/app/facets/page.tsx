@@ -4,7 +4,8 @@ import BlocksView from "@/components/BlocksView";
 import { listFacets } from "@/lib/queries";
 import { supabase } from "@/lib/supabase-client";
 import { FACET_DIMENSIONS } from "@/lib/constants";
-import type { BlockWithChannelTags, ChannelTag, Item } from "@/lib/types";
+import { ITEM_CARD_COLUMNS } from "@/lib/types";
+import type { BlockWithChannelTags, CardItem, ChannelTag } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -38,14 +39,13 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
               <p>
                 I&rsquo;m a PhD candidate on the topic of{" "}
                 <span className="text-neutral-100">user control in AI interfaces</span>.
-                I surveyed 360 people across 46 countries and reviewed a decade of
+                I surveyed people in 46 countries and reviewed a decade of
                 AI-UX research; the resulting papers are now under peer review at top
                 HCI journals. The recurring finding: people want{" "}
                 <span className="text-neutral-100">
                   clarity, refinement tools, and better personalization
                 </span>{" "}
-                - insight that shapes everything I design, including the product I
-                lead,{" "}
+                - insight that shapes everything I design, including{" "}
                 <a
                   href="https://flero.ai"
                   target="_blank"
@@ -54,7 +54,7 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
                 >
                   flero.ai
                 </a>
-                .
+                , where I lead the product design.
               </p>
               <p className="text-neutral-400">
                 This is the reading behind that work - every paper I&rsquo;ve
@@ -120,7 +120,7 @@ async function ThemesDirectory() {
               <Link
                 key={f.slug}
                 href={`/facet/${f.slug}`}
-                className="rounded-full border border-neutral-700 px-4 py-2 text-[15px] text-neutral-100 transition-colors hover:bg-neutral-900"
+                className="rounded-full border border-neutral-700 px-4 py-2 text-[15px] text-neutral-100 transition-colors hover:border-neutral-100 hover:bg-neutral-900"
               >
                 {f.value}
                 <span className="ml-2 text-neutral-500">{f.paper_count}</span>
@@ -134,7 +134,7 @@ async function ThemesDirectory() {
 }
 
 /** A raw items row with the embedded channels join. */
-type PaperRow = Item & { connections: { channels: unknown }[] | null };
+type PaperRow = CardItem & { connections: { channels: unknown }[] | null };
 
 /** Flatten a row's embedded connections into a unique list of channel tags. */
 function channelsFromRow(row: PaperRow): ChannelTag[] {
@@ -159,7 +159,7 @@ async function PapersGrid({ order }: { order: string }) {
 
   let query = supabase
     .from("items")
-    .select("*, connections(channels(slug, title))")
+    .select(`${ITEM_CARD_COLUMNS}, connections(channels(slug, title))`)
     .eq("kind", "paper")
     .limit(500);
   switch (order) {
@@ -189,7 +189,7 @@ async function PapersGrid({ order }: { order: string }) {
     (row) => {
       const { connections: _c, ...item } = row;
       void _c;
-      return { ...(item as Item), channels: channelsFromRow(row) };
+      return { ...(item as CardItem), channels: channelsFromRow(row) };
     }
   );
 

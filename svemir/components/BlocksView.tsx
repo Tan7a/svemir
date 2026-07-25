@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { ChannelTag, Item } from "@/lib/types";
+import type { CardItem, ChannelTag } from "@/lib/types";
 import BlockCard from "./BlockCard";
 import BlockSelectionBar from "./BlockSelectionBar";
 
-type Block = Item & { channels?: ChannelTag[] };
+type Block = CardItem & { channels?: ChannelTag[] };
 
 type Props = {
   blocks: Block[];

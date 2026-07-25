@@ -375,9 +375,20 @@ export default function IdeaGarden({ gardens }: Props) {
       pill.style.cssText =
         "position:absolute;transform:translate(-50%,-100%);padding:3px 10px;border-radius:999px;" +
         "font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;white-space:nowrap;" +
-        "max-width:150px;overflow:hidden;text-overflow:ellipsis;color:#0a0a0a;pointer-events:none;" +
-        "box-shadow:0 1px 4px rgba(0,0,0,.5);will-change:left,top";
+        "max-width:150px;overflow:hidden;text-overflow:ellipsis;color:#0a0a0a;pointer-events:auto;" +
+        "cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5);will-change:left,top";
       pill.style.background = `hsl(${channel.hue},55%,70%)`;
+      // The balloon doubles as a link to its channel. Listeners die with the
+      // pill when the overlay is cleared on teardown.
+      pill.addEventListener("mouseenter", () => {
+        pill.style.textDecoration = "underline";
+      });
+      pill.addEventListener("mouseleave", () => {
+        pill.style.textDecoration = "";
+      });
+      pill.addEventListener("click", () => {
+        router.push(`/channel/${channel.slug}`);
+      });
       overlay.appendChild(pill);
 
       // The balloon's string, drawn down to the crown each frame.

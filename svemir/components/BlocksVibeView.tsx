@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ChannelTag, Item } from "@/lib/types";
+import type { CardItem, ChannelTag } from "@/lib/types";
 import BlockCard from "./BlockCard";
 import VibeScale from "./VibeScale";
 
-type VibeBlock = Item & { channels?: ChannelTag[] };
+type VibeBlock = CardItem & { channels?: ChannelTag[] };
 
 /** A block's vibe key: first category → source → kind (matches the old sort). */
-function vibeKey(b: Item): string {
+function vibeKey(b: CardItem): string {
   return (b.categories?.[0] || b.source_name || b.kind || "misc").toLowerCase();
 }
 
