@@ -15,12 +15,14 @@ export const revalidate = 60;
 // Cap concept nodes shown in the graph - keeps the force simulation legible.
 const MAX_CONCEPT_NODES = 150;
 
-type ChannelRef = { id: string; title: string };
+type ChannelRef = { id: string; title: string; slug: string };
 
 type GraphRow = {
   id: string;
   title: string;
   categories: string[] | null;
+  image_url: string | null;
+  kind: string;
   connections: { channels: unknown }[] | null;
 };
 
@@ -50,7 +52,9 @@ export default async function GraphPage() {
   ] = await Promise.all([
     supabase
       .from("items")
-      .select("id, title, categories, connections(channels(id, title))"),
+      .select(
+        "id, title, categories, image_url, kind, connections(channels(id, title, slug))"
+      ),
     supabase.from("block_connections").select("a_id, b_id"),
     supabase
       .from("concepts")
@@ -119,8 +123,11 @@ export default async function GraphPage() {
         id: row.id,
         title: row.title,
         category: row.categories?.[0] ?? null,
+        img: row.image_url,
+        kind: row.kind,
         tagIds: channelPairs.map((c) => c.id),
         tagNames: channelPairs.map((c) => c.title),
+        tagSlugs: channelPairs.map((c) => c.slug),
       };
     }
   );
