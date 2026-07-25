@@ -77,22 +77,22 @@ export function colorForTag(id: string): { bg: string; text: string } {
 
 /**
  * Curated raw-hex palette for the knowledge graph canvas (where Tailwind classes
- * can't reach). Apple's iOS dark-mode system colours (HIG values): saturated but
- * perceptually balanced, designed for near-black backgrounds - each channel gets
- * one stable colour so its cluster is legible at a glance.
+ * can't reach). Moody-tropical palette from Tanja's reference (teal, forest,
+ * ochre, peach, terracotta, magenta...). The darkest swatches are lifted a step
+ * in lightness: galaxy nodes draw at ~70% opacity over near-black, which
+ * multiplies darkness - same hue, kept legible.
  */
 export const GRAPH_CHANNEL_PALETTE = [
-  "#0a84ff", // blue
-  "#64d2ff", // cyan
-  "#66d4cf", // mint
-  "#30d158", // green
-  "#ffd60a", // yellow
-  "#ff9f0a", // orange
-  "#ff375f", // pink
-  "#bf5af2", // purple
-  "#5e5ce6", // indigo
-  "#40c8e0", // teal
-  "#ac8e68", // brown
+  "#1d6e8c", // deep teal (lifted)
+  "#2f6b4f", // forest green (lifted)
+  "#c08a1e", // golden ochre
+  "#8a8026", // olive (lifted)
+  "#f5a86b", // peach
+  "#c26744", // terracotta
+  "#c03d2b", // brick red
+  "#b8235f", // raspberry
+  "#8c1e3e", // burgundy (lifted)
+  "#a15f2b", // caramel brown
 ] as const;
 
 /** Deterministic graph colour for a channel id (same hash scheme as colorForTag). */
