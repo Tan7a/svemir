@@ -625,6 +625,46 @@ export default function KnowledgeGraph({
       scene.add(stars);
     }
 
+    // Celestial wireframe: faint meridians + parallels at the shell radius,
+    // so the dust cloud unmistakably reads as an orb (thin matte lines, the
+    // same language as the garden's line-art; no glow). Rotates with the
+    // scene, giving a strong 3D cue while orbiting.
+    if (scene && !scene.getObjectByName("spheregrid")) {
+      const globe = new THREE.Group();
+      globe.name = "spheregrid";
+      const R =
+        sphereRadius(data.nodes.filter((n) => n.type === "channel").length) *
+        1.04; // sit just outside the dust shell
+      const gridMat = new THREE.LineBasicMaterial({
+        color: 0x9a9aa4,
+        transparent: true,
+        opacity: 0.16,
+      });
+      const circle = (radius: number, segments = 96) => {
+        const pts: THREE.Vector3[] = [];
+        for (let i = 0; i < segments; i++) {
+          const a = (i / segments) * 2 * Math.PI;
+          pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+        }
+        return new THREE.BufferGeometry().setFromPoints(pts);
+      };
+      // Meridians: great circles through the poles, fanned around Y.
+      for (let k = 0; k < 6; k++) {
+        const line = new THREE.LineLoop(circle(R), gridMat);
+        line.rotation.y = (k / 6) * Math.PI;
+        globe.add(line);
+      }
+      // Parallels: latitude rings, equator strongest by being longest.
+      for (const lat of [-60, -30, 0, 30, 60]) {
+        const rad = (lat * Math.PI) / 180;
+        const line = new THREE.LineLoop(circle(R * Math.cos(rad)), gridMat);
+        line.rotation.x = Math.PI / 2; // lie flat in the XZ plane
+        line.position.y = R * Math.sin(rad);
+        globe.add(line);
+      }
+      scene.add(globe);
+    }
+
     const controls = fg.controls?.();
     if (controls) {
       controls.autoRotate = true;
@@ -642,8 +682,27 @@ export default function KnowledgeGraph({
         stars.geometry.dispose();
         (stars.material as THREE.Material).dispose();
       }
+      const globe = sc?.getObjectByName("spheregrid") as THREE.Group | undefined;
+      if (globe) {
+        sc?.remove(globe);
+        const mats = new Set<THREE.Material>();
+        globe.traverse((o) => {
+          const line = o as THREE.LineLoop;
+          if (line.geometry) line.geometry.dispose();
+          if (line.material) mats.add(line.material as THREE.Material);
+        });
+        mats.forEach((m) => m.dispose());
+      }
     };
   }, [data, size.w, fgReady]);
+
+  // Dev-only escape hatch: the graph handle on window, for scene/camera
+  // inspection from the console (stripped from production bundles).
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      (window as unknown as Record<string, unknown>).__kg = fgRef.current;
+    }
+  });
 
   // Hover follows the cursor; click "pins" a focus. Hover wins while active so
   // you can still peek at other nodes without losing your pinned selection.
@@ -962,9 +1021,31 @@ export default function KnowledgeGraph({
                     {channelBlocks.length} block
                     {channelBlocks.length === 1 ? "" : "s"} in this channel
                   </div>
+                  {(() => {
+                    // 2x2 preview grid: the channel's first four blocks that
+                    // carry an image, each a clickable thumb.
+                    const thumbs = channelBlocks
+                      .filter((b) => b.img)
+                      .slice(0, 4);
+                    if (thumbs.length === 0) return null;
+                    return (
+                      <div className="mb-3 grid grid-cols-2 gap-1.5">
+                        {thumbs.map((b) => (
+                          <Link key={b.id} href={`/block/${b.id}`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={b.img!}
+                              alt={b.title || ""}
+                              className="h-16 w-full rounded-md object-cover transition-opacity hover:opacity-80"
+                            />
+                          </Link>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {channelBlocks.length > 0 && (
                     <ul className="mb-3 space-y-1">
-                      {channelBlocks.slice(0, 6).map((b) => (
+                      {channelBlocks.slice(0, 4).map((b) => (
                         <li key={b.id} className="truncate">
                           <Link
                             href={`/block/${b.id}`}
@@ -974,9 +1055,9 @@ export default function KnowledgeGraph({
                           </Link>
                         </li>
                       ))}
-                      {channelBlocks.length > 6 && (
+                      {channelBlocks.length > 4 && (
                         <li className="text-neutral-600">
-                          +{channelBlocks.length - 6} more
+                          +{channelBlocks.length - 4} more
                         </li>
                       )}
                     </ul>
