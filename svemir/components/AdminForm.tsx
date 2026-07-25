@@ -80,13 +80,11 @@ export default function AdminForm() {
   }, [kind, url, title, description, imageUrl, sourceName, channels]);
 
   // Debounced channel suggester. Runs once title is non-empty and settles.
+  // An empty title hides whatever was suggested before via the derived
+  // shownSuggestions below, rather than clearing state from inside the effect.
   useEffect(() => {
     if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    if (!title.trim()) {
-      setSuggestions([]);
-      setSuggestKey(null);
-      return;
-    }
+    if (!title.trim()) return;
     suggestTimer.current = setTimeout(async () => {
       try {
         const result = await suggestChannelsAction({
@@ -104,6 +102,12 @@ export default function AdminForm() {
       if (suggestTimer.current) clearTimeout(suggestTimer.current);
     };
   }, [title, description, sourceName]);
+
+  // Suggestions belong to the title that produced them: with the title
+  // cleared there is nothing to suggest for, so hide them.
+  const hasTitle = title.trim().length > 0;
+  const shownSuggestions = hasTitle ? suggestions : [];
+  const shownSuggestKey = hasTitle ? suggestKey : null;
 
   function reset() {
     setUrl("");
@@ -262,7 +266,6 @@ export default function AdminForm() {
         message: `Unsupported file type: ${file.type || "unknown"}`,
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [title]
   );
 
@@ -531,9 +534,9 @@ export default function AdminForm() {
         <ChannelPicker
           value={channels}
           onChange={setChannels}
-          suggestions={suggestions}
+          suggestions={shownSuggestions}
           recents={recents}
-          autoApplyKey={suggestKey ?? undefined}
+          autoApplyKey={shownSuggestKey ?? undefined}
         />
       </div>
 

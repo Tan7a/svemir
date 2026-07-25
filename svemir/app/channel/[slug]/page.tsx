@@ -4,7 +4,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
 import BlocksView from "@/components/BlocksView";
-import type { Channel, ChannelWithBlocks, Item } from "@/lib/types";
+import { ITEM_CARD_COLUMNS } from "@/lib/types";
+import type { CardItem, Channel, ChannelWithBlocks } from "@/lib/types";
 import ChannelCard from "@/components/ChannelCard";
 
 export const revalidate = 60;
@@ -46,20 +47,30 @@ export default async function ChannelPage({ params }: { params: Params }) {
 
   // Parent + connections + children + their connections in ONE query via
   // Supabase's nested-select self-join. Replaces the previous 1 + 1 + N×2
-  // round-trip pattern with a single PostgREST request.
+  // round-trip pattern with a single PostgREST request. Card columns only
+  // (no body_text/search_tsv); children fetch just the 8 cover cards their
+  // strip renders, with the true count from an aliased count embed.
   type ChannelWithConns = Channel & {
     connections: { position: number; items: unknown }[] | null;
   };
+  type ChildRow = Channel & {
+    covers: { position: number; items: unknown }[] | null;
+    meta: { count: number }[] | null;
+  };
   type ChannelWithKids = ChannelWithConns & {
-    children: ChannelWithConns[] | null;
+    children: ChildRow[] | null;
   };
 
   const { data: channelRow } = await client
     .from("channels")
     .select(
-      "*, connections(position, items(*)), children:channels!parent_id(*, connections(position, items(*)))"
+      `*,
+       connections(position, items(${ITEM_CARD_COLUMNS})),
+       children:channels!parent_id(*, covers:connections(position, items(${ITEM_CARD_COLUMNS})), meta:connections(count))`
     )
     .eq("slug", slug)
+    .order("position", { referencedTable: "children.covers", ascending: true })
+    .limit(8, { referencedTable: "children.covers" })
     .maybeSingle();
 
   if (!channelRow) notFound();
@@ -69,19 +80,19 @@ export default async function ChannelPage({ params }: { params: Params }) {
 
   function blocksFromConns(
     conns: { position: number; items: unknown }[] | null
-  ): Item[] {
+  ): CardItem[] {
     return (conns ?? [])
       .map((row) => {
         const it = row.items;
         const item = Array.isArray(it) ? it[0] : it;
-        return { position: row.position, item: item as Item | undefined };
+        return { position: row.position, item: item as CardItem | undefined };
       })
-      .filter((r): r is { position: number; item: Item } => !!r.item)
+      .filter((r): r is { position: number; item: CardItem } => !!r.item)
       .sort((a, b) => a.position - b.position)
       .map((r) => r.item);
   }
 
-  const blocks: Item[] = blocksFromConns(parentConns);
+  const blocks: CardItem[] = blocksFromConns(parentConns);
 
   const childrenWithBlocks: ChannelWithBlocks[] = (children ?? [])
     .sort(
@@ -89,11 +100,11 @@ export default async function ChannelPage({ params }: { params: Params }) {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
     .map((c) => {
-      const childBlocks = blocksFromConns(c.connections);
+      const { covers, meta, ...base } = c;
       return {
-        ...(c as Channel),
-        blocks: childBlocks.slice(0, 8),
-        block_count: childBlocks.length,
+        ...(base as Channel),
+        blocks: blocksFromConns(covers),
+        block_count: meta?.[0]?.count ?? 0,
       } satisfies ChannelWithBlocks;
     });
 

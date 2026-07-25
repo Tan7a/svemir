@@ -55,23 +55,6 @@ export async function ensureChannelId(
 }
 
 /**
- * Newest `connected_at` across a channel's connection rows, or null when the
- * channel has no connections. Used to order channels by when a block was most
- * recently saved into them.
- */
-export function lastConnectedAt(
-  conns: { connected_at: string | null }[] | null
-): string | null {
-  let last: string | null = null;
-  for (const x of conns ?? []) {
-    if (x.connected_at && (last === null || x.connected_at > last)) {
-      last = x.connected_at;
-    }
-  }
-  return last;
-}
-
-/**
  * Comparator: most-recently-connected first, channels with no connections
  * (null) last, alphabetical by title as the tie-break. Shared by the home
  * Channels view and `recentChannels` so both order identically.
@@ -90,41 +73,17 @@ export function compareChannelRecency(
 
 /**
  * Channels ordered by most-recently-connected. Channels with no connections
- * fall to the bottom (last_connected_at IS NULL). Aggregation in JS keeps
- * the Supabase query simple - fine at personal scale (<1000 channels).
+ * fall to the bottom (last_connected_at IS NULL). Aggregated in SQL via the
+ * recent_channels RPC (migration 0011) - the previous JS aggregation pulled
+ * every connections row of every channel and grew with the archive.
  */
 export async function recentChannels(
   client: SupabaseClient,
   limit = 20
 ): Promise<RecentChannel[]> {
-  const { data, error } = await client
-    .from("channels")
-    .select(
-      "id, slug, title, connections(connected_at)"
-    );
+  const { data, error } = await client.rpc("recent_channels", { lim: limit });
   if (error || !data) return [];
-
-  type Row = {
-    id: string;
-    slug: string;
-    title: string;
-    connections: { connected_at: string | null }[] | null;
-  };
-
-  const enriched: RecentChannel[] = (data as Row[]).map((c) => {
-    const conns = c.connections ?? [];
-    return {
-      id: c.id,
-      slug: c.slug,
-      title: c.title,
-      block_count: conns.length,
-      last_connected_at: lastConnectedAt(conns),
-    };
-  });
-
-  enriched.sort(compareChannelRecency);
-
-  return enriched.slice(0, limit);
+  return data as RecentChannel[];
 }
 
 /**
@@ -133,45 +92,14 @@ export async function recentChannels(
  * - source_names: distinct source_name values from those blocks (used to
  *   bias suggestion toward channels that already collect the same source)
  *
- * One round-trip via a join. Fine at personal scale (~50 channels, ~1k
- * blocks). If this ever becomes slow, push the aggregation to SQL via an
- * RPC.
+ * Aggregated in SQL via the channel_stats RPC (migration 0011) - the
+ * previous JS aggregation pulled the source_name of every connected item
+ * across all channels and grew with the archive.
  */
 export async function channelStats(
   client: SupabaseClient
 ): Promise<ChannelStat[]> {
-  const { data, error } = await client
-    .from("channels")
-    .select("id, title, connections(items(source_name))");
+  const { data, error } = await client.rpc("channel_stats");
   if (error || !data) return [];
-
-  type Row = {
-    id: string;
-    title: string;
-    connections:
-      | {
-          items:
-            | { source_name: string | null }
-            | { source_name: string | null }[]
-            | null;
-        }[]
-      | null;
-  };
-
-  return (data as unknown as Row[]).map((c) => {
-    const conns = c.connections ?? [];
-    const sources = new Set<string>();
-    for (const x of conns) {
-      const itemsField = x.items;
-      const item = Array.isArray(itemsField) ? itemsField[0] : itemsField;
-      const s = item?.source_name;
-      if (s && s.trim()) sources.add(s.trim());
-    }
-    return {
-      id: c.id,
-      title: c.title,
-      block_count: conns.length,
-      source_names: [...sources],
-    };
-  });
+  return data as ChannelStat[];
 }

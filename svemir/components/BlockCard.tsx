@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { ChannelTag, Item } from "@/lib/types";
+import type { CardItem, ChannelTag } from "@/lib/types";
 import SelectionCircle from "./ui/SelectionCircle";
 import ChannelChip from "./ui/ChannelChip";
 
 type Props = {
-  block: Item & { channels?: ChannelTag[] };
+  block: CardItem & { channels?: ChannelTag[] };
   /** Whether this card is currently part of a multi-select. */
   selected?: boolean;
   /** True when a selection is in progress (≥1 card selected) - reveals every
@@ -22,7 +22,7 @@ type Props = {
  * back to the URL's hostname (matching BlockDetail's "Source" row). Stripped of
  * a leading "www." and returned null when there's nothing to show.
  */
-function sourceLabel(block: Item): string | null {
+function sourceLabel(block: CardItem): string | null {
   if (block.source_name) return block.source_name;
   if (block.url) {
     try {
@@ -35,7 +35,7 @@ function sourceLabel(block: Item): string | null {
 }
 
 /** "First Author et al." from a paper's author list, or null when empty. */
-function authorLine(block: Item): string | null {
+function authorLine(block: CardItem): string | null {
   const authors = block.paper_authors ?? [];
   if (authors.length === 0) return null;
   const shown = authors.slice(0, 2).join(", ");

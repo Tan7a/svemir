@@ -20,10 +20,12 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-force-graph-2d": "^1.29.1",
+    "react-force-graph-3d": "^1.29.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "sharp": "^0.35.3",
     "three": "^0.184.0",
+    "three-spritetext": "^1.10.0",
     "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {

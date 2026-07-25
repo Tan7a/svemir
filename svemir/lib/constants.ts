@@ -77,23 +77,22 @@ export function colorForTag(id: string): { bg: string; text: string } {
 
 /**
  * Curated raw-hex palette for the knowledge graph canvas (where Tailwind classes
- * can't reach). Muted-but-distinct tones tuned to read well on a near-black
- * background - each channel gets one stable colour so its cluster is legible at a
- * glance, Obsidian-style, instead of a per-id rainbow.
+ * can't reach). Moody-tropical palette from Tanja's reference (teal, forest,
+ * ochre, peach, terracotta, magenta...). The darkest swatches are lifted a step
+ * in lightness: galaxy nodes draw at ~70% opacity over near-black, which
+ * multiplies darkness - same hue, kept legible.
  */
 export const GRAPH_CHANNEL_PALETTE = [
-  "#7aa2f7", // blue
-  "#7dcfff", // cyan
-  "#9ece6a", // green
-  "#e0af68", // amber
-  "#f7768e", // rose
-  "#bb9af7", // purple
-  "#2ac3de", // teal
-  "#ff9e64", // orange
-  "#73daca", // mint
-  "#d291e4", // magenta
-  "#e5c07b", // gold
-  "#c0caf5", // lavender
+  "#1d6e8c", // deep teal (lifted)
+  "#2f6b4f", // forest green (lifted)
+  "#c08a1e", // golden ochre
+  "#8a8026", // olive (lifted)
+  "#f5a86b", // peach
+  "#c26744", // terracotta
+  "#c03d2b", // brick red
+  "#b8235f", // raspberry
+  "#8c1e3e", // burgundy (lifted)
+  "#a15f2b", // caramel brown
 ] as const;
 
 /** Deterministic graph colour for a channel id (same hash scheme as colorForTag). */
