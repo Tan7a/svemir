@@ -75,46 +75,117 @@ export function colorForTag(id: string): { bg: string; text: string } {
   return TAG_COLOR_PALETTE[Math.abs(hash) % TAG_COLOR_PALETTE.length];
 }
 
-/**
- * Curated raw-hex palette for the knowledge graph canvas (where Tailwind classes
- * can't reach). Moody-tropical palette from Tanja's reference (teal, forest,
- * ochre, peach, terracotta, magenta...). The darkest swatches are lifted a step
- * in lightness: galaxy nodes draw at ~70% opacity over near-black, which
- * multiplies darkness - same hue, kept legible.
- */
-export const GRAPH_CHANNEL_PALETTE = [
-  "#1d6e8c", // deep teal (lifted)
-  "#2f6b4f", // forest green (lifted)
-  "#c08a1e", // golden ochre
-  "#8a8026", // olive (lifted)
-  "#f5a86b", // peach
-  "#c26744", // terracotta
-  "#c03d2b", // brick red
-  "#b8235f", // raspberry
-  "#8c1e3e", // burgundy (lifted)
-  "#a15f2b", // caramel brown
-] as const;
+export type BrandColor = {
+  name: string;
+  pantone: string;
+  hex: string;
+  /**
+   * Map-only substitute colour, with its own name. The Map is deliberately a
+   * cooler, deep-space read than the Garden, so the two greens are swapped for
+   * blues there. Chosen at the same relative luminance as the green they
+   * replace, so swapping them does not change how the depth fog reads.
+   *
+   * Note this means a green channel is green in the Garden and blue on the
+   * Map. That divergence is intentional, not a drift between two palettes.
+   */
+  mapHex?: string;
+  mapName?: string;
+  /** A UI neutral: documented, but never used as a channel identity colour. */
+  neutral?: boolean;
+};
 
-/** Deterministic graph colour for a channel id (same hash scheme as colorForTag). */
-export function channelColor(id: string): string {
+/**
+ * The brand palette: eleven named colours with their Pantone references. Single
+ * source of truth for channel identity (Garden pills and leaves, Map nodes) and
+ * for the swatch set on /design-system.
+ *
+ * `neutral` marks the two greys. They are documented but excluded from the
+ * channel rotation, so no channel reads as "uncoloured" beside the chromatic
+ * ones, and Off White never becomes the brightest thing on the Map.
+ *
+ * Map nodes draw at full opacity so the hue lands true, and depth comes from
+ * the scene fog rather than from tinting the colour. The only place the two
+ * views differ is the deliberate green-to-blue swap described on `mapHex`.
+ */
+export const BRAND_PALETTE: BrandColor[] = [
+  { name: 'Sunny Yellow',    pantone: '109 C',   hex: '#FFB500' },
+  { name: 'Ocean Blue',      pantone: '2130',    hex: '#4E76D0' },
+  { name: 'Sky Blue',        pantone: '283',     hex: '#8EBFE8' },
+  { name: 'Forest Green',    pantone: '2427',    hex: '#01561D', mapHex: '#1A4E8F', mapName: 'Deep Blue' },
+  { name: 'Emerald Green',   pantone: '7724',    hex: '#00936D', mapHex: '#0D8AAE', mapName: 'Teal Blue' },
+  { name: 'Lavender Purple', pantone: '7671',    hex: '#4F467F' },
+  { name: 'Grape Purple',    pantone: '2715',    hex: '#8885D2' },
+  { name: 'Ruby Red',        pantone: '1645',    hex: '#FC6E48' },
+  { name: 'Quartz Pink',     pantone: '3572',    hex: '#FF9BA5' },
+  { name: 'Stone Gray',      pantone: '283',     hex: '#C6C6C6', neutral: true },
+  { name: 'Off White',       pantone: '663 39%', hex: '#F3F2F5', neutral: true },
+];
+
+/** The chromatic colours, in order, that channels cycle through. */
+export const CHANNEL_PALETTE: BrandColor[] = BRAND_PALETTE.filter(
+  (c) => !c.neutral
+);
+
+/** Deterministic palette slot for an id (same hash scheme as colorForTag). */
+function channelSwatch(id: string): BrandColor {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) | 0;
   }
-  return GRAPH_CHANNEL_PALETTE[Math.abs(hash) % GRAPH_CHANNEL_PALETTE.length];
+  return CHANNEL_PALETTE[Math.abs(hash) % CHANNEL_PALETTE.length];
+}
+
+/** A channel's brand colour. Garden pills, leaves, and DOM chrome. */
+export function channelColor(id: string): string {
+  return channelSwatch(id).hex;
+}
+
+/** A channel's colour on the Map, where the greens are swapped for blues. */
+export function channelMapColor(id: string): string {
+  const c = channelSwatch(id);
+  return c.mapHex ?? c.hex;
+}
+
+/** The two inks that may sit on a brand swatch: page ink, and Off White. */
+const INK_DARK = '#0a0a0a';
+const INK_LIGHT = '#F3F2F5';
+
+/** WCAG relative luminance of a #rrggbb colour. */
+function relativeLuminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio between two relative luminances. */
+function contrastRatio(a: number, b: number): number {
+  const [hi, lo] = a > b ? [a, b] : [b, a];
+  return (hi + 0.05) / (lo + 0.05);
 }
 
 /**
- * Deterministic hue (0-359) from any id string. Same id → same hue every time,
- * so a concept/channel keeps its colour across renders. Shared by the knowledge
- * graph (concept colours) and the idea-garden (per-channel plant tint).
+ * Minimum contrast the light ink must reach to be used. This is the WCAG AA
+ * threshold for large text and UI components, deliberately preferred here over
+ * the 4.5:1 body-text rule: light-on-colour is the intended look for the brand
+ * swatches, and at 4.5:1 only the two darkest colours would ever qualify.
+ * Colours where even 3:1 fails fall back to near-black, which on those
+ * (Sunny Yellow, Sky Blue, Quartz Pink...) is comfortably above 4.5:1 anyway.
  */
-export function hueFromId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (Math.imul(h, 31) + id.charCodeAt(i)) >>> 0;
-  }
-  return h % 360;
+const INK_LIGHT_MIN_CONTRAST = 3;
+
+/**
+ * Ink for text sitting on a solid swatch. Prefers the light ink and only drops
+ * to near-black where light text would be genuinely hard to read.
+ */
+export function inkOn(hex: string): string {
+  const L = relativeLuminance(hex);
+  return contrastRatio(L, relativeLuminance(INK_LIGHT)) >=
+    INK_LIGHT_MIN_CONTRAST
+    ? INK_LIGHT
+    : INK_DARK;
 }
 
 /**

@@ -8,7 +8,7 @@ import {
   type GraphConcept,
   type BlockConceptLink,
 } from "@/components/KnowledgeGraph";
-import { hueFromId } from "@/lib/constants";
+import { channelColor } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -85,18 +85,26 @@ export default async function GraphPage() {
 
   let blockConceptLinks: BlockConceptLink[] = [];
   if (concepts.length > 0) {
-    const { data: bcRows } = await supabase
-      .from("block_concepts")
-      .select("block_id, concept_id, tf")
-      .in(
-        "concept_id",
-        concepts.map((c) => c.id)
-      );
-    blockConceptLinks = ((bcRows ?? []) as {
-      block_id: string;
-      concept_id: string;
-      tf: number;
-    }[]).map((r) => ({
+    // Paged, because PostgREST caps a single response at 1000 rows. Fetching
+    // this in one shot silently returned exactly 1000 links, which left ~78 of
+    // the 150 concepts (including the biggest ones, "user" and "design") with
+    // no edges at all. On the Map those became orphans flung outside the orb.
+    const PAGE = 1000;
+    const MAX_PAGES = 25; // ~25k links; a backstop, not an expected limit
+    const conceptIds = concepts.map((c) => c.id);
+    const bcRows: { block_id: string; concept_id: string; tf: number }[] = [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const from = page * PAGE;
+      const { data: rows } = await supabase
+        .from("block_concepts")
+        .select("block_id, concept_id, tf")
+        .in("concept_id", conceptIds)
+        .range(from, from + PAGE - 1);
+      if (!rows?.length) break;
+      bcRows.push(...(rows as typeof bcRows));
+      if (rows.length < PAGE) break; // short page: that was the last one
+    }
+    blockConceptLinks = bcRows.map((r) => ({
       blockId: r.block_id,
       conceptId: r.concept_id,
       weight: r.tf,
@@ -162,7 +170,7 @@ export default async function GraphPage() {
         id: row.id,
         slug: row.slug,
         title: row.title,
-        hue: hueFromId(row.id),
+        color: channelColor(row.id),
         leaves,
       };
     })

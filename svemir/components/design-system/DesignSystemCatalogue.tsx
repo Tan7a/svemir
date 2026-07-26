@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { BlockWithChannelTags, ChannelWithBlocks } from "@/lib/types";
 import { THEMES, getTheme, setTheme, type ThemeId } from "@/lib/themes";
+import { BRAND_PALETTE, inkOn, type BrandColor } from "@/lib/constants";
 import Button from "@/components/ui/Button";
 import Pill from "@/components/ui/Pill";
 import TextInput from "@/components/ui/TextInput";
@@ -57,6 +58,7 @@ const NAV = [
     items: [
       { label: "Brand", id: "f-brand" },
       { label: "Colour", id: "f-color-ramp" },
+      { label: "Brand palette", id: "f-color-brand" },
       { label: "Typography", id: "f-type" },
       { label: "Spacing", id: "f-spacing" },
       { label: "Radius", id: "f-radius" },
@@ -263,6 +265,49 @@ function Swatch({ varName, label }: { varName: string; label: string }) {
       <span className="font-mono text-[10px] uppercase text-neutral-500">
         {hex || "·"}
       </span>
+    </div>
+  );
+}
+
+/**
+ * One brand-palette chip. The name is painted in the ink `inkOn()` would pick,
+ * so the swatch doubles as a live contrast check rather than just a colour.
+ */
+function BrandSwatch({ color }: { color: BrandColor }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div
+        className="flex h-14 w-full items-end rounded-xl border border-neutral-800 p-2"
+        style={{ background: color.hex }}
+      >
+        <span
+          className="text-[10px] font-semibold leading-none"
+          style={{ color: inkOn(color.hex) }}
+        >
+          {color.name}
+        </span>
+      </div>
+      <span className="font-mono text-[10px] uppercase text-neutral-400">
+        {color.hex}
+      </span>
+      <span className="text-[10px] text-neutral-600">
+        PANTONE {color.pantone}
+      </span>
+      {color.neutral && (
+        <span className="text-[10px] text-neutral-600">
+          UI neutral, not a channel colour
+        </span>
+      )}
+      {color.mapHex && (
+        <span className="flex items-center gap-1 text-[10px] text-neutral-600">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full border border-neutral-700"
+            style={{ background: color.mapHex }}
+          />
+          <span className="font-mono uppercase">{color.mapHex}</span>{" "}
+          {color.mapName} on Map
+        </span>
+      )}
     </div>
   );
 }
@@ -599,6 +644,40 @@ export default function DesignSystemCatalogue() {
                 {SEMANTIC.map((s) => (
                   <Swatch key={s.varName} varName={s.varName} label={s.label} />
                 ))}
+              </div>
+            </Spec>
+
+            <Spec
+              id="f-color-brand"
+              name="Colour · brand palette"
+              usage="channel identity across the Garden and the Map"
+              recipe="channelColor(id) for true colour (Garden pills, leaves) · channelGraphColor(id) for the Map · inkOn(hex) for readable text on a swatch"
+            >
+              <div className="flex w-full flex-col gap-4">
+                <p className="max-w-prose text-xs leading-relaxed text-neutral-500">
+                  Eleven named colours. The nine chromatic ones cycle
+                  deterministically per channel, so a channel keeps the same
+                  colour everywhere: its Garden pill, its leaves, and its Map
+                  nodes. The two neutrals are documented but stay out of that
+                  rotation, so no channel reads as uncoloured.
+                </p>
+                <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                  {BRAND_PALETTE.map((c) => (
+                    <BrandSwatch key={c.hex} color={c} />
+                  ))}
+                </div>
+                <p className="max-w-prose text-xs leading-relaxed text-neutral-500">
+                  Map nodes draw at full opacity so the hue lands true, and
+                  depth comes from the scene fog instead of from tinting the
+                  colour. The Map runs a cooler palette than the Garden: the two
+                  greens are swapped for blues there, marked above, matched to
+                  the same luminance so the depth fog reads identically. A green
+                  channel is therefore green in the Garden and blue on the Map.
+                  Text on a swatch uses{" "}
+                  <code className="rounded bg-neutral-900 px-1">inkOn()</code>,
+                  which prefers the light ink and only falls back to near-black
+                  where light text would drop under 3:1.
+                </p>
               </div>
             </Spec>
 

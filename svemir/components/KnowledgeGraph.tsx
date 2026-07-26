@@ -7,7 +7,7 @@ import type { ComponentType } from "react";
 import * as THREE from "three";
 import SpriteText from "three-spritetext";
 import { forceCollide, forceRadial } from "d3-force-3d";
-import { channelColor } from "@/lib/constants";
+import { channelMapColor } from "@/lib/constants";
 import { useThemePalette } from "@/lib/use-theme-palette";
 
 // react-force-graph-3d's TypeScript generics don't survive next/dynamic, so
@@ -324,7 +324,10 @@ function renderNodeObject(raw: unknown): THREE.Object3D {
       map: dustTexture(),
       color: new THREE.Color(n.color),
       transparent: true,
-      opacity: isHub ? 0.9 : isConcept ? 0.5 : 0.85,
+      // Full opacity so the palette lands true and matches the Garden pills.
+      // Anything less blends every node toward the near-black background and
+      // reads as a different, muddier palette. Depth comes from the fog.
+      opacity: isConcept ? 0.85 : 1,
       depthWrite: false,
     })
   );
@@ -367,6 +370,11 @@ type GraphHandle = {
   ) => void;
   scene?: () => THREE.Scene;
   camera?: () => THREE.PerspectiveCamera;
+  controls?: () => {
+    target?: { x: number; y: number; z: number };
+    addEventListener?: (ev: string, cb: () => void) => void;
+    removeEventListener?: (ev: string, cb: () => void) => void;
+  };
 };
 
 // Frame the core of the galaxy, not its outliers: ~8% of blocks are
@@ -525,7 +533,7 @@ export default function KnowledgeGraph({
       tags: i.tagNames,
       tagIds: i.tagIds,
       type: "block",
-      color: i.tagIds[0] ? channelColor(i.tagIds[0]) : BLOCK_NEUTRAL,
+      color: i.tagIds[0] ? channelMapColor(i.tagIds[0]) : BLOCK_NEUTRAL,
       img: i.img,
     }));
 
@@ -555,7 +563,7 @@ export default function KnowledgeGraph({
         // channel chips show/hide the hub together with its blocks.
         tagIds: [id],
         type: "channel",
-        color: channelColor(id),
+        color: channelMapColor(id),
         slug: meta.slug,
         prevalence: meta.count,
       });
@@ -718,7 +726,7 @@ export default function KnowledgeGraph({
       m.set(id, {
         id,
         name: id === NO_CHANNEL ? "No channel" : i.tagNames[0] ?? "Channel",
-        color: id === NO_CHANNEL ? BLOCK_NEUTRAL : channelColor(id),
+        color: id === NO_CHANNEL ? BLOCK_NEUTRAL : channelMapColor(id),
       });
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -825,6 +833,9 @@ export default function KnowledgeGraph({
     if (!fg || size.w === 0) return;
 
     const charge = fg.d3Force("charge");
+    // This is what keeps the orb round. Repulsion is the only force spreading
+    // nodes evenly across the shell; weaken it and the big channels collapse
+    // into each other, leaving a lopsided blob with a dense side and a bare one.
     if (charge?.strength) charge.strength(-45);
     const link = fg.d3Force("link");
     // Channel links are the structural layer: strong, with spoke length
@@ -867,6 +878,13 @@ export default function KnowledgeGraph({
     // of radius R, concepts toward an inner ball, so the archive holds its
     // planet shape instead of collapsing into a blob or a plane.
     const R = sphereR;
+    // The sphere keeper: pull channel hubs and their blocks toward a shell of
+    // radius R, concepts toward an inner ball, so the archive holds its planet
+    // shape instead of collapsing into a blob or a plane.
+    //
+    // Kept gentle on purpose. Pulling harder (and squeezing the concepts into a
+    // tight central core) fought the channel links instead of complementing
+    // them, and the result was a lopsided lump rather than a rounder orb.
     fg.d3Force(
       "radial",
       forceRadial((n: unknown) =>
@@ -874,11 +892,31 @@ export default function KnowledgeGraph({
       ).strength(0.3)
     );
 
-    // Only safe once the layout exists (see layoutReadyRef). Skipping it on
-    // first mount costs nothing: the graph runs its own warmup/cooldown when
-    // it ingests graphData, and the forces set above are picked up by that run.
-    if (layoutReadyRef.current) fg.d3ReheatSimulation?.();
+    // The forces above only do anything while the engine is ticking, so the
+    // simulation has to be reheated after installing them. It cannot be
+    // reheated immediately: d3ReheatSimulation only flips the engine's
+    // "running" flag, and the tick loop then dereferences a `state.layout`
+    // that does not exist until the graph has ingested graphData, which throws
+    // inside the animation loop and blacks out the canvas.
+    //
+    // So wait for the first successful tick (layoutReadyRef) and reheat then.
+    // Skipping the reheat entirely is NOT an option: without it the engine
+    // finishes its warmup on d3's default forces and stops, and none of the
+    // core/shell layout above is ever applied.
+    let reheatRaf = 0;
+    let tries = 0;
+    const reheatWhenReady = () => {
+      if (layoutReadyRef.current) {
+        fg.d3ReheatSimulation?.();
+        return;
+      }
+      if (tries++ > 600) return; // ~10s of visible frames, then give up
+      reheatRaf = requestAnimationFrame(reheatWhenReady);
+    };
+    reheatWhenReady();
+
     didFitRef.current = false; // allow one fresh camera fit per data load
+    return () => cancelAnimationFrame(reheatRaf);
   }, [data, size.w, fgReady, sphereR]);
 
   // Keep the camera framed while the layout settles.
@@ -903,9 +941,11 @@ export default function KnowledgeGraph({
     };
 
     const track = () => {
-      // ~6s of visible time (rAF pauses in background tabs, which is fine -
-      // it resumes and finishes framing when the tab is looked at).
-      if (didFitRef.current || frames++ > 360) return release();
+      // ~15s of visible time (rAF pauses in background tabs, which is fine:
+      // it resumes and finishes framing when the tab is looked at). The core
+      // and shell layout keeps expanding for a while, so a short budget stops
+      // tracking while the camera is still too close.
+      if (didFitRef.current || frames++ > 900) return release();
       const half = coreHalfExtent(data.nodes);
       // Wait until the layout has actually reached its shell before touching
       // the camera. Fitting a half-formed cloud puts the camera among the
@@ -995,11 +1035,49 @@ export default function KnowledgeGraph({
     };
     updateFog();
 
-    // (No auto-orbit: the graph runs TrackballControls, which has no
-    // autoRotate. The assignment that used to live here was inert - the map
-    // has never actually rotated on its own.)
+    // Gentle auto-orbit, matching the Garden's drift.
+    //
+    // Hand-rolled because neither control type gives us this for free: the
+    // library's TrackballControls has no autoRotate at all, and OrbitControls
+    // (which does) crashes on node drag-end here. So spin the camera around the
+    // vertical axis through the controls' target ourselves. Using the target
+    // rather than the origin means panning still works.
+    const controls = fg.controls?.();
+    let spinning = true;
+    const pause = () => {
+      spinning = false;
+    };
+    const resume = () => {
+      spinning = true;
+    };
+    controls?.addEventListener?.("start", pause);
+    controls?.addEventListener?.("end", resume);
+
+    const SPIN_PER_FRAME = 0.0004; // radians, ~1 revolution per 4 minutes
+    let spinRaf = 0;
+    const spin = () => {
+      spinRaf = requestAnimationFrame(spin);
+      if (!spinning) return;
+      const cam = fg.camera?.();
+      if (!cam) return;
+      const t = controls?.target;
+      const tx = t?.x ?? 0;
+      const ty = t?.y ?? 0;
+      const tz = t?.z ?? 0;
+      const dx = cam.position.x - tx;
+      const dz = cam.position.z - tz;
+      const c = Math.cos(SPIN_PER_FRAME);
+      const s = Math.sin(SPIN_PER_FRAME);
+      cam.position.x = tx + dx * c - dz * s;
+      cam.position.z = tz + dx * s + dz * c;
+      cam.lookAt(tx, ty, tz);
+    };
+    spin();
 
     return () => {
+      cancelAnimationFrame(spinRaf);
+      controls?.removeEventListener?.("start", pause);
+      controls?.removeEventListener?.("end", resume);
       cancelAnimationFrame(fogRaf);
       const sc = fg.scene?.();
       if (sc) sc.fog = null;
@@ -1083,9 +1161,8 @@ export default function KnowledgeGraph({
           Uses the graph's visibility accessors, so toggling never re-runs the
           layout. */}
       <div className="absolute left-3 top-3 z-20 text-xs">
-        {/* Stacked, not side by side: the view switcher is centred, and a
-            second pill on this row collides with it on narrower windows. */}
-        <div className="flex flex-col items-start gap-2">
+        {/* One row, matching the Garden's control cluster. */}
+        <div className="flex items-start gap-2">
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
@@ -1209,6 +1286,11 @@ export default function KnowledgeGraph({
           height={size.h}
           backgroundColor={palette.bg}
           showNavInfo={false}
+          // Left on the library default (trackball) deliberately. OrbitControls
+          // would give us a real autoRotate, but 3d-force-graph fires a
+          // synthetic touch "pointerup" at the end of a node drag and
+          // OrbitControls throws on it (it has no matching registered pointer).
+          // The auto-orbit is done by hand instead, see the spin loop.
           warmupTicks={30}
           cooldownTicks={250}
           onEngineTick={() => {
@@ -1243,8 +1325,9 @@ export default function KnowledgeGraph({
               activeId !== null &&
               (linkEndId(l.source) === activeId ||
                 linkEndId(l.target) === activeId);
-            // Concept cross-ties are the tangle: in 3D they only appear
-            // around the node you're hovering/inspecting.
+            // Concept cross-ties are the tangle: there are ~2000 of them, and
+            // drawing them all at rest buries the sphere in a hairball. They
+            // only appear around the node you're hovering or inspecting.
             if (l.kind === "concept" && !touchesActive) return false;
             if (!anyFilter) return true;
             const s = nodeById.get(linkEndId(l.source));
@@ -1460,7 +1543,7 @@ export default function KnowledgeGraph({
                             className="h-1.5 w-1.5 rounded-full"
                             style={{
                               background: node.tagIds[i]
-                                ? channelColor(node.tagIds[i])
+                                ? channelMapColor(node.tagIds[i])
                                 : BLOCK_NEUTRAL,
                             }}
                           />

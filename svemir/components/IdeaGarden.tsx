@@ -6,13 +6,15 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { buildPlant, mulberry32, seedFromId } from "@/lib/lsystem";
 import { pickSpecies, speciesParams } from "@/lib/tree-species";
+import { inkOn } from "@/lib/constants";
 
 export type GardenLeaf = { id: string; title: string; createdAt: string };
 export type GardenChannel = {
   id: string;
   slug: string;
   title: string;
-  hue: number;
+  /** The channel's brand colour (hex), shared with its Map nodes. */
+  color: string;
   leaves: GardenLeaf[];
 };
 
@@ -356,7 +358,9 @@ export default function IdeaGarden({ gardens }: Props) {
         tmpMatrix.makeScale(s, s, s);
         tmpMatrix.setPosition(lp.x, lp.y, lp.z);
         inst.setMatrixAt(i, tmpMatrix);
-        tmpColor.setHSL(channel.hue / 360, 0.52, 0.62 + lr() * 0.14);
+        // Brand colour per channel, with a little per-leaf lightness jitter so
+        // the crown reads as foliage rather than one flat block of colour.
+        tmpColor.set(channel.color).offsetHSL(0, 0, -0.06 + lr() * 0.14);
         inst.setColorAt(i, tmpColor);
         meta[i] = channel.leaves[i];
       }
@@ -375,9 +379,12 @@ export default function IdeaGarden({ gardens }: Props) {
       pill.style.cssText =
         "position:absolute;transform:translate(-50%,-100%);padding:3px 10px;border-radius:999px;" +
         "font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;white-space:nowrap;" +
-        "max-width:150px;overflow:hidden;text-overflow:ellipsis;color:#0a0a0a;pointer-events:auto;" +
+        "max-width:150px;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;" +
         "cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5);will-change:left,top";
-      pill.style.background = `hsl(${channel.hue},55%,70%)`;
+      pill.style.background = channel.color;
+      // Dark swatches (Forest Green, Lavender Purple) need light text, or the
+      // label is unreadable on its own pill.
+      pill.style.color = inkOn(channel.color);
       // The balloon doubles as a link to its channel. Listeners die with the
       // pill when the overlay is cleared on teardown.
       pill.addEventListener("mouseenter", () => {
@@ -393,7 +400,7 @@ export default function IdeaGarden({ gardens }: Props) {
 
       // The balloon's string, drawn down to the crown each frame.
       const line = document.createElementNS(SVG_NS, "line");
-      line.setAttribute("stroke", `hsl(${channel.hue},55%,70%)`);
+      line.setAttribute("stroke", channel.color);
       line.setAttribute("stroke-width", "1");
       line.setAttribute("stroke-opacity", "0.4");
 
