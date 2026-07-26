@@ -7,6 +7,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { buildPlant, mulberry32, seedFromId } from "@/lib/lsystem";
 import { pickSpecies, speciesParams } from "@/lib/tree-species";
 import { inkOn } from "@/lib/constants";
+import {
+  IconPlay,
+  IconPause,
+  IconSoundOn,
+  IconSoundOff,
+} from "@/components/ui/icons";
 
 export type GardenLeaf = { id: string; title: string; createdAt: string };
 export type GardenChannel = {
@@ -185,6 +191,10 @@ export default function IdeaGarden({ gardens }: Props) {
   // Forest ambience (off by default; created on first toggle = user gesture).
   const [soundOn, setSoundOn] = useState(false);
   const audioRef = useRef<ForestAudio | null>(null);
+  // Camera drift on/off. Same ref-plus-state shape as showLabels: the render
+  // loop reads the ref every frame so toggling never rebuilds the scene.
+  const [motionOn, setMotionOn] = useState(true);
+  const motionRef = useRef(true);
   useEffect(() => {
     const obs = new MutationObserver(() =>
       setThemeKey(document.documentElement.dataset.theme || "dark")
@@ -199,6 +209,10 @@ export default function IdeaGarden({ gardens }: Props) {
   useEffect(() => {
     showLabelsRef.current = showLabels;
   }, [showLabels]);
+
+  useEffect(() => {
+    motionRef.current = motionOn;
+  }, [motionOn]);
 
   // Start/stop the ambience when the toggle flips.
   useEffect(() => {
@@ -691,14 +705,16 @@ export default function IdeaGarden({ gardens }: Props) {
     controls.target.set(0, targetY, 0);
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.18; // very gentle drift
-    // Persistent drift on/off (toggled by a click on empty space). Dragging pauses
-    // the drift, then resumes to whatever this flag says.
-    let autoRotateOn = true;
+    // Drift on/off has two inputs: the visitor's explicit Pause/Play toggle
+    // (motionRef, also flipped by clicking empty space) and a transient pause
+    // while dragging. Both are applied per-frame in the animation loop, so the
+    // two can never disagree about the final state.
+    let dragging = false;
     const onControlsStart = () => {
-      controls.autoRotate = false;
+      dragging = true;
     };
     const onControlsEnd = () => {
-      controls.autoRotate = autoRotateOn;
+      dragging = false;
     };
     controls.addEventListener("start", onControlsStart);
     controls.addEventListener("end", onControlsEnd);
@@ -852,8 +868,7 @@ export default function IdeaGarden({ gardens }: Props) {
         router.push(`/block/${hovered.id}`);
         return;
       }
-      autoRotateOn = !autoRotateOn; // click empty space → toggle the drift
-      controls.autoRotate = autoRotateOn;
+      setMotionOn((v) => !v); // click empty space → toggle the drift
     }
     renderer.domElement.addEventListener("pointermove", onMove);
     renderer.domElement.addEventListener("pointerleave", onLeave);
@@ -912,6 +927,7 @@ export default function IdeaGarden({ gardens }: Props) {
     const animate = () => {
       raf = requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
+      controls.autoRotate = motionRef.current && !dragging;
       controls.update();
       updateBirds(time);
       updateHover();
@@ -952,6 +968,10 @@ export default function IdeaGarden({ gardens }: Props) {
 
   const toggleClass =
     "rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-xs backdrop-blur transition-colors";
+  // Icon-only variant: a circle rather than a pill, so the two ambient toggles
+  // read as controls next to the wider text button.
+  const iconToggleClass =
+    "flex h-[26px] w-[26px] items-center justify-center rounded-full border border-neutral-800 bg-neutral-900/70 backdrop-blur transition-colors";
   return (
     <div ref={mountRef} className="relative h-full w-full">
       <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
@@ -965,13 +985,28 @@ export default function IdeaGarden({ gardens }: Props) {
         >
           {showLabels ? "Hide labels" : "Show labels"}
         </button>
+        {/* Icon only, so aria-label carries the meaning for screen readers. */}
         <button
           type="button"
           onClick={() => setSoundOn((v) => !v)}
           aria-pressed={soundOn}
-          className={`${toggleClass} ${soundOn ? "text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
+          aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
+          title={soundOn ? "Sound on" : "Sound off"}
+          className={`${iconToggleClass} ${soundOn ? "text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
         >
-          {soundOn ? "Sound on" : "Sound off"}
+          {soundOn ? <IconSoundOn size={14} /> : <IconSoundOff size={14} />}
+        </button>
+        {/* Stop the drift so the garden holds still while you browse. Clicking
+            empty space toggles the same state. */}
+        <button
+          type="button"
+          onClick={() => setMotionOn((v) => !v)}
+          aria-pressed={motionOn}
+          aria-label={motionOn ? "Stop rotation" : "Start rotation"}
+          title={motionOn ? "Stop rotation" : "Start rotation"}
+          className={`${iconToggleClass} ${motionOn ? "text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
+        >
+          {motionOn ? <IconPause size={14} /> : <IconPlay size={14} />}
         </button>
       </div>
       {/* Credit for the garden concept, sitting just above the site's

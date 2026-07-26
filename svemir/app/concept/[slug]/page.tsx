@@ -3,6 +3,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
 import BlocksView from "@/components/BlocksView";
+import ExportPapersButton from "@/components/ExportPapersButton";
 import { ITEM_CARD_COLUMNS } from "@/lib/types";
 import type { CardItem } from "@/lib/types";
 
@@ -77,6 +78,13 @@ export default async function ConceptPage({ params }: { params: Params }) {
           <p className="mt-3 text-xs text-neutral-500">
             {blocks.length} block{blocks.length === 1 ? "" : "s"} mention this
           </p>
+          {/* Owner-only: the papers among these blocks, as CSV. */}
+          <div className="mt-4">
+            <ExportPapersButton
+              concept={concept.slug}
+              label="Export papers (CSV)"
+            />
+          </div>
         </div>
       </div>
 

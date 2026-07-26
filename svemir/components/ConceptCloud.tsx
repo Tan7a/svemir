@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { textPaletteColor } from "@/lib/constants";
 
 export type CloudConcept = {
   id: string;
@@ -39,8 +40,13 @@ export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] })
         <li key={c.id}>
           <Link
             href={`/concept/${c.slug}`}
-            className="text-neutral-300 transition-colors hover:text-neutral-100"
-            style={{ fontSize: `${sizeRem(c.count)}rem` }}
+            className="transition-opacity hover:opacity-70"
+            style={{
+              fontSize: `${sizeRem(c.count)}rem`,
+              // Seeded on the term, not the id, so a concept keeps its colour
+              // even if re-indexing gives it a new row.
+              color: textPaletteColor(c.term),
+            }}
             title={`${c.count} block${c.count === 1 ? "" : "s"}`}
           >
             {c.term}

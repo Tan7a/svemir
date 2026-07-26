@@ -39,7 +39,7 @@ export default function ViewNav() {
   // Shared item shape: a rounded pill that fills on hover so every link reads
   // as interactive. Active = bright text; inactive = muted with a hover fill.
   // Uses the neutral ramp (not literal white) so the fill inverts per theme.
-  const base = "rounded-lg px-2.5 py-1 transition-colors";
+  const base = "rounded-full px-3 py-1 transition-colors";
   const cls = (isActive: boolean) =>
     isActive
       ? `${base} text-neutral-100`

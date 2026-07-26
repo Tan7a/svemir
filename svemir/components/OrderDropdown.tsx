@@ -193,7 +193,7 @@ export default function OrderDropdown() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex max-w-[10rem] items-center gap-1.5 rounded-xl px-2.5 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+        className="flex max-w-[10rem] items-center gap-1.5 rounded-full px-3 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
       >
         <span className="truncate">{currentLabel}</span>
         <Chevron open={open} className="shrink-0 text-neutral-500" />

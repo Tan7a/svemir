@@ -334,3 +334,44 @@ export function IconDropdownCircle({ size = 16, className = "" }: IconProps) {
     </svg>
   );
 }
+
+/* ---- Playback + sound (Map and Garden ambient controls) ------------------ */
+
+/** Play - a triangle, for resuming the camera drift. */
+export function IconPlay({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M8 5.5v13l10-6.5-10-6.5z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Pause - two bars, for holding the camera still. */
+export function IconPause({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M9.5 5v14M14.5 5v14" />
+    </svg>
+  );
+}
+
+/** Sound on - speaker with two waves. */
+export function IconSoundOn({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M5 9.5h3L12 6v12l-4-3.5H5z" strokeLinejoin="round" />
+      <path d="M15.5 9.5a3.5 3.5 0 0 1 0 5" />
+      <path d="M18 7a7 7 0 0 1 0 10" />
+    </svg>
+  );
+}
+
+/** Sound off - speaker with an X. */
+export function IconSoundOff({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...s24} className={className} aria-hidden>
+      <path d="M5 9.5h3L12 6v12l-4-3.5H5z" strokeLinejoin="round" />
+      <path d="M16 10l4 4M20 10l-4 4" />
+    </svg>
+  );
+}

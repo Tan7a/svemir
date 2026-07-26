@@ -62,6 +62,13 @@ export default async function ConceptsPage() {
             {concepts.length} recurring concept
             {concepts.length === 1 ? "" : "s"} · sized by prevalence
           </p>
+          {/* One-liner, kept true to lib/extract-terms.ts (local extraction,
+              no AI) and the 2+ block floor applied by the query below. */}
+          <p className="mt-4 max-w-prose text-xs leading-relaxed text-neutral-500">
+            Recurring words and phrases read out of the blocks themselves,
+            locally and without AI. A term appears once two or more blocks share
+            it, sized by how many.
+          </p>
         </div>
       </div>
 

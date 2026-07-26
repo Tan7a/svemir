@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import BlocksView from "@/components/BlocksView";
+import ExportPapersButton from "@/components/ExportPapersButton";
 import { listFacets } from "@/lib/queries";
 import { supabase } from "@/lib/supabase-client";
 import { FACET_DIMENSIONS } from "@/lib/constants";
@@ -71,6 +72,10 @@ export default async function FacetsPage({ searchParams }: { searchParams: SP })
                 </a>
                 .
               </p>
+            </div>
+            {/* Owner-only: the whole library as a CSV table. */}
+            <div className="mt-5">
+              <ExportPapersButton label="Export all papers (CSV)" />
             </div>
           </div>
         </header>

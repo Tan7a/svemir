@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { FacetWithPapers } from "@/lib/types";
 import { FACET_DIMENSION_BY_KEY } from "@/lib/constants";
+import ExportPapersButton from "@/components/ExportPapersButton";
 
 type Props = {
   facet: FacetWithPapers;
@@ -48,6 +49,8 @@ export default function FacetDetail({ facet, inModal = false }: Props) {
           >
             View in grid →
           </Link>
+          {/* Owner-only: just this theme's papers as CSV. */}
+          <ExportPapersButton facet={facet.slug} label="Export theme (CSV)" />
         </div>
       </header>
 

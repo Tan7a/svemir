@@ -42,7 +42,7 @@ export default function TopBar() {
         {/* Quiet Guestbook link, sitting next to the sort control. */}
         <Link
           href="/guestbook"
-          className="rounded-xl px-2.5 py-1 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100"
+          className="rounded-full px-3 py-1 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100"
         >
           Guestbook
         </Link>

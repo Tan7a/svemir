@@ -8,6 +8,12 @@ import * as THREE from "three";
 import SpriteText from "three-spritetext";
 import { forceCollide, forceRadial } from "d3-force-3d";
 import { channelMapColor } from "@/lib/constants";
+import {
+  IconPlay,
+  IconPause,
+  IconSoundOn,
+  IconSoundOff,
+} from "@/components/ui/icons";
 import { useThemePalette } from "@/lib/use-theme-palette";
 
 // react-force-graph-3d's TypeScript generics don't survive next/dynamic, so
@@ -482,6 +488,13 @@ export default function KnowledgeGraph({
   // Deep-space ambience, off by default; the AudioContext is only created on
   // the first toggle, which is the user gesture browsers require.
   const [soundOn, setSoundOn] = useState(false);
+  // Auto-orbit toggle. Read through a ref inside the spin loop so flipping it
+  // doesn't re-run the scene effect (which would rebuild the starfield).
+  const [motionOn, setMotionOn] = useState(true);
+  const motionRef = useRef(true);
+  useEffect(() => {
+    motionRef.current = motionOn;
+  }, [motionOn]);
   const audioRef = useRef<UniverseAudio | null>(null);
   // Blocks with no links at all (no channel, no shared concept, no manual
   // edge) settle on an outer ring - this hides them when they're just noise.
@@ -1057,7 +1070,9 @@ export default function KnowledgeGraph({
     let spinRaf = 0;
     const spin = () => {
       spinRaf = requestAnimationFrame(spin);
-      if (!spinning) return;
+      // `spinning` is the transient pause while dragging; motionRef is the
+      // visitor's explicit stop.
+      if (!spinning || !motionRef.current) return;
       const cam = fg.camera?.();
       if (!cam) return;
       const t = controls?.target;
@@ -1173,18 +1188,36 @@ export default function KnowledgeGraph({
               <span className="ml-1 text-neutral-500">· {shownKeys.size}</span>
             )}
           </button>
-          {/* Deep-space ambience, mirroring the Garden's sound toggle. */}
+          {/* Deep-space ambience, mirroring the Garden's sound toggle. Icon
+              only, so aria-label carries the meaning for screen readers. */}
           <button
             type="button"
             onClick={() => setSoundOn((v) => !v)}
             aria-pressed={soundOn}
-            className={`rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 backdrop-blur transition-colors ${
+            aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
+            title={soundOn ? "Sound on" : "Sound off"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-full border border-neutral-800 bg-neutral-900/70 backdrop-blur transition-colors ${
               soundOn
                 ? "text-neutral-100"
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            {soundOn ? "Sound on" : "Sound off"}
+            {soundOn ? <IconSoundOn size={14} /> : <IconSoundOff size={14} />}
+          </button>
+          {/* Stop the auto-orbit so the map holds still while you read it. */}
+          <button
+            type="button"
+            onClick={() => setMotionOn((v) => !v)}
+            aria-pressed={motionOn}
+            aria-label={motionOn ? "Stop rotation" : "Start rotation"}
+            title={motionOn ? "Stop rotation" : "Start rotation"}
+            className={`flex h-[26px] w-[26px] items-center justify-center rounded-full border border-neutral-800 bg-neutral-900/70 backdrop-blur transition-colors ${
+              motionOn
+                ? "text-neutral-100"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            {motionOn ? <IconPause size={14} /> : <IconPlay size={14} />}
           </button>
         </div>
         {filtersOpen && (

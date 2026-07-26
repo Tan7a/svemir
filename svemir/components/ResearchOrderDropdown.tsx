@@ -64,7 +64,7 @@ export default function ResearchOrderDropdown() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
       >
         {currentLabel}
         <Chevron open={open} className="text-neutral-500" />

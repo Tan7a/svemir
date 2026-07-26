@@ -146,6 +146,31 @@ export function channelMapColor(id: string): string {
   return c.mapHex ?? c.hex;
 }
 
+/**
+ * Palette colours usable as TEXT on the dark page background.
+ *
+ * A colour that reads fine as a 6px dot can be unreadable as a word. Forest
+ * Green and Lavender Purple sit at roughly 2.2:1 and 2.4:1 against the page,
+ * well under the 4.5:1 minimum, so they are filtered out here rather than
+ * hand-excluded, which keeps this honest if the palette ever changes.
+ *
+ * Tuned for the dark theme, which is the default. On a light theme the light
+ * end of the palette would be the failing side instead.
+ */
+export const TEXT_PALETTE: BrandColor[] = CHANNEL_PALETTE.filter(
+  (c) =>
+    contrastRatio(relativeLuminance(c.hex), relativeLuminance('#0a0a0a')) >= 4.5
+);
+
+/** Deterministic text-safe colour for any stable string (concept terms). */
+export function textPaletteColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return TEXT_PALETTE[Math.abs(hash) % TEXT_PALETTE.length].hex;
+}
+
 /** The two inks that may sit on a brand swatch: page ink, and Off White. */
 const INK_DARK = '#0a0a0a';
 const INK_LIGHT = '#F3F2F5';
