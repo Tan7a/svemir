@@ -7,6 +7,7 @@ import BlocksView from "@/components/BlocksView";
 import { ITEM_CARD_COLUMNS } from "@/lib/types";
 import type { CardItem, Channel, ChannelWithBlocks } from "@/lib/types";
 import ChannelCard from "@/components/ChannelCard";
+import ChannelActions from "@/components/ChannelActions";
 
 export const revalidate = 60;
 
@@ -51,7 +52,9 @@ export default async function ChannelPage({ params }: { params: Params }) {
   // (no body_text/search_tsv); children fetch just the 8 cover cards their
   // strip renders, with the true count from an aliased count embed.
   type ChannelWithConns = Channel & {
-    connections: { position: number; items: unknown }[] | null;
+    connections:
+      | { position: number; connected_at: string; items: unknown }[]
+      | null;
   };
   type ChildRow = Channel & {
     covers: { position: number; items: unknown }[] | null;
@@ -65,7 +68,7 @@ export default async function ChannelPage({ params }: { params: Params }) {
     .from("channels")
     .select(
       `*,
-       connections(position, items(${ITEM_CARD_COLUMNS})),
+       connections(position, connected_at, items(${ITEM_CARD_COLUMNS})),
        children:channels!parent_id(*, covers:connections(position, items(${ITEM_CARD_COLUMNS})), meta:connections(count))`
     )
     .eq("slug", slug)
@@ -93,6 +96,26 @@ export default async function ChannelPage({ params }: { params: Params }) {
   }
 
   const blocks: CardItem[] = blocksFromConns(parentConns);
+
+  // Info-popup extras, mirroring what ChannelCard derives for the card menu.
+  // Every connection row is already fetched here (no limit), so the most recent
+  // connected_at is a free reduction rather than a second query.
+  const lastUpdated = (parentConns ?? []).reduce<string | null>((max, row) => {
+    const at = row.connected_at;
+    if (!at) return max;
+    return !max || new Date(at).getTime() > new Date(max).getTime() ? at : max;
+  }, null);
+
+  const topicCounts = new Map<string, number>();
+  for (const b of blocks) {
+    for (const c of b.categories ?? []) {
+      topicCounts.set(c, (topicCounts.get(c) ?? 0) + 1);
+    }
+  }
+  const topics = [...topicCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([c]) => c);
 
   const childrenWithBlocks: ChannelWithBlocks[] = (children ?? [])
     .sort(
@@ -124,31 +147,50 @@ export default async function ChannelPage({ params }: { params: Params }) {
         </div>
       )}
       <div>
-        <div className="px-5 pt-8 pb-6">
-          <h1 className="flex items-baseline gap-3">
-            <Link
-              href="/"
-              className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-500 hover:text-neutral-200"
-            >
-              svemir
-            </Link>
-            <span className="text-3xl text-neutral-700">/</span>
-            <span className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-100">
-              {channel.title}
-            </span>
-          </h1>
-          {channel.description && (
-            <p className="mt-2 max-w-prose text-sm text-neutral-400">
-              {channel.description}
-            </p>
-          )}
-          <p className="mt-3 text-xs text-neutral-500">
-            {blocks.length} block{blocks.length === 1 ? "" : "s"}
-            {childrenWithBlocks.length > 0 && (
-              <> · {childrenWithBlocks.length} nested channel{childrenWithBlocks.length === 1 ? "" : "s"}</>
+        <div className="flex items-start justify-between gap-4 px-5 pt-8 pb-6">
+          <div>
+            <h1 className="flex items-baseline gap-3">
+              <Link
+                href="/"
+                className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-500 hover:text-neutral-200"
+              >
+                svemir
+              </Link>
+              <span className="text-3xl text-neutral-700">/</span>
+              <span className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-100">
+                {channel.title}
+              </span>
+            </h1>
+            {channel.description && (
+              <p className="mt-2 max-w-prose text-sm text-neutral-400">
+                {channel.description}
+              </p>
             )}
-            {" "}· created {relativeTime(channel.created_at)}
-          </p>
+            <p className="mt-3 text-xs text-neutral-500">
+              {blocks.length} block{blocks.length === 1 ? "" : "s"}
+              {childrenWithBlocks.length > 0 && (
+                <> · {childrenWithBlocks.length} nested channel{childrenWithBlocks.length === 1 ? "" : "s"}</>
+              )}
+              {" "}· created {relativeTime(channel.created_at)}
+            </p>
+          </div>
+
+          {/* Same actions menu as the channel cards. Always visible here (no
+              card to hover), and it renders null for signed-out visitors. */}
+          <div className="shrink-0">
+            <ChannelActions
+              channelId={channel.id}
+              channelTitle={channel.title}
+              hasParent={channel.parent_id !== null}
+              info={{
+                description: channel.description,
+                blockCount: blocks.length,
+                createdAt: channel.created_at,
+                lastUpdated,
+                topics,
+              }}
+            />
+          </div>
         </div>
       </div>
 

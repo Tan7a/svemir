@@ -71,6 +71,10 @@ type GraphNode = {
   img?: string | null; // block thumbnail for the detail card
   // Link degree (centrality) - drives node size, Obsidian-style.
   deg?: number;
+  // Written by d3-force once the simulation runs, not by us.
+  x?: number;
+  y?: number;
+  z?: number;
 };
 
 type GraphLink = {
@@ -153,6 +157,277 @@ function nodeRadius(node: { deg?: number }): number {
   return 2 + Math.sqrt(node.deg ?? 0) * 0.9;
 }
 
+type UniverseAudio = { stop: () => void };
+
+// Procedural deep-space ambience (Web Audio, no external asset), the Map's
+// counterpart to the Garden's forest sound: a low drone a fifth apart that
+// beats slowly against itself, a dark filtered-noise bed for the cosmic
+// background, and sparse long-decay bell tones that read as distant stars.
+// Created on a user gesture (the Sound toggle) so it satisfies autoplay rules,
+// and fades in/out rather than clicking on.
+function startUniverseAudio(): UniverseAudio {
+  const ctx = new AudioContext();
+  void ctx.resume();
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+  const t0 = ctx.currentTime;
+  master.gain.setValueAtTime(0, t0);
+  master.gain.linearRampToValueAtTime(0.42, t0 + 2.5); // slow swell
+
+  // Drone: root + fifth, detuned a few cents so they beat against each other
+  // over several seconds. Kept under a lowpass so it stays a hum, not a tone.
+  const droneFilter = ctx.createBiquadFilter();
+  droneFilter.type = "lowpass";
+  droneFilter.frequency.value = 320;
+  const droneGain = ctx.createGain();
+  droneGain.gain.value = 0.16;
+  droneFilter.connect(droneGain).connect(master);
+
+  const drones = [48, 72, 96].map((freq, i) => {
+    const osc = ctx.createOscillator();
+    osc.type = i === 2 ? "sine" : "triangle";
+    osc.frequency.value = freq;
+    osc.detune.value = i * 7 - 7; // a few cents apart -> slow beating
+    const g = ctx.createGain();
+    g.gain.value = i === 2 ? 0.25 : 1;
+    osc.connect(g).connect(droneFilter);
+    osc.start();
+    return osc;
+  });
+
+  // Cosmic background: brown-ish noise, darker and quieter than the garden's
+  // wind so it sits under the drone rather than beside it.
+  const len = Math.floor(3 * ctx.sampleRate);
+  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    const white = Math.random() * 2 - 1;
+    last = (last + 0.015 * white) / 1.015;
+    data[i] = last * 3.4;
+  }
+  const hiss = ctx.createBufferSource();
+  hiss.buffer = buffer;
+  hiss.loop = true;
+  const hissFilter = ctx.createBiquadFilter();
+  hissFilter.type = "lowpass";
+  hissFilter.frequency.value = 220;
+  const hissGain = ctx.createGain();
+  hissGain.gain.value = 0.16;
+  hiss.connect(hissFilter).connect(hissGain).connect(master);
+  hiss.start();
+
+  // Very slow LFOs so the whole bed breathes instead of sitting static.
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.035;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 120;
+  lfo.connect(lfoGain).connect(droneFilter.frequency);
+  const lfo2 = ctx.createOscillator();
+  lfo2.frequency.value = 0.021;
+  const lfo2Gain = ctx.createGain();
+  lfo2Gain.gain.value = 0.07;
+  lfo2.connect(lfo2Gain).connect(hissGain.gain);
+  lfo.start();
+  lfo2.start();
+
+  // Distant stars: occasional bell tones on a pentatonic set, panned wide,
+  // with a long exponential tail so they hang in the space.
+  const SCALE = [329.63, 392.0, 440.0, 493.88, 587.33, 659.25];
+  let stopped = false;
+  let timer = 0;
+  const ping = () => {
+    if (stopped) return;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.7 - 0.85;
+    pan.connect(master);
+    const f = SCALE[Math.floor(Math.random() * SCALE.length)];
+    const start = ctx.currentTime + 0.02;
+    const decay = 3.5 + Math.random() * 3;
+    // Fundamental plus a quiet octave for a glassy, bell-like timbre.
+    [
+      [f, 0.055],
+      [f * 2, 0.018],
+    ].forEach(([freq, peak]) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.linearRampToValueAtTime(peak, start + 0.35); // soft, no click
+      g.gain.exponentialRampToValueAtTime(0.0001, start + decay); // never exactly 0
+      osc.connect(g).connect(pan);
+      osc.start(start);
+      osc.stop(start + decay + 0.1);
+    });
+    // Drop this ping's panner once it has rung out, so idle nodes don't pile
+    // up on master over a long session.
+    window.setTimeout(() => {
+      try {
+        pan.disconnect();
+      } catch {
+        // context closed; ignore
+      }
+    }, (decay + 1) * 1000);
+    timer = window.setTimeout(ping, 5000 + Math.random() * 7000);
+  };
+  timer = window.setTimeout(ping, 1800);
+
+  return {
+    stop: () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
+      master.gain.linearRampToValueAtTime(0, t + 1.2); // fade-out
+      window.setTimeout(() => {
+        try {
+          drones.forEach((d) => d.stop());
+          hiss.stop();
+          lfo.stop();
+          lfo2.stop();
+          void ctx.close();
+        } catch {
+          // context already closing; ignore
+        }
+      }, 1300);
+    },
+  };
+}
+
+/**
+ * Build one node's 3D object. Fine translucent particles: flat billboard discs
+ * in the node's channel colour with real opacity, so overlapping particles
+ * build density instead of solid balls. Blocks are small dust, hubs are larger
+ * soft blobs, concepts sit between. Channel names float above their hub; other
+ * names show in the hover tooltip. Flat matte throughout - no glow.
+ *
+ * Deliberately module-level, NOT an inline prop: three-forcegraph wipes and
+ * rebuilds every node object whenever this accessor's identity changes
+ * (`nodeDataMapper.clear()`), so an inline arrow re-created all ~900 sprites on
+ * every single React render - including on every hover, since onNodeHover sets
+ * state. It reads nothing but the node itself, so hoisting it is free.
+ */
+function renderNodeObject(raw: unknown): THREE.Object3D {
+  const n = raw as GraphNode;
+  const isHub = n.type === "channel";
+  const isConcept = n.type === "concept";
+  const r = 4 * Math.cbrt(Math.min(60, Math.max(1, n.deg ?? 1)));
+  // Stardust scale: blocks are tiny motes, hubs stay modest and let their
+  // floating label do the identifying. Density comes from many overlapping
+  // specks, not from big shapes.
+  const d = isHub ? r * 1.5 : isConcept ? r * 0.9 : r * 0.8;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: dustTexture(),
+      color: new THREE.Color(n.color),
+      transparent: true,
+      opacity: isHub ? 0.9 : isConcept ? 0.5 : 0.85,
+      depthWrite: false,
+    })
+  );
+  sprite.scale.set(d, d, 1);
+  if (!isHub) return sprite;
+  const group = new THREE.Group();
+  group.add(sprite);
+  const label = n.name.length > 28 ? n.name.slice(0, 26) + "…" : n.name;
+  const text = new SpriteText(label);
+  text.textHeight = 6.5;
+  text.color = "#d6d6dc";
+  text.fontWeight = "600";
+  text.fontFace = "Inter, system-ui, sans-serif";
+  text.material.depthWrite = false;
+  text.position.y = d / 2 + 7;
+  group.add(text);
+  return group;
+}
+
+type GraphHandle = {
+  d3Force: (
+    name: string,
+    force?: unknown
+  ) =>
+    | {
+        strength?: (n: unknown) => unknown;
+        distance?: (n: unknown) => unknown;
+      }
+    | undefined;
+  d3ReheatSimulation?: () => void;
+  getGraphBbox?: () => {
+    x: [number, number];
+    y: [number, number];
+    z: [number, number];
+  } | null;
+  cameraPosition?: (
+    pos: { x: number; y: number; z: number },
+    lookAt?: { x: number; y: number; z: number },
+    ms?: number
+  ) => void;
+  scene?: () => THREE.Scene;
+  camera?: () => THREE.PerspectiveCamera;
+};
+
+// Frame the core of the galaxy, not its outliers: ~8% of blocks are
+// unconnected and drift far outside the sphere, and fitting to the true
+// bounding box pushes the camera so far back the archive reads as empty again.
+const FIT_PERCENTILE = 0.9;
+
+/**
+ * How far out the bulk of the graph reaches: the FIT_PERCENTILE-th node
+ * distance from the origin. Returns 0 until enough nodes have coordinates.
+ */
+function coreHalfExtent(nodes: { x?: number; y?: number; z?: number }[]): number {
+  const dists = nodes
+    .filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y))
+    .map((n) => Math.hypot(n.x ?? 0, n.y ?? 0, n.z ?? 0))
+    .sort((a, b) => a - b);
+  if (dists.length < 8) return 0;
+  return dists[Math.floor(FIT_PERCENTILE * (dists.length - 1))] || 0;
+}
+
+/**
+ * Point the camera so a sphere of `halfExtent` fills the frame, instantly.
+ *
+ * Hand-rolled rather than `zoomToFit` for three reasons:
+ *  1. Any camera move with a transition duration is broken in this stack:
+ *     `zoomToFit(ms > 0)` never moves the camera at all, and
+ *     `cameraPosition(..., ms > 0)` collapses it onto the origin.
+ *  2. The library's `fitToBbox` divides by `Math.atan(...)` where `Math.tan(...)`
+ *     belongs, landing the camera roughly twice as far out as it should.
+ *  3. It fits the raw bounding box, so a handful of far-flung orphans would
+ *     decide the framing for all 900 nodes.
+ */
+function fitCamera(
+  fg: GraphHandle,
+  halfExtent: number,
+  margin = 1.05
+): boolean {
+  const camera = fg.camera?.();
+  if (!camera || !fg.cameraPosition || halfExtent <= 0) return false;
+
+  const halfFov = ((camera.fov ?? 50) / 2) * (Math.PI / 180);
+  const fitHeight = halfExtent / Math.tan(halfFov);
+  // Narrow windows are width-constrained, so back off further there.
+  const fitWidth = fitHeight / (camera.aspect || 1);
+  const dist = Math.max(fitHeight, fitWidth) * margin;
+  // A zero-height canvas makes aspect 0/NaN, and feeding NaN to the camera
+  // wedges the renderer into a black screen you can't recover from.
+  if (!Number.isFinite(dist) || dist <= 0) return false;
+
+  // Keep whatever direction the camera is already looking from, so a refit
+  // after the user has spun the map doesn't snap them back to the front.
+  const p = camera.position;
+  const len = Math.hypot(p.x, p.y, p.z) || 1;
+  fg.cameraPosition(
+    { x: (p.x / len) * dist, y: (p.y / len) * dist, z: (p.z / len) * dist },
+    { x: 0, y: 0, z: 0 },
+    0
+  );
+  return true;
+}
+
 export default function KnowledgeGraph({
   items,
   manualEdges = [],
@@ -160,38 +435,24 @@ export default function KnowledgeGraph({
   blockConceptLinks = [],
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<{
-    d3Force: (
-      name: string,
-      force?: unknown
-    ) =>
-      | {
-          strength?: (n: unknown) => unknown;
-          distance?: (n: unknown) => unknown;
-        }
-      | undefined;
-    d3ReheatSimulation?: () => void;
-    zoomToFit?: (ms?: number, padding?: number) => void;
-    cameraPosition?: (
-      pos: { x: number; y: number; z: number },
-      lookAt?: { x: number; y: number; z: number },
-      ms?: number
-    ) => void;
-    controls?: () => {
-      autoRotate?: boolean;
-      autoRotateSpeed?: number;
-      addEventListener?: (ev: string, cb: () => void) => void;
-    };
-    scene?: () => THREE.Scene;
-    camera?: () => THREE.Camera;
-  } | null>(null);
+  const fgRef = useRef<GraphHandle | null>(null);
   // Ref attachment doesn't re-render, and the 3D module loads lazily - this
   // flag re-runs the setup effects once the graph instance actually exists.
   const [fgReady, setFgReady] = useState(false);
-  // One camera fit per data load, fired when the simulation settles (the
-  // timer-based fit raced the lazy module + intro overlay and could leave
-  // the camera inside the sphere).
+  // One camera fit per data load, fired when the simulation settles. The fit
+  // is applied instantly (see fitCamera): animated camera moves are broken in
+  // this stack - `zoomToFit(ms > 0)` silently does nothing and
+  // `cameraPosition(..., ms > 0)` collapses the camera onto the origin, which
+  // is what used to leave the view "inside the sphere".
   const didFitRef = useRef(false);
+  // True once the force layout exists. `d3ReheatSimulation()` only flips the
+  // engine's "running" flag (via d3ForceLayout), but the tick loop dereferences
+  // a separate `state.layout` that isn't built until the graph has ingested
+  // graphData - reheating before then throws "Cannot read properties of
+  // undefined (reading 'tick')" inside the animation loop, which kills all
+  // rendering and leaves a black canvas. onEngineTick only fires after a
+  // successful tick, so it is a safe readiness signal.
+  const layoutReadyRef = useRef(false);
   const [size, setSize] = useState({ w: 0, h: 0 });
   // The node the cursor is over - drives Obsidian-style neighbour highlighting.
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -210,21 +471,38 @@ export default function KnowledgeGraph({
   // special CONCEPTS_KEY for the concept layer.
   const [shownKeys, setShownKeys] = useState<Set<string>>(() => new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Deep-space ambience, off by default; the AudioContext is only created on
+  // the first toggle, which is the user gesture browsers require.
+  const [soundOn, setSoundOn] = useState(false);
+  const audioRef = useRef<UniverseAudio | null>(null);
   // Blocks with no links at all (no channel, no shared concept, no manual
   // edge) settle on an outer ring - this hides them when they're just noise.
   const [hideUnconnected, setHideUnconnected] = useState(false);
   // Canvas colours can't ride the CSS-var ramp, so resolve them per theme.
   const palette = useThemePalette();
 
+  // A ResizeObserver, not a one-shot measure: the canvas below is gated on a
+  // non-zero size, and a container that measures 0x0 at mount (React hides a
+  // suspended subtree with display:none, which zeroes getBoundingClientRect)
+  // would otherwise stay blank until a window resize or a full reload. Same
+  // guard IdeaGarden already uses. Zero readings are ignored rather than
+  // stored, so a transient hidden state can't latch a bad size.
   useEffect(() => {
-    function onResize() {
-      if (!containerRef.current) return;
-      const r = containerRef.current.getBoundingClientRect();
-      setSize({ w: r.width, h: r.height });
-    }
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      setSize((prev) =>
+        prev.w === r.width && prev.h === r.height
+          ? prev
+          : { w: r.width, h: r.height }
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // The graph is curation-driven: every block links to its channel hubs (the
@@ -495,10 +773,12 @@ export default function KnowledgeGraph({
     const z = n.z ?? 0;
     const dist = Math.hypot(n.x, n.y, z) || 1;
     const ratio = 1 + 90 / dist;
+    // Instant, not animated: a transition duration here dumps the camera on
+    // the origin instead of the node (same library bug fitCamera works around).
     fgRef.current?.cameraPosition?.(
       { x: n.x * ratio, y: n.y * ratio, z: z * ratio + 50 },
       { x: n.x, y: n.y, z },
-      1200
+      0
     );
     setFocusId(n.id);
   };
@@ -528,6 +808,13 @@ export default function KnowledgeGraph({
     }
     return { blockToConcepts: b2c, conceptToBlocks: c2b, channelToBlocks: ch2b };
   }, [items, concepts, blockConceptLinks]);
+
+  // Radius of the shell the channel hubs settle on. Drives the radial force,
+  // the fog range, and the camera fit's "has the layout spread yet?" check.
+  const sphereR = useMemo(
+    () => sphereRadius(data.nodes.filter((n) => n.type === "channel").length),
+    [data]
+  );
 
   // Neo4j-style "magnet": strong, short links pull connected nodes into tight
   // clusters, while only mild repulsion keeps them from overlapping and light
@@ -579,9 +866,7 @@ export default function KnowledgeGraph({
     // The sphere keeper: pull channel hubs and their blocks toward a shell
     // of radius R, concepts toward an inner ball, so the archive holds its
     // planet shape instead of collapsing into a blob or a plane.
-    const R = sphereRadius(
-      data.nodes.filter((n) => n.type === "channel").length
-    );
+    const R = sphereR;
     fg.d3Force(
       "radial",
       forceRadial((n: unknown) =>
@@ -589,13 +874,60 @@ export default function KnowledgeGraph({
       ).strength(0.3)
     );
 
-    fg.d3ReheatSimulation?.();
+    // Only safe once the layout exists (see layoutReadyRef). Skipping it on
+    // first mount costs nothing: the graph runs its own warmup/cooldown when
+    // it ingests graphData, and the forces set above are picked up by that run.
+    if (layoutReadyRef.current) fg.d3ReheatSimulation?.();
     didFitRef.current = false; // allow one fresh camera fit per data load
-  }, [data, size.w, fgReady]);
+  }, [data, size.w, fgReady, sphereR]);
 
-  // Galaxy dressing + motion, once the 3D scene exists: a matte starfield
-  // shell far behind the graph (tiny flat points, NO glow/bloom - hard rule),
-  // and a slow auto-orbit that stops the moment you grab the view.
+  // Keep the camera framed while the layout settles.
+  //
+  // Deliberately a per-frame track rather than a one-shot on `onEngineStop`:
+  // the engine reports a stop while the nodes are still stacked near the
+  // origin, and fitting at that moment parks the camera inside the cloud.
+  // Rather than trying to detect "settled" (the spread creeps for a while and
+  // never fully stops), just re-frame every frame for a few seconds, which
+  // reads as a gentle zoom-out and is correct whenever the layout finishes.
+  // Any interaction hands control straight back to the visitor.
+  useEffect(() => {
+    const fg = fgRef.current;
+    const el = containerRef.current;
+    if (!fg || !el || size.w === 0) return;
+
+    let raf = 0;
+    let frames = 0;
+    const release = () => {
+      didFitRef.current = true;
+      cancelAnimationFrame(raf);
+    };
+
+    const track = () => {
+      // ~6s of visible time (rAF pauses in background tabs, which is fine -
+      // it resumes and finishes framing when the tab is looked at).
+      if (didFitRef.current || frames++ > 360) return release();
+      const half = coreHalfExtent(data.nodes);
+      // Wait until the layout has actually reached its shell before touching
+      // the camera. Fitting a half-formed cloud puts the camera among the
+      // nodes, which renders as a black screen for a beat after switching in.
+      // Until then the library's own default distance keeps everything in view.
+      if (half >= sphereR * 0.9) fitCamera(fg, half);
+      raf = requestAnimationFrame(track);
+    };
+    raf = requestAnimationFrame(track);
+
+    el.addEventListener("pointerdown", release);
+    el.addEventListener("wheel", release, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("pointerdown", release);
+      el.removeEventListener("wheel", release);
+    };
+  }, [data, size.w, fgReady, sphereR]);
+
+  // Galaxy dressing, once the 3D scene exists: a matte starfield shell far
+  // behind the graph (flat points, NO glow/bloom - hard rule) plus the fog
+  // depth cue below.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || size.w === 0) return;
@@ -618,11 +950,15 @@ export default function KnowledgeGraph({
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
       const mat = new THREE.PointsMaterial({
-        color: 0x84848c,
-        size: 1.2,
-        sizeAttenuation: false,
+        // The dust texture keeps these round: untextured points render as
+        // squares, which becomes obvious above ~2px.
+        map: dustTexture(),
+        color: 0xa8a8b2,
+        size: 1.8,
+        sizeAttenuation: false, // constant screen size, so stars read as stars at any zoom
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.5,
+        depthWrite: false,
         fog: false, // deep space stays visible behind the fogged orb
       });
       const stars = new THREE.Points(geo, mat);
@@ -630,14 +966,20 @@ export default function KnowledgeGraph({
       scene.add(stars);
     }
 
-    // Depth cue: aerial-perspective fog. Particles fade toward the background
-    // the further they are from the camera, so the far hemisphere dims and
-    // dust brightens as it rotates toward you - a matte fade, no glow. The
-    // range is re-tied to the camera distance every frame (a fixed range
-    // over-fogs when zoomed out and under-fogs up close).
-    const R = sphereRadius(
-      data.nodes.filter((n) => n.type === "channel").length
-    );
+    // Depth cue: aerial-perspective fog, which is what makes the archive read
+    // as a solid sphere rather than a flat scatter. Nodes recede toward the
+    // background the further they sit from the camera, so the far hemisphere
+    // sinks away and dust re-emerges as it rotates toward you. This is a matte
+    // fade to the page colour, NOT a glow: nothing is ever brightened, only
+    // dimmed. Re-tied to the camera distance every frame, since a fixed range
+    // over-fogs when zoomed out and under-fogs up close.
+    //
+    // The band is deliberately narrow: it spans the sphere itself (front pole
+    // clear, back pole almost gone) instead of trailing far past it, which is
+    // what previously flattened the depth out to a barely-visible gradient.
+    // The hub shell sits at sphereR, but blocks and orphans scatter well past
+    // it, so the effective radius is ~1.35x.
+    const R = sphereR * 1.35;
     if (scene && !scene.fog) {
       scene.fog = new THREE.Fog(new THREE.Color(palette.bg), 800, 3000);
     }
@@ -648,19 +990,14 @@ export default function KnowledgeGraph({
       const f = fg.scene?.()?.fog as THREE.Fog | undefined;
       if (!cam || !f) return;
       const dist = cam.position.length();
-      f.near = Math.max(40, dist - R * 1.1); // near hemisphere stays vivid
-      f.far = dist + R * 2.4; // far side fades most of the way out
+      f.near = Math.max(30, dist - R * 0.95); // front of the sphere: full colour
+      f.far = dist + R * 1.05; // back of the sphere: almost fully sunk into the bg
     };
     updateFog();
 
-    const controls = fg.controls?.();
-    if (controls) {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.4;
-      controls.addEventListener?.("start", () => {
-        controls.autoRotate = false;
-      });
-    }
+    // (No auto-orbit: the graph runs TrackballControls, which has no
+    // autoRotate. The assignment that used to live here was inert - the map
+    // has never actually rotated on its own.)
 
     return () => {
       cancelAnimationFrame(fogRaf);
@@ -673,7 +1010,26 @@ export default function KnowledgeGraph({
         (stars.material as THREE.Material).dispose();
       }
     };
-  }, [data, size.w, fgReady, palette.bg]);
+  }, [data, size.w, fgReady, palette.bg, sphereR]);
+
+  // Start/stop the ambience when the toggle flips.
+  useEffect(() => {
+    if (soundOn && !audioRef.current) audioRef.current = startUniverseAudio();
+    else if (!soundOn && audioRef.current) {
+      audioRef.current.stop();
+      audioRef.current = null;
+    }
+  }, [soundOn]);
+
+  // Silence it when the Map unmounts (e.g. switching to Garden or Concepts),
+  // otherwise the drone keeps playing over the other views.
+  useEffect(
+    () => () => {
+      audioRef.current?.stop();
+      audioRef.current = null;
+    },
+    []
+  );
 
   // Dev-only escape hatch: the graph handle on window, for scene/camera
   // inspection from the console (stripped from production bundles).
@@ -727,16 +1083,33 @@ export default function KnowledgeGraph({
           Uses the graph's visibility accessors, so toggling never re-runs the
           layout. */}
       <div className="absolute left-3 top-3 z-20 text-xs">
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((o) => !o)}
-          className="rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-neutral-300 backdrop-blur transition-colors hover:text-neutral-100"
-        >
-          Filters
-          {anyFilter && (
-            <span className="ml-1 text-neutral-500">· {shownKeys.size}</span>
-          )}
-        </button>
+        {/* Stacked, not side by side: the view switcher is centred, and a
+            second pill on this row collides with it on narrower windows. */}
+        <div className="flex flex-col items-start gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className="rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-neutral-300 backdrop-blur transition-colors hover:text-neutral-100"
+          >
+            Filters
+            {anyFilter && (
+              <span className="ml-1 text-neutral-500">· {shownKeys.size}</span>
+            )}
+          </button>
+          {/* Deep-space ambience, mirroring the Garden's sound toggle. */}
+          <button
+            type="button"
+            onClick={() => setSoundOn((v) => !v)}
+            aria-pressed={soundOn}
+            className={`rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 backdrop-blur transition-colors ${
+              soundOn
+                ? "text-neutral-100"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            {soundOn ? "Sound on" : "Sound off"}
+          </button>
+        </div>
         {filtersOpen && (
           <div className="mt-2 max-h-[60vh] w-56 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl backdrop-blur-md">
             <div className="mb-1 flex items-center justify-between px-1">
@@ -819,10 +1192,16 @@ export default function KnowledgeGraph({
           </div>
         )}
       </div>
+      {/* No onEngineStop handler: framing is handled by the camera-track
+          effect above. The engine reports "stopped" while the nodes are still
+          bunched at the origin, and re-arms itself on any React render, so it
+          isn't a trustworthy trigger for the fit. */}
       {size.w > 0 && size.h > 0 && (
         <ForceGraph3D
           ref={(inst: unknown) => {
             fgRef.current = inst as (typeof fgRef)["current"];
+            // A new instance has a fresh, not-yet-built layout.
+            if (!inst) layoutReadyRef.current = false;
             if (inst) setFgReady(true);
           }}
           graphData={data}
@@ -832,10 +1211,10 @@ export default function KnowledgeGraph({
           showNavInfo={false}
           warmupTicks={30}
           cooldownTicks={250}
-          onEngineStop={() => {
-            if (didFitRef.current) return;
-            didFitRef.current = true;
-            fgRef.current?.zoomToFit?.(800, 70);
+          onEngineTick={() => {
+            // Fires only after a successful layout tick, so the force layout
+            // is now safe to reheat.
+            layoutReadyRef.current = true;
           }}
           d3VelocityDecay={0.3}
           enableNodeDrag={true}
@@ -913,46 +1292,7 @@ export default function KnowledgeGraph({
               n.name
             )}</div>`;
           }}
-          nodeThreeObject={(raw: unknown) => {
-            // Fine translucent particles, striking-and-mysterious style: flat
-            // billboard discs in the node's channel colour with real opacity,
-            // so overlapping particles build density instead of solid balls.
-            // Blocks are small dust, hubs are larger soft blobs, concepts sit
-            // between. Channel names float above their hub; other names show
-            // in the hover tooltip. Flat matte throughout - no glow.
-            const n = raw as GraphNode;
-            const isHub = n.type === "channel";
-            const isConcept = n.type === "concept";
-            const r = 4 * Math.cbrt(Math.min(60, Math.max(1, n.deg ?? 1)));
-            // Stardust scale: blocks are tiny motes, hubs stay modest and let
-            // their floating label do the identifying. Density comes from many
-            // overlapping specks, not from big shapes.
-            const d = isHub ? r * 1.5 : isConcept ? r * 0.9 : r * 0.8;
-            const sprite = new THREE.Sprite(
-              new THREE.SpriteMaterial({
-                map: dustTexture(),
-                color: new THREE.Color(n.color),
-                transparent: true,
-                opacity: isHub ? 0.9 : isConcept ? 0.5 : 0.85,
-                depthWrite: false,
-              })
-            );
-            sprite.scale.set(d, d, 1);
-            if (!isHub) return sprite;
-            const group = new THREE.Group();
-            group.add(sprite);
-            const label =
-              n.name.length > 28 ? n.name.slice(0, 26) + "…" : n.name;
-            const text = new SpriteText(label);
-            text.textHeight = 6.5;
-            text.color = "#d6d6dc";
-            text.fontWeight = "600";
-            text.fontFace = "Inter, system-ui, sans-serif";
-            text.material.depthWrite = false;
-            text.position.y = d / 2 + 7;
-            group.add(text);
-            return group;
-          }}
+          nodeThreeObject={renderNodeObject}
         />
       )}
 
