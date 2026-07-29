@@ -1,36 +1,59 @@
 import { setPendingAsset } from "../lib/storage";
 import type { ExtractedAsset } from "../lib/types";
 
-const CONTEXT_MENU_ID = "svemir-save-image";
+const MENU_SAVE_IMAGE = "svemir-save-image";
+const MENU_SAVE_SELECTION = "svemir-save-selection";
 
+// Context menus persist in the browser profile and only (re)register here, on
+// install/update - a rebuild alone won't surface a new item; reload the
+// extension in chrome://extensions.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID,
+    id: MENU_SAVE_IMAGE,
     title: "Save image to svemir",
     contexts: ["image"],
+  });
+  chrome.contextMenus.create({
+    id: MENU_SAVE_SELECTION,
+    title: "Save selection to svemir",
+    contexts: ["selection"],
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== CONTEXT_MENU_ID) return;
   if (!tab?.id) return;
-  if (!info.srcUrl) return;
 
   let hostname = "";
   try {
-    hostname = new URL(info.pageUrl ?? info.srcUrl).hostname;
+    hostname = new URL(info.pageUrl ?? info.srcUrl ?? "").hostname;
   } catch {
     /* ignore */
   }
 
-  const asset: ExtractedAsset = {
-    kind: "image",
-    url: info.pageUrl ?? info.srcUrl,
-    image_url: info.srcUrl,
-    title: tab.title ?? "",
-    description: "",
-    source_name: hostname,
-  };
+  let asset: ExtractedAsset | null = null;
+  if (info.menuItemId === MENU_SAVE_IMAGE && info.srcUrl) {
+    asset = {
+      kind: "image",
+      url: info.pageUrl ?? info.srcUrl,
+      image_url: info.srcUrl,
+      title: tab.title ?? "",
+      description: "",
+      source_name: hostname,
+    };
+  } else if (info.menuItemId === MENU_SAVE_SELECTION && info.selectionText) {
+    // A text block: the selection becomes the description (what the API
+    // requires for kind "text") and body_text (what concept extraction reads).
+    asset = {
+      kind: "text",
+      url: info.pageUrl ?? "",
+      image_url: "",
+      title: tab.title ?? "",
+      description: info.selectionText,
+      source_name: hostname,
+      body_text: info.selectionText,
+    };
+  }
+  if (!asset) return;
 
   await setPendingAsset(tab.id, asset);
 

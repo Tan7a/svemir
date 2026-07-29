@@ -266,7 +266,7 @@ export default function App() {
             />
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-neutral-800 bg-neutral-900 text-neutral-500">
-              {asset.kind === "image" ? "📷" : "🔗"}
+              {asset.kind === "image" ? "📷" : asset.kind === "text" ? "📝" : "🔗"}
             </div>
           )}
           <div className="min-w-0 flex-1">
