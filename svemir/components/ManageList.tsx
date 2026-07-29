@@ -472,7 +472,7 @@ export default function ManageList({
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="text-xs text-neutral-600 hover:text-neutral-900"
+            className="text-xs text-neutral-600 hover:text-neutral-300"
           >
             Clear
           </button>

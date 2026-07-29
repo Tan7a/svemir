@@ -15,7 +15,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-8 text-neutral-300">
+    <div className="flex min-h-screen items-center justify-center bg-background p-8 text-neutral-300">
       <div className="max-w-lg text-center">
         <h1 className="text-2xl font-light text-neutral-100">
           Something went wrong
