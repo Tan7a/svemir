@@ -131,3 +131,57 @@ export async function reconcileBlockConcepts(
 
   return rows.length;
 }
+
+/**
+ * Remove a block's concept rows entirely and refresh the counts they backed.
+ * Used for blocks that live only in private channels: concepts/block_concepts
+ * are select-using(true), so leaving rows behind would leak a private block's
+ * vocabulary into the public cloud. Stamps `concepts_indexed_at` (the block HAS
+ * been processed; the correct result is "no public concepts") so backfill
+ * passes don't reprocess it forever. If the block later becomes public again,
+ * syncBlockConceptPrivacy re-extracts based on it having no concept rows.
+ */
+export async function removeBlockConcepts(
+  client: SupabaseClient,
+  blockId: string
+): Promise<void> {
+  const { data: prev } = await client
+    .from("block_concepts")
+    .select("concept_id")
+    .eq("block_id", blockId);
+  const prevIds = (prev ?? []).map((r) => r.concept_id as string);
+
+  if (prevIds.length > 0) {
+    await client.from("block_concepts").delete().eq("block_id", blockId);
+  }
+  await client
+    .from("items")
+    .update({ concepts_indexed_at: new Date().toISOString() })
+    .eq("id", blockId);
+  if (prevIds.length > 0) {
+    await refreshConceptCounts(client, prevIds);
+  }
+}
+
+/**
+ * True when the block has at least one connection and every one of them points
+ * at a private channel - the "hidden from the public site" state the RLS
+ * policies in migration 0012 enforce. Service-role client required (it must
+ * see private channels to answer the question).
+ */
+export async function isPrivateOnly(
+  client: SupabaseClient,
+  blockId: string
+): Promise<boolean> {
+  const { data } = await client
+    .from("connections")
+    .select("channels(is_private)")
+    .eq("block_id", blockId);
+  const flags = (data ?? []).flatMap((r) => {
+    const raw = (r as { channels: unknown }).channels;
+    return (Array.isArray(raw) ? raw : [raw]).map(
+      (c) => (c as { is_private?: boolean } | null)?.is_private === true
+    );
+  });
+  return flags.length > 0 && flags.every(Boolean);
+}

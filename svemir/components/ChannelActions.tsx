@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase-client";
 import { useAuthed } from "@/lib/use-authed";
 import {
   setChannelParent,
   removeChannelParent,
   deleteChannel,
   renameChannel,
+  setChannelPrivacy,
+  listAllChannelsAction,
 } from "@/app/admin/actions";
 import ChannelInfoModal from "./ChannelInfoModal";
 import { MenuPanel, MenuItem } from "./ui/Menu";
@@ -19,11 +20,17 @@ import {
   IconTrash,
   IconEdit,
   IconInfo,
+  IconLock,
+  IconEye,
 } from "./ui/icons";
 
 type Props = {
   channelId: string;
   channelTitle: string;
+  /** Needed to route the owner to the right page after a privacy flip. */
+  channelSlug: string;
+  /** Owner-only flag; public pages always pass false. */
+  isPrivate?: boolean;
   hasParent: boolean;
   /** When provided, a "Channel info" item opens a detail popup. */
   info?: {
@@ -38,6 +45,8 @@ type Props = {
 export default function ChannelActions({
   channelId,
   channelTitle,
+  channelSlug,
+  isPrivate = false,
   hasParent,
   info,
 }: Props) {
@@ -69,20 +78,12 @@ export default function ChannelActions({
   useEffect(() => {
     if (!picking) return;
     inputRef.current?.focus();
-    if (allChannels.length || !supabase) return;
-    supabase
-      .from("channels")
-      .select("id, title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) {
-          setAllChannels(
-            (data as { id: string; title: string }[]).filter(
-              (c) => c.id !== channelId
-            )
-          );
-        }
-      });
+    if (allChannels.length) return;
+    // Server action, not the anon client: the owner's picker must include
+    // private channels, which the anon key can't see (migration 0012).
+    listAllChannelsAction().then((data) => {
+      setAllChannels(data.filter((c) => c.id !== channelId));
+    });
   }, [picking, allChannels.length, channelId]);
 
   useEffect(() => {
@@ -148,6 +149,26 @@ export default function ChannelActions({
     if (result.success) {
       setOpen(false);
       router.refresh();
+    } else {
+      setError(result.error);
+    }
+  }
+
+  async function togglePrivacy() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const result = await setChannelPrivacy(channelId, !isPrivate);
+    setBusy(false);
+    if (result.success) {
+      setOpen(false);
+      // A now-private channel 404s on its public URL (RLS hides it), so send
+      // the owner to the admin mirror; going public routes back.
+      router.push(
+        !isPrivate
+          ? `/admin/channel/${channelSlug}`
+          : `/channel/${channelSlug}`
+      );
     } else {
       setError(result.error);
     }
@@ -257,6 +278,12 @@ export default function ChannelActions({
                   }}
                 />
               )}
+              <MenuItem
+                leading={isPrivate ? <IconEye /> : <IconLock />}
+                label={isPrivate ? "Make public" : "Make private"}
+                onClick={togglePrivacy}
+                disabled={busy}
+              />
               <div className="my-1 border-t border-neutral-800" />
               <MenuItem
                 leading={<IconTrash />}

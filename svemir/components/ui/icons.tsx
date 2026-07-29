@@ -27,6 +27,16 @@ export function IconEye({ size = 16, className = "" }: IconProps) {
   );
 }
 
+/** svemir's own thin-stroke padlock - private channels. */
+export function IconLock({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden>
+      <rect x="4" y="9" width="12" height="8.5" rx="1.5" strokeLinejoin="round" />
+      <path d="M6.75 9V6.25C6.75 4.45507 8.20507 3 10 3C11.7949 3 13.25 4.45507 13.25 6.25V9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** Flero `edit.svg` - pencil in a frame. */
 export function IconEdit({ size = 16, className = "" }: IconProps) {
   return (

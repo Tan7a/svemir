@@ -20,8 +20,13 @@ import {
   type Suggestion,
   type SuggestionInput,
 } from "@/lib/suggest";
-import { reconcileBlockConcepts } from "@/lib/concepts";
+import {
+  reconcileBlockConcepts,
+  removeBlockConcepts,
+  isPrivateOnly,
+} from "@/lib/concepts";
 import { cleanPaperMarkdown, PAPERS_BUCKET } from "@/lib/paper-text";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 /** Page size for the inline Manage list in the admin overlay. */
@@ -165,19 +170,12 @@ export async function addItem(
     }
   }
 
-  // Extract concepts from the block's text. Done synchronously (a serverless
+  // Extract concepts from the block's text - unless every target channel is
+  // private, in which case the block must stay out of the public concept
+  // tables (sync handles both cases). Done synchronously (a serverless
   // function may be frozen after it returns, so "fire-and-forget" is unsafe),
-  // but soft-failed: a concept hiccup must never lose the user's save. Skipped
-  // silently if migration 0006 hasn't been applied yet.
-  try {
-    await reconcileBlockConcepts(client, blockId, {
-      title: data.title,
-      description: data.description,
-      body_text: cleanBodyText ?? null,
-    });
-  } catch {
-    // non-fatal - the block is saved; concepts can be backfilled later
-  }
+  // and soft-failed inside sync: a concept hiccup must never lose the save.
+  await syncBlockConceptPrivacy(client, blockId);
 
   revalidatePath("/");
   revalidatePath("/graph");
@@ -559,6 +557,9 @@ export async function addChannelToBlock(
       { onConflict: "block_id,channel_id" }
     );
   if (error) return { success: false, error: error.message };
+  // Connecting can flip the block public (private-only -> has a public
+  // channel) or keep it private; keep the concept tables in step.
+  await syncBlockConceptPrivacy(client, blockId);
   revalidatePath("/");
   revalidatePath("/graph");
   revalidatePath(`/block/${blockId}`);
@@ -585,6 +586,9 @@ export async function removeChannelFromBlock(
     .eq("block_id", blockId)
     .eq("channel_id", channelId);
   if (error) return { success: false, error: error.message };
+  // Removing a public channel may leave the block private-only; sync scrubs
+  // its concept rows in that case.
+  await syncBlockConceptPrivacy(supabaseAdmin, blockId);
   revalidatePath("/");
   revalidatePath("/graph");
   revalidatePath(`/block/${blockId}`);
@@ -628,6 +632,9 @@ export async function updateItemChannelsAndCategories(
       );
     if (linkErr) return { success: false, error: linkErr.message };
   }
+
+  // The full channel set just changed; reconcile the block's privacy state.
+  await syncBlockConceptPrivacy(client, blockId);
 
   revalidatePath("/");
   revalidatePath("/graph");
@@ -835,6 +842,81 @@ export async function refetchScreenshotCovers(
 }
 
 /**
+ * The text concept extraction should read for an item row. Papers keep their
+ * full text in the private bucket (copyright gate), so their body_text is
+ * empty; download and clean it transiently, never persisting it. Falls back to
+ * whatever body_text the row carries (or null) on any download hiccup.
+ */
+async function resolveExtractionBody(
+  client: SupabaseClient,
+  row: {
+    body_text: string | null;
+    kind: string | null;
+    paper_full_text_path: string | null;
+  }
+): Promise<string | null> {
+  if (row.kind !== "paper" || row.body_text || !row.paper_full_text_path) {
+    return row.body_text;
+  }
+  try {
+    const { data: blob } = await client.storage
+      .from(PAPERS_BUCKET)
+      .download(row.paper_full_text_path);
+    if (blob) return cleanPaperMarkdown(await blob.text());
+  } catch {
+    /* soft-fail: extract from title + abstract */
+  }
+  return row.body_text;
+}
+
+/**
+ * Keep a block's public concept rows consistent with its privacy state
+ * (migration 0012): private-only blocks must have NO block_concepts rows
+ * (those tables are select-using(true), so rows would leak the block's
+ * vocabulary); public blocks that were previously scrubbed get re-extracted.
+ * Call after anything that changes which channels a block belongs to.
+ * Soft-fails: privacy bookkeeping must never break the user's action.
+ */
+async function syncBlockConceptPrivacy(
+  client: SupabaseClient,
+  blockId: string
+): Promise<void> {
+  try {
+    if (await isPrivateOnly(client, blockId)) {
+      await removeBlockConcepts(client, blockId);
+      return;
+    }
+    // Publicly visible. Re-extract only when the block has no concept rows
+    // (fresh block, or previously scrubbed while private).
+    const { count } = await client
+      .from("block_concepts")
+      .select("*", { count: "exact", head: true })
+      .eq("block_id", blockId);
+    if ((count ?? 0) > 0) return;
+    const { data: row } = await client
+      .from("items")
+      .select("id, title, description, body_text, kind, paper_full_text_path")
+      .eq("id", blockId)
+      .maybeSingle();
+    if (!row) return;
+    await reconcileBlockConcepts(client, blockId, {
+      title: (row.title as string) ?? "",
+      description: row.description as string | null,
+      body_text: await resolveExtractionBody(
+        client,
+        row as {
+          body_text: string | null;
+          kind: string | null;
+          paper_full_text_path: string | null;
+        }
+      ),
+    });
+  } catch {
+    /* non-fatal */
+  }
+}
+
+/**
  * Batch concept extraction for blocks that haven't been indexed yet. Pages
  * through `items where concepts_indexed_at is null` by id (keyset pagination),
  * mirroring scrapeMissingMetadata. The client calls this repeatedly, advancing
@@ -883,25 +965,23 @@ export async function backfillBlockConcepts(
   // recompute step is needed.
   const results = await Promise.allSettled(
     targets.map(async (t) => {
-      // Papers keep their full text in the private bucket (copyright gate), so
-      // their body_text is empty. Fetch and clean it transiently for extraction
-      // only; it is never written back to the row. A failed download soft-fails
-      // to title + abstract, which is what extraction used before.
-      let body = t.body_text as string | null;
-      if (t.kind === "paper" && !body && t.paper_full_text_path) {
-        try {
-          const { data: blob } = await client.storage
-            .from(PAPERS_BUCKET)
-            .download(t.paper_full_text_path as string);
-          if (blob) body = cleanPaperMarkdown(await blob.text());
-        } catch {
-          /* soft-fail per row */
-        }
+      // Private-only blocks (migration 0012) must not contribute public
+      // concept rows; scrub instead of extracting.
+      if (await isPrivateOnly(client, t.id as string)) {
+        await removeBlockConcepts(client, t.id as string);
+        return 0;
       }
       return reconcileBlockConcepts(client, t.id as string, {
         title: (t.title as string) ?? "",
         description: t.description as string | null,
-        body_text: body,
+        body_text: await resolveExtractionBody(
+          client,
+          t as {
+            body_text: string | null;
+            kind: string | null;
+            paper_full_text_path: string | null;
+          }
+        ),
       });
     })
   );
@@ -1035,20 +1115,120 @@ export async function deleteChannel(
   if (!supabaseAdmin) {
     return { success: false, error: "Supabase admin is not configured." };
   }
+  // Capture the channel's blocks BEFORE the cascade wipes the connections:
+  // deleting a private channel can make its blocks public (or unconnected),
+  // and their concept rows must be re-synced afterwards.
+  const { data: members } = await supabaseAdmin
+    .from("connections")
+    .select("block_id")
+    .eq("channel_id", channelId);
+
   const { error } = await supabaseAdmin
     .from("channels")
     .delete()
     .eq("id", channelId);
   if (error) return { success: false, error: error.message };
   // connections cascade-delete via the FK in migration 0001.
+  for (const m of members ?? []) {
+    await syncBlockConceptPrivacy(supabaseAdmin, m.block_id as string);
+  }
   revalidatePath("/");
   revalidatePath("/graph");
+  revalidatePath("/concepts");
   return { success: true };
 }
 
 export async function recentChannelsAction(): Promise<RecentChannel[]> {
   if (!supabaseAdmin) return [];
   return recentChannels(supabaseAdmin, 20);
+}
+
+/**
+ * Flip a channel's privacy (migration 0012). Making it private hides the
+ * channel, its connections, and its private-only blocks from every anon
+ * surface via RLS; this action's job is the app-side bookkeeping: concept
+ * rows for every member block, and cache revalidation. Returns the slug so
+ * the caller can route the owner to the right page afterwards.
+ */
+export async function setChannelPrivacy(
+  channelId: string,
+  isPrivate: boolean
+): Promise<
+  { success: true; slug: string } | { success: false; error: string }
+> {
+  if (!(await isAuthed())) {
+    return { success: false, error: "Not authorized." };
+  }
+  if (!supabaseAdmin) {
+    return { success: false, error: "Supabase admin not configured" };
+  }
+  const client = supabaseAdmin;
+
+  const { data: updated, error } = await client
+    .from("channels")
+    .update({ is_private: isPrivate })
+    .eq("id", channelId)
+    .select("slug")
+    .single();
+  if (error || !updated) {
+    return {
+      success: false,
+      error:
+        error?.message ??
+        "Channel not found (is migration 0012 applied in Supabase?)",
+    };
+  }
+
+  // Every member block may have changed visibility; sync sequentially
+  // (soft-fails per block inside).
+  const { data: members } = await client
+    .from("connections")
+    .select("block_id")
+    .eq("channel_id", channelId);
+  for (const m of members ?? []) {
+    await syncBlockConceptPrivacy(client, m.block_id as string);
+  }
+
+  const slug = updated.slug as string;
+  revalidatePath("/");
+  revalidatePath("/graph");
+  revalidatePath("/concepts");
+  revalidatePath(`/channel/${slug}`);
+  return { success: true, slug };
+}
+
+/**
+ * Owner's full channel list (id, title, slug, is_private), service-role so
+ * private channels are included. The anon-key fetch client components used
+ * before migration 0012 can no longer see private channels, so owner-facing
+ * pickers must come through here. Empty for signed-out callers.
+ */
+export async function listAllChannelsAction(): Promise<
+  { id: string; title: string; slug: string; is_private: boolean }[]
+> {
+  if (!(await isAuthed())) return [];
+  if (!supabaseAdmin) return [];
+  const { data, error } = await supabaseAdmin
+    .from("channels")
+    .select("id, title, slug, is_private")
+    .order("title");
+  if (!error) {
+    return (data ?? []) as {
+      id: string;
+      title: string;
+      slug: string;
+      is_private: boolean;
+    }[];
+  }
+  // Migration 0012 not applied yet: the is_private column doesn't exist.
+  // Degrade to the plain list rather than an empty picker.
+  const { data: plain } = await supabaseAdmin
+    .from("channels")
+    .select("id, title, slug")
+    .order("title");
+  return ((plain ?? []) as { id: string; title: string; slug: string }[]).map(
+    (c) => ({ ...c, is_private: false })
+  );
 }
 
 export async function suggestChannelsAction(

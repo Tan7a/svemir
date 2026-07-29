@@ -181,6 +181,8 @@ export default async function ChannelPage({ params }: { params: Params }) {
             <ChannelActions
               channelId={channel.id}
               channelTitle={channel.title}
+              channelSlug={channel.slug}
+              isPrivate={false}
               hasParent={channel.parent_id !== null}
               info={{
                 description: channel.description,
