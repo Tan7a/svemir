@@ -13,7 +13,7 @@ import { channelColor } from "@/lib/constants";
 export const revalidate = 60;
 
 // Cap concept nodes shown in the graph - keeps the force simulation legible.
-const MAX_CONCEPT_NODES = 150;
+const MAX_CONCEPT_NODES = 220;
 
 type ChannelRef = { id: string; title: string; slug: string };
 

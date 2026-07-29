@@ -90,7 +90,9 @@ export async function reconcileBlockConcepts(
   blockId: string,
   doc: RawTermDoc
 ): Promise<number> {
-  const terms = extractTerms(doc);
+  // 20 (up from the extractor's default 12) so longer blocks and papers
+  // contribute a fuller spread of terms; run "Re-extract all" after changing.
+  const terms = extractTerms(doc, { maxTerms: 20 });
 
   const rows: {
     block_id: string;

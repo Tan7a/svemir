@@ -21,6 +21,7 @@ import {
   type SuggestionInput,
 } from "@/lib/suggest";
 import { reconcileBlockConcepts } from "@/lib/concepts";
+import { cleanPaperMarkdown, PAPERS_BUCKET } from "@/lib/paper-text";
 import type { Item, Channel, ItemWithChannels } from "@/lib/types";
 
 /** Page size for the inline Manage list in the admin overlay. */
@@ -866,7 +867,7 @@ export async function backfillBlockConcepts(
   // (used after tuning stopwords/extraction so existing concepts get rebuilt).
   let query = client
     .from("items")
-    .select("id, title, description, body_text")
+    .select("id, title, description, body_text, kind, paper_full_text_path")
     .order("id")
     .limit(limit);
   if (!force) query = query.is("concepts_indexed_at", null);
@@ -881,13 +882,28 @@ export async function backfillBlockConcepts(
   // reconcileBlockConcepts refreshes prevalence counts per block, so no separate
   // recompute step is needed.
   const results = await Promise.allSettled(
-    targets.map((t) =>
-      reconcileBlockConcepts(client, t.id as string, {
+    targets.map(async (t) => {
+      // Papers keep their full text in the private bucket (copyright gate), so
+      // their body_text is empty. Fetch and clean it transiently for extraction
+      // only; it is never written back to the row. A failed download soft-fails
+      // to title + abstract, which is what extraction used before.
+      let body = t.body_text as string | null;
+      if (t.kind === "paper" && !body && t.paper_full_text_path) {
+        try {
+          const { data: blob } = await client.storage
+            .from(PAPERS_BUCKET)
+            .download(t.paper_full_text_path as string);
+          if (blob) body = cleanPaperMarkdown(await blob.text());
+        } catch {
+          /* soft-fail per row */
+        }
+      }
+      return reconcileBlockConcepts(client, t.id as string, {
         title: (t.title as string) ?? "",
         description: t.description as string | null,
-        body_text: t.body_text as string | null,
-      })
-    )
+        body_text: body,
+      });
+    })
   );
 
   let processed = 0;

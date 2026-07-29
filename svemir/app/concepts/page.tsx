@@ -37,7 +37,7 @@ export default async function ConceptsPage() {
     .select("id, slug, term, block_count")
     .gte("block_count", 2)
     .order("block_count", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   const concepts = (data ?? []) as ConceptRow[];
 
@@ -62,12 +62,14 @@ export default async function ConceptsPage() {
             {concepts.length} recurring concept
             {concepts.length === 1 ? "" : "s"} · sized by prevalence
           </p>
-          {/* One-liner, kept true to lib/extract-terms.ts (local extraction,
-              no AI) and the 2+ block floor applied by the query below. */}
+          {/* Kept true to lib/extract-terms.ts (local extraction, no AI) and
+              the 2+ block floor applied by the query below. Same copy as the
+              concepts tab in components/GraphViewSwitcher.tsx. */}
           <p className="mt-4 max-w-prose text-xs leading-relaxed text-neutral-500">
-            Recurring words and phrases read out of the blocks themselves,
-            locally and without AI. A term appears once two or more blocks share
-            it, sized by how many.
+            Concepts are recurring words and phrases pulled straight from the
+            titles and text of your blocks, no AI involved. A term becomes a
+            concept once at least two blocks share it, so the cloud grows as
+            you save more.
           </p>
         </div>
       </div>
