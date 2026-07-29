@@ -4,21 +4,26 @@ import type { ExtractedAsset } from "../lib/types";
 const MENU_SAVE_IMAGE = "svemir-save-image";
 const MENU_SAVE_SELECTION = "svemir-save-selection";
 
-// Context menus persist in the browser profile and only (re)register here, on
-// install/update - a rebuild alone won't surface a new item; reload the
-// extension in chrome://extensions.
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: MENU_SAVE_IMAGE,
-    title: "Save image to svemir",
-    contexts: ["image"],
+// Register from scratch (removeAll first, so re-registration never collides
+// with leftovers) on BOTH install/update and browser startup. Some Chromium
+// forks don't reliably fire onInstalled for unpacked reloads, which left the
+// menu missing; onStartup covers the next launch regardless.
+function registerMenus() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: MENU_SAVE_IMAGE,
+      title: "Save image to svemir",
+      contexts: ["image"],
+    });
+    chrome.contextMenus.create({
+      id: MENU_SAVE_SELECTION,
+      title: "Save selection to svemir",
+      contexts: ["selection"],
+    });
   });
-  chrome.contextMenus.create({
-    id: MENU_SAVE_SELECTION,
-    title: "Save selection to svemir",
-    contexts: ["selection"],
-  });
-});
+}
+chrome.runtime.onInstalled.addListener(registerMenus);
+chrome.runtime.onStartup.addListener(registerMenus);
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!tab?.id) return;
