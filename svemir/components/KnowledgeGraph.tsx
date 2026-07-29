@@ -314,9 +314,10 @@ function startUniverseAudio(): UniverseAudio {
  * rebuilds every node object whenever this accessor's identity changes
  * (`nodeDataMapper.clear()`), so an inline arrow re-created all ~900 sprites on
  * every single React render - including on every hover, since onNodeHover sets
- * state. It reads nothing but the node itself, so hoisting it is free.
+ * state. Theme ink is threaded in through a useMemo'd accessor in the
+ * component, so identity still only changes on an actual theme switch.
  */
-function renderNodeObject(raw: unknown): THREE.Object3D {
+function renderNodeObject(raw: unknown, ink: string): THREE.Object3D {
   const n = raw as GraphNode;
   const isHub = n.type === "channel";
   const isConcept = n.type === "concept";
@@ -344,7 +345,8 @@ function renderNodeObject(raw: unknown): THREE.Object3D {
   const label = n.name.length > 28 ? n.name.slice(0, 26) + "…" : n.name;
   const text = new SpriteText(label);
   text.textHeight = 6.5;
-  text.color = "#d6d6dc";
+  // Theme ink, not a fixed grey: the old #d6d6dc vanished on light themes.
+  text.color = ink;
   text.fontWeight = "600";
   text.fontFace = "Inter, system-ui, sans-serif";
   text.material.depthWrite = false;
@@ -501,6 +503,14 @@ export default function KnowledgeGraph({
   const [hideUnconnected, setHideUnconnected] = useState(false);
   // Canvas colours can't ride the CSS-var ramp, so resolve them per theme.
   const palette = useThemePalette();
+  // Memoized so the accessor's identity only changes on a theme switch: an
+  // inline arrow would make three-forcegraph rebuild every sprite on every
+  // render (see the renderNodeObject comment). A rebuild on theme change is
+  // exactly what we want - the hub labels must repaint in the new ink.
+  const nodeObjectAccessor = useMemo(
+    () => (raw: unknown) => renderNodeObject(raw, `rgb(${palette.inkRGB})`),
+    [palette]
+  );
 
   // A ResizeObserver, not a one-shot measure: the canvas below is gated on a
   // non-zero size, and a container that measures 0x0 at mount (React hides a
@@ -1369,19 +1379,22 @@ export default function KnowledgeGraph({
           }}
           linkColor={(raw: unknown) => {
             const l = raw as GraphLink;
+            // Light themes need stronger alpha: thin lines wash out against a
+            // bright background and the fog blends far links toward it.
+            const dark = palette.isDark;
             if (activeId) {
               const touches =
                 linkEndId(l.source) === activeId ||
                 linkEndId(l.target) === activeId;
               if (!touches) return `rgba(${palette.inkRGB},0.03)`;
               return l.kind === "manual"
-                ? `rgba(${palette.inkRGB},0.6)`
-                : `rgba(${palette.inkRGB},0.42)`;
+                ? `rgba(${palette.inkRGB},${dark ? 0.6 : 0.7})`
+                : `rgba(${palette.inkRGB},0.5)`;
             }
-            // Whisper-faint grey at rest, cozy.im style.
+            // Quiet but legible at rest.
             return l.kind === "manual"
-              ? `rgba(${palette.inkRGB},0.24)`
-              : `rgba(${palette.inkRGB},0.09)`;
+              ? `rgba(${palette.inkRGB},${dark ? 0.38 : 0.5})`
+              : `rgba(${palette.inkRGB},${dark ? 0.2 : 0.28})`;
           }}
           linkOpacity={1}
           onNodeClick={(raw: unknown, event: unknown) => {
@@ -1404,11 +1417,13 @@ export default function KnowledgeGraph({
           nodeVisibility={(raw: unknown) => isNodeVisible(raw as GraphNode)}
           nodeLabel={(raw: unknown) => {
             const n = raw as GraphNode;
-            return `<div style="font:12px Inter,system-ui,sans-serif;padding:3px 8px;border-radius:8px;background:rgba(12,12,14,0.88);color:#e5e5ea;max-width:260px">${escapeHTML(
+            // Halo/ink pair from the theme palette, so the tooltip stays a
+            // readable chip on light themes too.
+            return `<div style="font:12px Inter,system-ui,sans-serif;padding:3px 8px;border-radius:8px;background:rgba(${palette.haloRGB},0.88);color:rgb(${palette.inkRGB});max-width:260px">${escapeHTML(
               n.name
             )}</div>`;
           }}
-          nodeThreeObject={renderNodeObject}
+          nodeThreeObject={nodeObjectAccessor}
         />
       )}
 
@@ -1503,7 +1518,7 @@ export default function KnowledgeGraph({
                   {node.slug && (
                     <Link
                       href={`/channel/${node.slug}`}
-                      className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-white"
+                      className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
                     >
                       Open channel →
                     </Link>
@@ -1546,7 +1561,7 @@ export default function KnowledgeGraph({
                   {node.slug && (
                     <Link
                       href={`/concept/${node.slug}`}
-                      className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-white"
+                      className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
                     >
                       Open concept →
                     </Link>
@@ -1587,7 +1602,7 @@ export default function KnowledgeGraph({
                   )}
                   <Link
                     href={`/block/${node.id}`}
-                    className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-white"
+                    className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
                   >
                     Open block →
                   </Link>
