@@ -67,9 +67,9 @@ export default async function ConceptsPage() {
               concepts tab in components/GraphViewSwitcher.tsx. */}
           <p className="mt-4 max-w-prose text-xs leading-relaxed text-neutral-500">
             Concepts are recurring words and phrases pulled straight from the
-            titles and text of your blocks, no AI involved. A term becomes a
-            concept once at least two blocks share it, so the cloud grows as
-            you save more.
+            titles and text of the blocks I&apos;ve collected, no AI involved.
+            A term becomes a concept once at least two blocks share it, so the
+            cloud grows as the archive does.
           </p>
         </div>
       </div>
