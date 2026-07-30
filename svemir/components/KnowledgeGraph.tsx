@@ -1379,8 +1379,10 @@ export default function KnowledgeGraph({
           }}
           linkColor={(raw: unknown) => {
             const l = raw as GraphLink;
-            // Light themes need stronger alpha: thin lines wash out against a
-            // bright background and the fog blends far links toward it.
+            // Alphas retuned for BOTH polarities ("visible map links"): light
+            // themes run ~0.1 hotter than dark because thin lines wash out
+            // against a bright background and the fog blends far links
+            // toward it.
             const dark = palette.isDark;
             if (activeId) {
               const touches =
@@ -1389,7 +1391,7 @@ export default function KnowledgeGraph({
               if (!touches) return `rgba(${palette.inkRGB},0.03)`;
               return l.kind === "manual"
                 ? `rgba(${palette.inkRGB},${dark ? 0.6 : 0.7})`
-                : `rgba(${palette.inkRGB},0.5)`;
+                : `rgba(${palette.inkRGB},${dark ? 0.5 : 0.6})`;
             }
             // Quiet but legible at rest.
             return l.kind === "manual"

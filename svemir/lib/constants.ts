@@ -249,3 +249,15 @@ export const FACET_DIMENSION_BY_KEY: Record<
 export function facetColor(dimension: string): string {
   return FACET_DIMENSION_BY_KEY[dimension]?.hex ?? '#c0caf5';
 }
+
+/**
+ * Shared explainer for the concept cloud, rendered on /concepts and on the
+ * graph's concepts tab (components/GraphViewSwitcher.tsx). One constant so
+ * the two copies can't drift. Keep it true to lib/extract-terms.ts (local
+ * extraction, no AI) and the 2+ block floor the concept queries apply.
+ */
+export const CONCEPTS_EXPLAINER =
+  "Concepts are recurring words and phrases pulled straight from the titles " +
+  "and text of the blocks I've collected, no AI involved. A term becomes a " +
+  "concept once at least two blocks share it, so the cloud grows as the " +
+  "archive does.";

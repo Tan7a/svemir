@@ -86,9 +86,9 @@ export default async function GraphPage() {
   let blockConceptLinks: BlockConceptLink[] = [];
   if (concepts.length > 0) {
     // Paged, because PostgREST caps a single response at 1000 rows. Fetching
-    // this in one shot silently returned exactly 1000 links, which left ~78 of
-    // the 150 concepts (including the biggest ones, "user" and "design") with
-    // no edges at all. On the Map those became orphans flung outside the orb.
+    // this in one shot silently truncated the links, which once left roughly
+    // half the concepts (including the biggest ones, "user" and "design")
+    // with no edges. On the Map those became orphans flung outside the orb.
     const PAGE = 1000;
     const MAX_PAGES = 25; // ~25k links; a backstop, not an expected limit
     const conceptIds = concepts.map((c) => c.id);

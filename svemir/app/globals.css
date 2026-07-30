@@ -63,11 +63,15 @@ html[data-theme="light-white"] {
   --color-neutral-100: #171717;
   --color-neutral-200: #262626;
   --color-neutral-300: #404040;
-  --color-neutral-400: #525252;
-  /* 500-700 darkened for contrast on white (500/600 >= 4.5:1, 700 >= 3:1);
-     800/900 darkened so borders read. Ordering must stay monotonic. */
-  --color-neutral-500: #6b6b6b;
-  --color-neutral-600: #747474;
+  /* 400-700 spaced in even ~20-unit steps so tiers stay tellable apart
+     (500-vs-600 hierarchy collapsed when they sat 9 units apart), while
+     keeping the floors: 500/600 >= 4.5:1 on white, 700 >= 3:1. 600 is pinned
+     at the 4.5 ceiling (#767676 = 4.54:1), so the spread comes from
+     darkening 400/500. 800/900 darkened so borders read. Ordering must stay
+     monotonic. */
+  --color-neutral-400: #4d4d4d;
+  --color-neutral-500: #616161;
+  --color-neutral-600: #767676;
   --color-neutral-700: #8f8f8f;
   --color-neutral-800: #d4d4d4;
   --color-neutral-900: #ececec;
@@ -91,9 +95,11 @@ html[data-theme="cream"] {
   --color-neutral-100: #2b2620;
   --color-neutral-200: #3a342c;
   --color-neutral-300: #57503f;
-  --color-neutral-400: #6b6150;
-  /* 500-700 darkened for contrast on the cream bg, hue kept warm. */
-  --color-neutral-500: #6f6754;
+  /* 400-600 spaced in even steps (they sat 4-6 units apart, reading as one
+     color); 600 is pinned at the 4.5:1 ceiling on cream, so 400/500 darken.
+     Hue kept warm. */
+  --color-neutral-400: #615947;
+  --color-neutral-500: #6b624f;
   --color-neutral-600: #756c58;
   --color-neutral-700: #90866e;
   --color-neutral-800: #d5cab0;
@@ -118,9 +124,11 @@ html[data-theme="funky"] {
   --color-neutral-100: #102a43;
   --color-neutral-200: #1c3d5a;
   --color-neutral-300: #2d5070;
-  --color-neutral-400: #486581;
-  /* 500-700 darkened for contrast on the blue bg, hue kept cool. */
-  --color-neutral-500: #4e6b85;
+  /* 400-600 spaced in even steps (they sat 4-6 units apart, reading as one
+     color); 600 is pinned at the 4.5:1 ceiling on the blue bg, so 400/500
+     darken. Hue kept cool. */
+  --color-neutral-400: #395b79;
+  --color-neutral-500: #456581;
   --color-neutral-600: #52708a;
   --color-neutral-700: #6f8ba6;
   --color-neutral-800: #b9d2ea;

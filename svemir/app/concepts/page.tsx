@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
 import ConceptCloud from "@/components/ConceptCloud";
+import { CONCEPTS_EXPLAINER } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -62,14 +63,8 @@ export default async function ConceptsPage() {
             {concepts.length} recurring concept
             {concepts.length === 1 ? "" : "s"} · sized by prevalence
           </p>
-          {/* Kept true to lib/extract-terms.ts (local extraction, no AI) and
-              the 2+ block floor applied by the query below. Same copy as the
-              concepts tab in components/GraphViewSwitcher.tsx. */}
           <p className="mt-4 max-w-prose text-xs leading-relaxed text-neutral-500">
-            Concepts are recurring words and phrases pulled straight from the
-            titles and text of the blocks I&apos;ve collected, no AI involved.
-            A term becomes a concept once at least two blocks share it, so the
-            cloud grows as the archive does.
+            {CONCEPTS_EXPLAINER}
           </p>
         </div>
       </div>
