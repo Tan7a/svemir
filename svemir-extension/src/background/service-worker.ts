@@ -10,14 +10,16 @@ const MENU_SAVE_SELECTION = "svemir-save-selection";
 // menu missing; onStartup covers the next launch regardless.
 function registerMenus() {
   chrome.contextMenus.removeAll(() => {
+    // One label for both contexts, Are.na style: which one fires is decided
+    // by what was right-clicked (an image vs a text selection).
     chrome.contextMenus.create({
       id: MENU_SAVE_IMAGE,
-      title: "Save image to svemir",
+      title: "Move to Svemir",
       contexts: ["image"],
     });
     chrome.contextMenus.create({
       id: MENU_SAVE_SELECTION,
-      title: "Save selection to svemir",
+      title: "Move to Svemir",
       contexts: ["selection"],
     });
   });
