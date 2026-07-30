@@ -3,7 +3,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 export default defineManifest({
   manifest_version: 3,
   name: "svemir",
-  version: "0.1.6",
+  version: "0.2.1",
   description: "Save the web to your svemir.",
   // Also shown beside our context-menu items; without these Chrome falls back
   // to the generic puzzle piece. Files live in public/icons (copied to dist).
