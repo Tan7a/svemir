@@ -50,7 +50,7 @@ export default function MobileNav() {
     { label: "Garden", href: "/graph", active: pathname === "/graph" },
     { label: "Research", href: "/facets", active: pathname === "/facets" },
     {
-      label: "Design",
+      label: "System",
       href: "/design-system",
       active: pathname === "/design-system",
     },

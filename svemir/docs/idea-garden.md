@@ -20,7 +20,8 @@ moved into a collapsible **side panel**. `KnowledgeGraph.tsx`, `GraphViewSwitche
   sibling: the canvas mount is measured by a ResizeObserver, and a width-changing sibling would
   cause a resize feedback loop. Small screens get a bottom sheet.
 - **`components/IdeaGarden.tsx`** (client, pure Three.js) draws trees + roots and reports clicks up
-  via `onRootSelect` / `onTreeSelect`.
+  via `onRootSelect` / `onTreeSelect`. Known gap: on a narrow screen the panel's bottom sheet covers
+  the timeline scrubber. Not addressed.
 
 ## Roots data flow
 
@@ -49,10 +50,53 @@ summed tf, `idf = ln(total/df)`, 40% max-df cap, pair weight `sum(least(tf_a, tf
   colour; weight = strand count (1/2/3, parallel offsets in ONE geometry) + opacity. `linewidth` is
   a no-op on WebGL. Root materials are per-root instances (`transparent`, `depthWrite: false`,
   `vertexColors: true`) so each root eases its own hover opacity.
-- **Hover priority: leaf > root > trunk**, one raycast pass (`computeHover`), with
-  `raycaster.params.Line.threshold` scaled to the scene. Click order: leaf -> block page, root ->
-  panel, trunk/branch -> panel, empty ground -> motion toggle (and ONLY then). Clicks re-raycast
-  synchronously so mobile taps work without a hover frame.
+- **Hover priority: pill > leaf > root > trunk**, one pass (`computeHover`), with
+  `raycaster.params.Line.threshold` scaled to the scene. Click order: pill -> channel page, leaf ->
+  block page, root -> panel, trunk/branch -> panel, empty ground -> motion toggle (and ONLY then,
+  and only off `lite`: on a phone the sky is most of the screen and stray taps fired it constantly).
+  Clicks re-raycast synchronously so mobile taps work without a hover frame.
+- **Label pills are `pointer-events: none`, and that is LOAD-BEARING. Do not "restore" it.** The
+  pills live in the overlay, a SIBLING of the canvas, and OrbitControls listens only on
+  `renderer.domElement`. While they were interactive, any drag or pinch starting on a label reached
+  nothing (and a two-finger one could become a browser page-zoom). On a phone the pills crowd the
+  middle of the screen, exactly where a thumb lands, so that ate most gestures. Taps and hover are
+  resolved instead by `pillAt()`, a screen-space box test reusing the boxes the label layout already
+  computes. That is also why there are no per-pill listeners: one rect test replaced 3N of them.
+- **Labels are NEVER hidden to resolve crowding.** `updateLabels` runs three passes per frame,
+  allocating nothing: project every anchor, resolve overlaps, write the DOM. A crowded pill *rises
+  up its own leader line* until clear, so it simply hangs on a longer string. Ordering is by
+  projected `sy` DESCENDING: the camera looks down from 20°, so a further tree projects HIGHER, and
+  placing the nearest first keeps the front row on its own crowns and pushes distant ones into the
+  empty sky. The climb is capped (scaled to viewport height, since a fixed cap could not resolve
+  60-odd labels in a 375px-tall landscape phone), clamped clear of the top chrome band and both
+  edges. Clamp what is DRAWN, not just the target: the lift is eased, so an unclamped draw position
+  paints off-screen before it settles. A downward fallback for pills pinned at the inset was tried
+  and removed (it re-collided after the clamps). Residual overlap under extreme crowding is the
+  accepted trade for never dropping a name.
+- **Never read layout in the frame loop.** `width`/`height` are cached and written by the
+  ResizeObserver; pills are positioned by `transform: translate3d(...)`, never `left`/`top` (not
+  compositable). Pill boxes are measured ONCE (plus once on `document.fonts.ready`, since Inter
+  arriving late changes every width) and on resize.
+- **Hover raycasting is gated.** Skipped entirely while `dragging`, and touch never enters the
+  frame-loop hover path at all (`pointerInside` is only set for non-touch pointers) since taps do
+  their own synchronous pass. Before this, a full-scene raycast ran on every pan and pinch frame.
+  `pointerup` / `pointercancel` handlers exist so an interrupted iOS gesture cannot latch hover on
+  or wedge the drift off.
+- **`lite` vs viewport-derived is a deliberate split.** `lite` (read once at build:
+  `(pointer: coarse)` or width < 640) covers only what cannot change without rebuilding the scene:
+  pixel density, grass/crystal/bird counts, damping, `zoomToCursor`. Everything about LAYOUT keys off
+  the live viewport instead (`stylePills`, `placeScrubber`, `setOrthoFrustum`), because layout has to
+  follow the window it is in. Latching layout left phone-sized pills and a phone-placed scrubber on a
+  desktop window resized after mount.
+- **Small viewports crop rather than fit-all.** `setOrthoFrustum` keeps fit-everything for roomy
+  landscape, but a narrow OR short viewport frames on the TREES: `maxH * 2 / sqrt(aspect)`. Anchoring
+  to `sceneR` does not work, because it grows with sqrt(channel count) and would shrink the trees
+  again as the archive grows; the `sqrt(aspect)` divisor holds the number of visible trees roughly
+  constant however the phone is held. `controls.minZoom` is DERIVED from that ratio, not fixed, so
+  pinching out always still reaches the whole ring.
+- **Antialiasing stays on, phones included.** The scene is thin diagonal line-art, the worst case for
+  stair-stepping, and mobile GPUs resolve MSAA cheaply in tile memory. Pixels are saved with a lower
+  density cap (1.5 vs 2) and a third of the grass stipple instead.
 - Three.js scenes must fully dispose on unmount (StrictMode double-mounts in dev). The existing
   `scene.traverse` teardown covers per-root geometry/materials because roots are scene children.
 - **No AI / no embeddings**: concepts come from local term extraction only.
