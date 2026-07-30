@@ -41,14 +41,14 @@ export default function Options() {
     <div className="mx-auto max-w-xl space-y-6 p-6">
       <header className="space-y-1">
         <h1 className="text-xl font-medium text-neutral-100">
-          ✻ svemir extension settings
+          svemir extension settings
         </h1>
         <p className="text-sm text-neutral-500">
           Connect the extension to your svemir instance.
         </p>
       </header>
 
-      <div className="space-y-4 rounded-md border border-neutral-800 bg-neutral-950 p-4">
+      <div className="space-y-4 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-300">
             Base URL
@@ -60,7 +60,7 @@ export default function Options() {
               setSettings({ ...settings, baseUrl: e.target.value.trim() })
             }
             placeholder="https://svemir.space"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
+            className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
           />
           <p className="mt-1 text-xs text-neutral-500">
             Default: https://svemir.space — change to{" "}
@@ -79,7 +79,7 @@ export default function Options() {
               setSettings({ ...settings, token: e.target.value.trim() })
             }
             placeholder="Paste a token from /admin/tokens"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
+            className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
           />
           <p className="mt-1 text-xs text-neutral-500">
             Mint a token at <code>{settings.baseUrl}/admin/tokens</code>. Stored
@@ -91,7 +91,7 @@ export default function Options() {
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
+            className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
           >
             Save
           </button>
@@ -99,7 +99,7 @@ export default function Options() {
             type="button"
             onClick={handleTest}
             disabled={!settings.token || test.kind === "running"}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+            className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 transition-colors hover:bg-neutral-900 disabled:opacity-50"
           >
             {test.kind === "running" ? "Testing…" : "Test connection"}
           </button>

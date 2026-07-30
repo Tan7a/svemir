@@ -125,7 +125,9 @@ export default function OrderDropdown() {
           { value: "random" as OrderKind, label: "Random" },
         ]
       : ORDER_OPTIONS;
-  const defaultOrder: OrderKind = view === "channels" ? "updated" : "newest";
+  // Must stay in sync with the server-side default in app/page.tsx.
+  const defaultOrder: OrderKind =
+    view === "channels" ? "alphabetical" : "newest";
   const current = (searchParams.get("order") as OrderKind | null) ?? defaultOrder;
 
   // Which value filter (if any) is currently applied - drives the button label

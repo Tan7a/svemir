@@ -37,10 +37,10 @@ export const ORDER_OPTIONS: { value: OrderKind; label: string }[] = [
 // Channels use their own vocabulary - "updated" = the channel whose newest
 // block was saved most recently.
 export const CHANNEL_ORDER_OPTIONS: { value: OrderKind; label: string }[] = [
+  { value: "alphabetical", label: "Alphabetical" },
   { value: "updated", label: "Recently updated" },
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
-  { value: "alphabetical", label: "Alphabetical" },
   { value: "connections", label: "No. of blocks" },
   { value: "random", label: "Random" },
 ];

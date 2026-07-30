@@ -56,11 +56,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const view: ViewKind =
     (sp.view && ALLOWED_VIEWS[sp.view]) || "blocks";
-  // Channels default to "updated" (most-recently-saved block first); blocks
-  // default to "newest". Both still honour an explicit ?order= in the URL.
+  // Channels default to "alphabetical"; blocks default to "newest". Both
+  // still honour an explicit ?order= in the URL. Must stay in sync with
+  // defaultOrder in components/OrderDropdown.tsx.
   const order: OrderKind =
     (sp.order && ALLOWED_ORDERS[sp.order]) ||
-    (view === "channels" ? "updated" : "newest");
+    (view === "channels" ? "alphabetical" : "newest");
   const q = (sp.q ?? "").trim();
   const facetSlug = (sp.facet ?? "").trim();
 

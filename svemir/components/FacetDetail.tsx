@@ -43,12 +43,6 @@ export default function FacetDetail({ facet, inModal = false }: Props) {
           <span className="text-neutral-500">
             {facet.papers.length} paper{facet.papers.length === 1 ? "" : "s"} carry this theme
           </span>
-          <Link
-            href={`/?facet=${facet.slug}`}
-            className="text-neutral-400 hover:text-neutral-100"
-          >
-            View in grid →
-          </Link>
           {/* Owner-only: just this theme's papers as CSV. */}
           <ExportPapersButton facet={facet.slug} label="Export theme (CSV)" />
         </div>

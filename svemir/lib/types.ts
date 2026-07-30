@@ -52,6 +52,9 @@ export type Channel = {
   cover_url: string | null;
   parent_id: string | null;
   created_at: string;
+  /** Owner-only channels (migration 0012). Absent on rows fetched via the
+      anon key, which never sees private channels at all. */
+  is_private?: boolean;
 };
 
 export type ItemWithChannels = Item & {

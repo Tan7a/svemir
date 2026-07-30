@@ -122,13 +122,13 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
   }
 
   const iconBtn =
-    "flex h-9 w-9 items-center justify-center rounded-xl text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white disabled:opacity-40";
+    "flex h-9 w-9 items-center justify-center rounded-xl text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-50 disabled:opacity-40";
 
   return (
     <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
       {/* Channel picker pops up above the bar. */}
       {picking && (
-        <div className="mb-2 w-72 rounded-xl border border-neutral-800 bg-[#0f0f0f] p-2 shadow-panel">
+        <div className="glass-panel mb-2 w-72 rounded-xl border border-neutral-800 p-2">
           <input
             ref={inputRef}
             type="text"
@@ -171,7 +171,7 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
         </div>
       )}
 
-      <div className="flex items-center gap-2 rounded-2xl border border-neutral-800 bg-[#141414]/95 px-3 py-2 shadow-panel backdrop-blur">
+      <div className="glass-panel flex items-center gap-2 rounded-2xl border border-neutral-800 px-3 py-2">
         <span className="pl-1 text-sm font-medium text-neutral-100">
           {ids.length} selected
         </span>
@@ -191,7 +191,7 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
           title="Add to channel"
           onClick={() => setPicking((p) => !p)}
           disabled={busy}
-          className={`${iconBtn} ${picking ? "bg-neutral-800 text-white" : ""}`}
+          className={`${iconBtn} ${picking ? "bg-neutral-800 text-neutral-50" : ""}`}
         >
           <IconFolder />
         </button>

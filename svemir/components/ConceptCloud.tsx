@@ -50,7 +50,9 @@ export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] })
             title={`${c.count} block${c.count === 1 ? "" : "s"}`}
           >
             {c.term}
-            <span className="ml-1 align-baseline text-xs text-neutral-600">
+            {/* neutral-400, not 600: the count must read as light grey on the
+                dark theme (and flips to a readable dark grey on light ramps). */}
+            <span className="ml-1 align-baseline text-xs text-neutral-400">
               {c.count}
             </span>
           </Link>

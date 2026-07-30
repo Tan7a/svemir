@@ -1,36 +1,66 @@
 import { setPendingAsset } from "../lib/storage";
 import type { ExtractedAsset } from "../lib/types";
 
-const CONTEXT_MENU_ID = "svemir-save-image";
+const MENU_SAVE_IMAGE = "svemir-save-image";
+const MENU_SAVE_SELECTION = "svemir-save-selection";
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_ID,
-    title: "Save image to svemir",
-    contexts: ["image"],
+// Register from scratch (removeAll first, so re-registration never collides
+// with leftovers) on BOTH install/update and browser startup. Some Chromium
+// forks don't reliably fire onInstalled for unpacked reloads, which left the
+// menu missing; onStartup covers the next launch regardless.
+function registerMenus() {
+  chrome.contextMenus.removeAll(() => {
+    // One label for both contexts, Are.na style: which one fires is decided
+    // by what was right-clicked (an image vs a text selection).
+    chrome.contextMenus.create({
+      id: MENU_SAVE_IMAGE,
+      title: "Move to Svemir",
+      contexts: ["image"],
+    });
+    chrome.contextMenus.create({
+      id: MENU_SAVE_SELECTION,
+      title: "Move to Svemir",
+      contexts: ["selection"],
+    });
   });
-});
+}
+chrome.runtime.onInstalled.addListener(registerMenus);
+chrome.runtime.onStartup.addListener(registerMenus);
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== CONTEXT_MENU_ID) return;
   if (!tab?.id) return;
-  if (!info.srcUrl) return;
 
   let hostname = "";
   try {
-    hostname = new URL(info.pageUrl ?? info.srcUrl).hostname;
+    hostname = new URL(info.pageUrl ?? info.srcUrl ?? "").hostname;
   } catch {
     /* ignore */
   }
 
-  const asset: ExtractedAsset = {
-    kind: "image",
-    url: info.pageUrl ?? info.srcUrl,
-    image_url: info.srcUrl,
-    title: tab.title ?? "",
-    description: "",
-    source_name: hostname,
-  };
+  let asset: ExtractedAsset | null = null;
+  if (info.menuItemId === MENU_SAVE_IMAGE && info.srcUrl) {
+    asset = {
+      kind: "image",
+      url: info.pageUrl ?? info.srcUrl,
+      image_url: info.srcUrl,
+      title: tab.title ?? "",
+      description: "",
+      source_name: hostname,
+    };
+  } else if (info.menuItemId === MENU_SAVE_SELECTION && info.selectionText) {
+    // A text block: the selection becomes the description (what the API
+    // requires for kind "text") and body_text (what concept extraction reads).
+    asset = {
+      kind: "text",
+      url: info.pageUrl ?? "",
+      image_url: "",
+      title: tab.title ?? "",
+      description: info.selectionText,
+      source_name: hostname,
+      body_text: info.selectionText,
+    };
+  }
+  if (!asset) return;
 
   await setPendingAsset(tab.id, asset);
 

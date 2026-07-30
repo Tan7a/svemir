@@ -206,14 +206,14 @@ export default function App() {
   if (phase.kind === "no-token") {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
-        <div className="text-2xl">✻</div>
+        <img src="/icons/icon-48.png" alt="" className="h-10 w-10" />
         <p className="text-center text-sm text-neutral-300">
           Welcome to svemir. Add your API token to start saving.
         </p>
         <button
           type="button"
           onClick={openSettings}
-          className="rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
+          className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
         >
           Open Settings
         </button>
@@ -229,15 +229,14 @@ export default function App() {
     <div className="flex flex-col gap-3 p-4">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-neutral-800 pb-3">
-        <span className="text-base" aria-hidden>
-          ✻
-        </span>
+        <img src="/icons/icon-32.png" alt="" className="h-6 w-6" />
         <span className="text-sm font-medium text-neutral-100">Connect</span>
-        <div className="flex items-center gap-2 text-neutral-500">
+        {/* Icon-variant buttons from the svemir design system (ui/Button). */}
+        <div className="flex items-center">
           <button
             type="button"
             onClick={openSettings}
-            className="hover:text-neutral-200"
+            className="flex h-7 w-7 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
             aria-label="Settings"
             title="Settings"
           >
@@ -246,7 +245,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => window.close()}
-            className="hover:text-neutral-200"
+            className="flex h-7 w-7 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-neutral-100"
             aria-label="Close"
           >
             ×
@@ -254,19 +253,19 @@ export default function App() {
         </div>
       </header>
 
-      {/* Asset card */}
-      <div className="rounded-md border border-neutral-800 bg-neutral-950 p-3">
+      {/* Asset card - rounded-2xl panel, like the app's cards. */}
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-3">
         <div className="flex items-center gap-3">
           {asset.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={asset.image_url}
               alt=""
-              className="h-10 w-10 shrink-0 rounded border border-neutral-800 object-cover"
+              className="h-10 w-10 shrink-0 rounded-lg border border-neutral-800 object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-neutral-800 bg-neutral-900 text-neutral-500">
-              {asset.kind === "image" ? "📷" : "🔗"}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-500">
+              {asset.kind === "image" ? "📷" : asset.kind === "text" ? "📝" : "🔗"}
             </div>
           )}
           <div className="min-w-0 flex-1">
@@ -282,7 +281,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
-            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+            className="rounded-xl border border-neutral-700 px-2 py-1 text-xs text-neutral-200 transition-colors hover:bg-neutral-900"
           >
             {editing ? "Done" : "Edit"}
           </button>
@@ -304,7 +303,7 @@ export default function App() {
                 setAsset({ ...asset, title: e.target.value })
               }
               placeholder="Title"
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+              className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
             />
             <textarea
               value={asset.description}
@@ -313,7 +312,7 @@ export default function App() {
               }
               placeholder="Description"
               rows={2}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+              className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
             />
           </div>
         )}
@@ -332,10 +331,10 @@ export default function App() {
         type="button"
         onClick={handleSave}
         disabled={selected.length === 0 || phase.kind === "saving"}
-        className={`mt-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
+        className={`mt-1 rounded-xl py-2.5 text-sm font-medium transition-colors ${
           selected.length === 0 || phase.kind === "saving"
             ? "bg-neutral-800 text-neutral-500"
-            : "bg-indigo-600 text-white hover:bg-indigo-500"
+            : "bg-neutral-100 text-neutral-900 hover:bg-neutral-50"
         }`}
       >
         {phase.kind === "saving"

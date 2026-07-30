@@ -50,7 +50,7 @@ html[data-theme="dark"] {
 html[data-theme="light-white"] {
   --background: #ffffff;
   --foreground: #171717;
-  --muted: #737373;
+  --muted: #6b6b6b;
   --border: #e5e5e5;
   --card-hover: #f5f5f5;
   --shadow-color: rgba(0, 0, 0, 0.14);
@@ -64,11 +64,13 @@ html[data-theme="light-white"] {
   --color-neutral-200: #262626;
   --color-neutral-300: #404040;
   --color-neutral-400: #525252;
-  --color-neutral-500: #737373;
-  --color-neutral-600: #a3a3a3;
-  --color-neutral-700: #d4d4d4;
-  --color-neutral-800: #e5e5e5;
-  --color-neutral-900: #f5f5f5;
+  /* 500-700 darkened for contrast on white (500/600 >= 4.5:1, 700 >= 3:1);
+     800/900 darkened so borders read. Ordering must stay monotonic. */
+  --color-neutral-500: #6b6b6b;
+  --color-neutral-600: #747474;
+  --color-neutral-700: #8f8f8f;
+  --color-neutral-800: #d4d4d4;
+  --color-neutral-900: #ececec;
   --color-neutral-950: #ffffff;
 }
 
@@ -76,7 +78,7 @@ html[data-theme="light-white"] {
 html[data-theme="cream"] {
   --background: #f5efe1;
   --foreground: #2b2620;
-  --muted: #8a7f6a;
+  --muted: #6f6754;
   --border: #e0d7c2;
   --card-hover: #efe7d4;
   --shadow-color: rgba(43, 38, 32, 0.16);
@@ -90,11 +92,12 @@ html[data-theme="cream"] {
   --color-neutral-200: #3a342c;
   --color-neutral-300: #57503f;
   --color-neutral-400: #6b6150;
-  --color-neutral-500: #8a7f6a;
-  --color-neutral-600: #b3a890;
-  --color-neutral-700: #d8cdb5;
-  --color-neutral-800: #e8dec8;
-  --color-neutral-900: #f3ecdb;
+  /* 500-700 darkened for contrast on the cream bg, hue kept warm. */
+  --color-neutral-500: #6f6754;
+  --color-neutral-600: #756c58;
+  --color-neutral-700: #90866e;
+  --color-neutral-800: #d5cab0;
+  --color-neutral-900: #ece4d0;
   --color-neutral-950: #faf5ea;
 }
 
@@ -102,7 +105,7 @@ html[data-theme="cream"] {
 html[data-theme="funky"] {
   --background: #e8f1fc;
   --foreground: #102a43;
-  --muted: #627d98;
+  --muted: #4e6b85;
   --border: #cfe0f2;
   --card-hover: #dcebfb;
   --shadow-color: rgba(16, 42, 67, 0.16);
@@ -116,11 +119,12 @@ html[data-theme="funky"] {
   --color-neutral-200: #1c3d5a;
   --color-neutral-300: #2d5070;
   --color-neutral-400: #486581;
-  --color-neutral-500: #627d98;
-  --color-neutral-600: #829ab1;
-  --color-neutral-700: #b6cce0;
-  --color-neutral-800: #d3e3f3;
-  --color-neutral-900: #e6f0fb;
+  /* 500-700 darkened for contrast on the blue bg, hue kept cool. */
+  --color-neutral-500: #4e6b85;
+  --color-neutral-600: #52708a;
+  --color-neutral-700: #6f8ba6;
+  --color-neutral-800: #b9d2ea;
+  --color-neutral-900: #dde9f7;
   --color-neutral-950: #f3f8ff;
 }
 
