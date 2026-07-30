@@ -19,12 +19,42 @@ export type GardenChannel = {
   id: string;
   slug: string;
   title: string;
-  /** The channel's brand colour (hex), shared with its Map nodes. */
+  /** The channel's brand colour (hex). */
   color: string;
   leaves: GardenLeaf[];
 };
 
-type Props = { gardens: GardenChannel[] };
+/** One shared term carried by a root; links to /concept/[slug]. */
+export type RootTerm = { term: string; slug: string };
+
+/**
+ * A concept connection between two channels, drawn as an organic root curve
+ * under the soil line. Computed by the channel_concept_pairs RPC (0013) and
+ * shaped in app/graph/page.tsx.
+ */
+export type GardenRoot = {
+  /** Channel id of one endpoint. */
+  a: string;
+  /** Channel id of the other endpoint. */
+  b: string;
+  /** 0..1, normalized against the strongest pair by the page. */
+  weight: number;
+  sharedCount: number;
+  terms: RootTerm[];
+};
+
+// Stable default: a fresh [] literal per render would change the effect deps
+// and rebuild the whole WebGL scene on every parent re-render.
+const NO_ROOTS: GardenRoot[] = [];
+
+type Props = {
+  gardens: GardenChannel[];
+  roots?: GardenRoot[];
+  /** Root clicked: open the shell panel on that pair. Read via ref, not deps. */
+  onRootSelect?: (root: GardenRoot) => void;
+  /** Trunk/branch clicked: open the shell panel on that channel. Via ref too. */
+  onTreeSelect?: (channelId: string) => void;
+};
 
 const GOLDEN = 137.50776405003785 * (Math.PI / 180);
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -41,6 +71,29 @@ type PlantView = {
   line: SVGLineElement; // leader line to the plant
   sx: number; // last projected anchor screen x
   sy: number; // last projected anchor screen y
+};
+
+/**
+ * Per-root render handle. One LineSegments carries every strand of the root
+ * (thicker pairs = more parallel strands, since linewidth is a no-op on
+ * WebGL), with its OWN material so each root can ease its opacity toward its
+ * hover target without touching the others.
+ */
+type RootView = {
+  root: GardenRoot;
+  line: THREE.LineSegments;
+  mat: THREE.LineBasicMaterial;
+  /** Anchor dots at both trunk bases: the visible click targets. */
+  dots: THREE.Points;
+  dotMat: THREE.PointsMaterial;
+  pvA: PlantView;
+  pvB: PlantView;
+  /** Rest opacity, scaled by the pair's weight. */
+  baseOpacity: number;
+  /** Current opacity, eased per frame toward the hover-aware target. */
+  opacity: number;
+  /** World point of the deepest dip; anchors the hover tooltip. */
+  mid: THREE.Vector3;
 };
 
 /**
@@ -170,10 +223,25 @@ function startForestAudio(): ForestAudio {
   };
 }
 
-export default function IdeaGarden({ gardens }: Props) {
+export default function IdeaGarden({
+  gardens,
+  roots = NO_ROOTS,
+  onRootSelect,
+  onTreeSelect,
+}: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  // Selection callbacks follow the showLabels/motionOn state+ref pattern: the
+  // scene reads the refs, so a new function identity from the parent (which
+  // happens on every parent render) never enters the effect deps and never
+  // rebuilds the WebGL scene.
+  const onRootSelectRef = useRef(onRootSelect);
+  const onTreeSelectRef = useRef(onTreeSelect);
+  useEffect(() => {
+    onRootSelectRef.current = onRootSelect;
+    onTreeSelectRef.current = onTreeSelect;
+  });
   // The scene is imperative Three.js, so it can't ride the CSS-var ramp. Track
   // the active theme and rebuild the garden (via the effect dep below) when it
   // flips, re-deriving the sky, line-art and control chrome from the palette.
@@ -335,6 +403,11 @@ export default function IdeaGarden({ gardens }: Props) {
     // ── instantiate plant meshes, grouped per plant ──────────────────────────────
     const leafMeshes: THREE.InstancedMesh[] = [];
     const plantViews: PlantView[] = [];
+    // Branch LineSegments double as "the tree" for hover/click (raycast
+    // targets), each tagged with its channel id below.
+    const branchLines: THREE.LineSegments[] = [];
+    // Channel whose label pill is hovered; its incident roots darken.
+    let pillHoverChannel: string | null = null;
     const tmpMatrix = new THREE.Matrix4();
     const tmpColor = new THREE.Color();
 
@@ -357,7 +430,10 @@ export default function IdeaGarden({ gardens }: Props) {
       });
       const lineGeo = new THREE.BufferGeometry();
       lineGeo.setAttribute("position", new THREE.BufferAttribute(linePos, 3));
-      group.add(new THREE.LineSegments(lineGeo, branchMat));
+      const branchSegs = new THREE.LineSegments(lineGeo, branchMat);
+      branchSegs.userData.channelId = channel.id;
+      branchLines.push(branchSegs);
+      group.add(branchSegs);
 
       // Leaves → one InstancedMesh per plant; one pastel hue, subtle per-leaf jitter.
       const inst = new THREE.InstancedMesh(leafGeos[shape], leafMat, n);
@@ -403,9 +479,11 @@ export default function IdeaGarden({ gardens }: Props) {
       // pill when the overlay is cleared on teardown.
       pill.addEventListener("mouseenter", () => {
         pill.style.textDecoration = "underline";
+        pillHoverChannel = channel.id; // darken this tree's roots
       });
       pill.addEventListener("mouseleave", () => {
         pill.style.textDecoration = "";
+        pillHoverChannel = null;
       });
       pill.addEventListener("click", () => {
         router.push(`/channel/${channel.slug}`);
@@ -437,8 +515,9 @@ export default function IdeaGarden({ gardens }: Props) {
       });
     });
 
-    // Point sprites (bees, grass dots) need a texture to be anything but a square,
-    // so we paint each mark shape onto a tiny canvas and use it as the points' map.
+    // Point sprites (root anchors, bees, grass dots) need a texture to be
+    // anything but a square, so we paint each mark shape onto a tiny canvas
+    // and use it as the points' map.
     const makeMarkTexture = (draw: (ctx: CanvasRenderingContext2D, s: number) => void) => {
       const cv = document.createElement("canvas");
       cv.width = cv.height = 64;
@@ -446,6 +525,193 @@ export default function IdeaGarden({ gardens }: Props) {
       if (ctx) draw(ctx, 64);
       return new THREE.CanvasTexture(cv);
     };
+    // Round sprite for the root anchor dots; painted white, tinted to the
+    // theme ink via the material colour (near-white on dark, dark on light,
+    // so the anchors never vanish into the background).
+    const rootDotTex = makeMarkTexture((ctx, s) => {
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(s / 2, s / 2, s * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // ── roots: shared-concept connections drawn under the soil ──────────────────
+    // Each GardenRoot becomes an organic curve from one trunk base down below
+    // y=0 and back up into the other trunk. The orthographic frustum already
+    // leaves ~0.65*maxH of visible world below the soil line, so no camera
+    // changes are needed. Roots are SCENE-LEVEL SIBLINGS of the tree groups,
+    // never children: the timeline scrub scales/hides whole groups, and a root
+    // parented to a tree would stretch with it.
+    const plantById = new Map<string, PlantView>();
+    plantViews.forEach((pv) => plantById.set(pv.channel.id, pv));
+    const rootViews: RootView[] = [];
+    const rootUp = new THREE.Vector3(0, 1, 0);
+    const rootTmpColor = new THREE.Color();
+    for (const root of roots) {
+      const pvA = plantById.get(root.a);
+      const pvB = plantById.get(root.b);
+      if (!pvA || !pvB) continue; // endpoint channel not planted (no leaves)
+      // Seeded like the trees: the same pair always grows the same root.
+      const rng = mulberry32(seedFromId(root.a + ":" + root.b));
+      const a = pvA.group.position;
+      const b = pvB.group.position;
+      const chord = new THREE.Vector3().subVectors(b, a);
+      const chordLen = chord.length() || 1;
+      // How deep the root dives. The under-soil head-room the frustum shows
+      // grows with the SCENE, not the trees (halfH tracks
+      // sceneR*sin(20°)+maxH, see setOrthoFrustum), so the depth budget must
+      // too: capped at maxH*0.6, wide gardens got roots that read as a flat
+      // net instead of a plunge. 0.34 = sin of the camera's 20° elevation.
+      const depthBudget = (sceneR * 0.34 + maxH) * 0.45;
+      const dip = THREE.MathUtils.clamp(
+        chordLen * 0.35,
+        Math.min(maxH * 0.4, depthBudget * 0.8),
+        depthBudget
+      );
+      // A consistent one-sided horizontal bow (side picked once per root) so
+      // the curve stays legible while the camera auto-rotates, instead of
+      // collapsing into a straight line edge-on.
+      const side = rng() < 0.5 ? 1 : -1;
+      const bowMag = (0.05 + rng() * 0.08) * chordLen * side;
+      const perp = new THREE.Vector3().crossVectors(chord, rootUp);
+      if (perp.lengthSq() < 1e-6) perp.set(1, 0, 0);
+      perp.normalize();
+      // Control stations as (t along the chord, fraction of dip) pairs. The
+      // shape is deliberately root-like: a near-VERTICAL plunge out of each
+      // trunk base (half depth within 6% of horizontal travel), a deep run
+      // through the middle, and a steep climb into the other trunk.
+      const stations: [number, number][] = [
+        [0, 0],
+        [0.06, 0.5],
+        [0.22, 0.85],
+        [0.5, 1],
+        [0.78, 0.85],
+        [0.94, 0.5],
+        [1, 0],
+      ];
+      const ctrl = stations.map(([t, df]) => {
+        const wave = Math.sin(Math.PI * t);
+        const wiggle = df === 0 ? 0 : (rng() - 0.5) * 0.9; // organic, seeded
+        return new THREE.Vector3(
+          a.x + chord.x * t + perp.x * bowMag * wave + wiggle,
+          -dip * df * (df === 0 ? 1 : 0.9 + rng() * 0.2),
+          a.z + chord.z * t + perp.z * bowMag * wave + wiggle
+        );
+      });
+      const curve = new THREE.CatmullRomCurve3(ctrl);
+      const pts = curve.getPoints(48);
+      // linewidth is a no-op on WebGL, so "thickness" = parallel strands:
+      // 1/2/3 by weight tier. All strands share ONE geometry + LineSegments.
+      const strandOffsets =
+        root.weight > 0.66 ? [-0.3, 0, 0.3] : root.weight > 0.33 ? [-0.16, 0.16] : [0];
+      const posArr: number[] = [];
+      const colArr: number[] = [];
+      const pushVert = (x: number, y: number, z: number) => {
+        posArr.push(x, y, z);
+        // Depth cue: a flat colour ramp from ink toward the sky colour as
+        // the root dives (no glow, no fog, just lerped vertex colour).
+        const fade = THREE.MathUtils.clamp((y / -dip) * 0.35, 0, 0.35);
+        rootTmpColor.copy(lineColor).lerp(skyColor, fade);
+        colArr.push(rootTmpColor.r, rootTmpColor.g, rootTmpColor.b);
+      };
+      const last = pts.length - 1;
+      for (const off of strandOffsets) {
+        for (let i = 0; i < last; i++) {
+          for (const idx of [i, i + 1]) {
+            const p = pts[idx];
+            // Strands pinch together at both ends (sqrt-eased) so the root
+            // visibly grows OUT of the trunk instead of arriving as rails.
+            const pinch = Math.sqrt(Math.sin(Math.PI * (idx / last)));
+            pushVert(p.x + perp.x * off * pinch, p.y, p.z + perp.z * off * pinch);
+          }
+        }
+      }
+      // Rootlets: short kinked side-branches sprouting mostly downward off
+      // the main root, the same trick the trees use to read as organic.
+      const rootletCount = 4 + strandOffsets.length * 2;
+      const rootletP = new THREE.Vector3();
+      for (let k = 0; k < rootletCount; k++) {
+        curve.getPoint(0.08 + rng() * 0.84, rootletP);
+        const len = dip * (0.12 + rng() * 0.15);
+        const p0 = rootletP.clone();
+        const p1 = p0
+          .clone()
+          .add(
+            new THREE.Vector3(rng() - 0.5, -(0.6 + rng() * 0.7), rng() - 0.5)
+              .normalize()
+              .multiplyScalar(len)
+          );
+        const p2 = p1
+          .clone()
+          .add(
+            new THREE.Vector3(rng() - 0.5, -(0.4 + rng() * 0.8), rng() - 0.5)
+              .normalize()
+              .multiplyScalar(len * 0.6)
+          );
+        pushVert(p0.x, p0.y, p0.z);
+        pushVert(p1.x, p1.y, p1.z);
+        pushVert(p1.x, p1.y, p1.z);
+        pushVert(p2.x, p2.y, p2.z);
+      }
+      const rootGeo = new THREE.BufferGeometry();
+      rootGeo.setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array(posArr), 3)
+      );
+      rootGeo.setAttribute(
+        "color",
+        new THREE.BufferAttribute(new Float32Array(colArr), 3)
+      );
+      const baseOpacity = 0.2 + root.weight * 0.2;
+      // Per-root material instance (NOT shared): each root eases its own
+      // opacity toward its hover target. depthWrite off so overlapping
+      // transparent lines don't pop as the draw order changes.
+      const rootMat = new THREE.LineBasicMaterial({
+        transparent: true,
+        depthWrite: false,
+        vertexColors: true,
+        opacity: baseOpacity,
+      });
+      const line = new THREE.LineSegments(rootGeo, rootMat);
+      scene.add(line);
+      // The connection's click handle: one small dot at the arc's LOWEST
+      // point (the same spot the tooltip anchors to), so each root has an
+      // obvious thing to aim for down in the under-soil tangle.
+      const mid = curve.getPoint(0.5);
+      const anchorGeo = new THREE.BufferGeometry();
+      anchorGeo.setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array([mid.x, mid.y, mid.z]), 3)
+      );
+      const anchorMat = new THREE.PointsMaterial({
+        map: rootDotTex,
+        color: lineColor,
+        size: 4,
+        sizeAttenuation: false,
+        transparent: true,
+        depthWrite: false,
+        alphaTest: 0.4,
+        opacity: Math.min(0.9, baseOpacity * 2),
+      });
+      const dots = new THREE.Points(anchorGeo, anchorMat);
+      scene.add(dots);
+      const rv: RootView = {
+        root,
+        line,
+        mat: rootMat,
+        dots,
+        dotMat: anchorMat,
+        pvA,
+        pvB,
+        baseOpacity,
+        opacity: baseOpacity,
+        mid,
+      };
+      line.userData.rootView = rv;
+      dots.userData.rootView = rv; // clicking the handle selects the root too
+      rootViews.push(rv);
+    }
+
     // ── crystals: faceted line-art gems on slender stalks ───────────────────────
     // Reworked from the old floating sprite cloud into thin OUTLINE gems drawn in
     // the same pale line colour as the branches, each rooted on the ground on a
@@ -525,8 +791,10 @@ export default function IdeaGarden({ gardens }: Props) {
     }
     const grassGeo = new THREE.BufferGeometry();
     grassGeo.setAttribute("position", new THREE.BufferAttribute(grassPos, 3));
+    // Grass in the theme ink, like every other line in the scene: white
+    // line-art on dark themes, near-black on light ones. No green anywhere.
     const grassMat = new THREE.LineBasicMaterial({
-      color: 0x8fa76a,
+      color: lineColor,
       transparent: true,
       opacity: 0.5,
     });
@@ -534,27 +802,43 @@ export default function IdeaGarden({ gardens }: Props) {
 
     // ── grass dots: fine ground stipple, densest at the centre and thinning out ──
     // toward the edge, so the grass spreads gradually from the middle of the forest.
+    // White sprite, tinted PER DOT below so the meadow can fade with radius.
     const dotTex = makeMarkTexture((ctx, s) => {
-      ctx.fillStyle = "#9bb173";
+      ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.arc(s / 2, s / 2, s * 0.26, 0, Math.PI * 2);
       ctx.fill();
     });
-    const GRASS_DOTS = Math.min(5000, Math.max(1000, Math.floor(sceneR * 4)));
+    const GRASS_DOTS = Math.min(20000, Math.max(4000, Math.floor(sceneR * 16)));
+    const grassSpread = sceneR * 1.35; // reach past the tree ring
     const dotPos = new Float32Array(GRASS_DOTS * 3);
+    const dotCol = new Float32Array(GRASS_DOTS * 3);
+    // The stipple uses the same ink; its radial gradient still fades it
+    // toward the sky colour with distance.
+    const grassInk = lineColor.clone();
+    const dotTint = new THREE.Color();
     for (let i = 0; i < GRASS_DOTS; i++) {
       const a = Math.random() * Math.PI * 2;
-      // pow > 0.5 biases toward the centre -> density falls off with radius
-      const rad = Math.pow(Math.random(), 1.7) * (sceneR + 4);
+      // pow > 0.5 biases toward the centre -> density falls off with radius,
+      // and the per-dot colour lerps toward the sky the further out it sits:
+      // density + colour together read as one gradient from a thick green
+      // centre to a dissolving edge.
+      const frac = Math.pow(Math.random(), 1.6);
+      const rad = frac * grassSpread;
       dotPos[i * 3] = Math.cos(a) * rad;
       dotPos[i * 3 + 1] = Math.random() * 0.22; // hug the ground
       dotPos[i * 3 + 2] = Math.sin(a) * rad;
+      dotTint.copy(grassInk).lerp(skyColor, Math.min(0.85, frac * 0.9));
+      dotCol[i * 3] = dotTint.r;
+      dotCol[i * 3 + 1] = dotTint.g;
+      dotCol[i * 3 + 2] = dotTint.b;
     }
     const dotGeo = new THREE.BufferGeometry();
     dotGeo.setAttribute("position", new THREE.BufferAttribute(dotPos, 3));
+    dotGeo.setAttribute("color", new THREE.BufferAttribute(dotCol, 3));
     const dotMat = new THREE.PointsMaterial({
       map: dotTex,
-      color: 0xffffff,
+      vertexColors: true,
       size: 4,
       sizeAttenuation: false,
       transparent: true,
@@ -842,9 +1126,18 @@ export default function IdeaGarden({ gardens }: Props) {
 
     // ── interaction (raycast hover + click) ──────────────────────────────────────
     const raycaster = new THREE.Raycaster();
+    // World-space slack for hitting 1px lines (roots, branches). Too big
+    // steals empty-ground clicks from the motion toggle; too small makes the
+    // roots unhittable. Scaled with the scene so big gardens stay clickable.
+    raycaster.params.Line = { threshold: Math.max(0.8, sceneR * 0.012) };
+    // The root click-handles are Points; give them a slightly fatter grab
+    // radius than the lines so the dot is always the easiest thing to hit.
+    raycaster.params.Points = { threshold: Math.max(1.2, sceneR * 0.018) };
     const pointer = new THREE.Vector2();
     let pointerInside = false;
     let hovered: GardenLeaf | null = null;
+    let hoveredRoot: RootView | null = null;
+    let hoveredTrunk: string | null = null;
     const worldPos = new THREE.Vector3();
 
     function onMove(e: PointerEvent) {
@@ -864,8 +1157,23 @@ export default function IdeaGarden({ gardens }: Props) {
     }
     function onClick(e: MouseEvent) {
       if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return; // was a drag
+      // Touch taps never fire pointermove, so the frame-loop hover state can
+      // be stale or empty here: redo one synchronous raycast at the click
+      // point before deciding what was clicked (fixes mobile taps).
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      computeHover();
       if (hovered) {
         router.push(`/block/${hovered.id}`);
+        return;
+      }
+      if (hoveredRoot) {
+        onRootSelectRef.current?.(hoveredRoot.root);
+        return;
+      }
+      if (hoveredTrunk) {
+        onTreeSelectRef.current?.(hoveredTrunk);
         return;
       }
       setMotionOn((v) => !v); // click empty space → toggle the drift
@@ -876,21 +1184,26 @@ export default function IdeaGarden({ gardens }: Props) {
     renderer.domElement.addEventListener("click", onClick);
 
     function clearHover() {
-      if (hovered) {
+      if (hovered || hoveredRoot || hoveredTrunk) {
         hovered = null;
+        hoveredRoot = null;
+        hoveredTrunk = null;
         hover.style.display = "none";
         renderer.domElement.style.cursor = "";
       }
     }
-    const updateHover = () => {
-      if (!pointerInside) {
-        clearHover();
-        return;
-      }
+    // One raycast pass, hover priority leaf > root > trunk. Runs every frame
+    // while the pointer is inside, and once synchronously from onClick.
+    const computeHover = () => {
       raycaster.setFromCamera(pointer, camera);
+      const w = mount.clientWidth || 1;
+      const h = mount.clientHeight || 1;
+      // Leaves first: the most specific target.
       const hits = raycaster.intersectObjects(leafMeshes, false);
-      const hit = hits.find((h) => h.instanceId !== undefined);
+      const hit = hits.find((lh) => lh.instanceId !== undefined);
       if (hit && hit.instanceId !== undefined) {
+        hoveredRoot = null;
+        hoveredTrunk = null;
         const meta = (hit.object.userData.leafMeta as GardenLeaf[])[hit.instanceId];
         hovered = meta;
         hoverTitle.textContent = meta.title || "Untitled";
@@ -900,15 +1213,85 @@ export default function IdeaGarden({ gardens }: Props) {
         inst.getMatrixAt(hit.instanceId, tmpMatrix);
         worldPos.setFromMatrixPosition(tmpMatrix);
         inst.localToWorld(worldPos);
-        const w = mount.clientWidth || 1;
-        const h = mount.clientHeight || 1;
         worldPos.project(camera);
         hover.style.left = `${(worldPos.x * 0.5 + 0.5) * w}px`;
         hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * h}px`;
         hover.style.display = "block";
         renderer.domElement.style.cursor = "pointer";
-      } else {
+        return;
+      }
+      hovered = null;
+      // Roots next: both the curves and their mid-point click handles. The
+      // raycaster does not skip invisible objects on its own, so filter out
+      // roots hidden by the scrubber before intersecting.
+      const rootTargets: THREE.Object3D[] = [];
+      for (const rv of rootViews) {
+        if (!rv.line.visible) continue;
+        rootTargets.push(rv.dots, rv.line);
+      }
+      const rHit = raycaster.intersectObjects(rootTargets, false)[0];
+      if (rHit) {
+        const rv = rHit.object.userData.rootView as RootView;
+        hoveredRoot = rv;
+        hoveredTrunk = null;
+        hoverTitle.textContent = `${rv.pvA.channel.title} and ${rv.pvB.channel.title}`;
+        hoverDate.textContent = `${rv.root.sharedCount} shared concept${
+          rv.root.sharedCount === 1 ? "" : "s"
+        }`;
+        // Tooltip anchors at the root's deepest dip, its most visible point.
+        worldPos.copy(rv.mid).project(camera);
+        hover.style.left = `${(worldPos.x * 0.5 + 0.5) * w}px`;
+        hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * h}px`;
+        hover.style.display = "block";
+        renderer.domElement.style.cursor = "pointer";
+        return;
+      }
+      hoveredRoot = null;
+      // Trunks/branches last: hovering any branch counts as the whole tree.
+      // No tooltip (the balloon already names the tree); cursor + darkened
+      // incident roots carry the affordance. Skip scrubbed-out trees.
+      const tHit = raycaster
+        .intersectObjects(branchLines, false)
+        .find((bh) => bh.object.parent?.visible);
+      if (tHit) {
+        hoveredTrunk = tHit.object.userData.channelId as string;
+        hover.style.display = "none";
+        renderer.domElement.style.cursor = "pointer";
+        return;
+      }
+      clearHover();
+    };
+    const updateHover = () => {
+      if (!pointerInside) {
         clearHover();
+        return;
+      }
+      computeHover();
+    };
+
+    // Roots track the scrubber + hover every frame: hidden when either
+    // endpoint tree is scrubbed out, faded by the younger tree's growth, and
+    // eased toward the hover target (never snapped) so the darkening breathes.
+    const updateRoots = () => {
+      const activeChannel = hoveredTrunk ?? pillHoverChannel;
+      for (const rv of rootViews) {
+        const vis = rv.pvA.group.visible && rv.pvB.group.visible;
+        rv.line.visible = vis;
+        rv.dots.visible = vis;
+        if (!vis) continue;
+        const growth = Math.min(rv.pvA.group.scale.y, rv.pvB.group.scale.y);
+        let target = rv.baseOpacity;
+        if (hoveredRoot === rv) target = 0.85;
+        else if (
+          activeChannel &&
+          (rv.root.a === activeChannel || rv.root.b === activeChannel)
+        )
+          target = 0.55;
+        rv.opacity += (target * growth - rv.opacity) * 0.18;
+        rv.mat.opacity = rv.opacity;
+        // Anchors ride the same ease but doubled (capped), so they stay a
+        // clear step brighter than their line at every hover state.
+        rv.dotMat.opacity = Math.min(0.9, rv.opacity * 2);
       }
     };
 
@@ -922,15 +1305,20 @@ export default function IdeaGarden({ gardens }: Props) {
     ro.observe(mount);
 
     // ── animation loop ─────────────────────────────────────────────────────────────
-    const clock = new THREE.Clock();
+    // Timer, not the deprecated Clock (which console-warns on every build).
+    // update() advances its internal state once per frame; getElapsed() then
+    // reads a stable value however often it's called within that frame.
+    const timer = new THREE.Timer();
     let raf = 0;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      const time = clock.getElapsedTime();
+      timer.update();
+      const time = timer.getElapsed();
       controls.autoRotate = motionRef.current && !dragging;
       controls.update();
       updateBirds(time);
       updateHover();
+      updateRoots();
       updateLabels(time);
       renderer.render(scene, camera);
     };
@@ -948,6 +1336,7 @@ export default function IdeaGarden({ gardens }: Props) {
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsEnd);
       controls.dispose();
+      timer.dispose(); // releases its page-visibility listener
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
         if (mesh.geometry) mesh.geometry.dispose();
@@ -959,12 +1348,16 @@ export default function IdeaGarden({ gardens }: Props) {
       branchMat.dispose();
       leafMat.dispose();
       dotTex.dispose(); // CanvasTextures aren't freed by scene.traverse
+      rootDotTex.dispose();
       overlay.replaceChildren(); // removes svg, pills, hover + scrubber DOM
       renderer.dispose();
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [gardens, router, themeKey]);
+    // roots is safe as a dep: it is server-serialized page data, referentially
+    // stable across client re-renders (unlike the selection callbacks, which
+    // change identity every parent render and therefore live in refs above).
+  }, [gardens, roots, router, themeKey]);
 
   const toggleClass =
     "rounded-full border border-neutral-800 bg-neutral-900/70 px-3 py-1 text-xs backdrop-blur transition-colors";

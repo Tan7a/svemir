@@ -79,40 +79,25 @@ export type BrandColor = {
   name: string;
   pantone: string;
   hex: string;
-  /**
-   * Map-only substitute colour, with its own name. The Map is deliberately a
-   * cooler, deep-space read than the Garden, so the two greens are swapped for
-   * blues there. Chosen at the same relative luminance as the green they
-   * replace, so swapping them does not change how the depth fog reads.
-   *
-   * Note this means a green channel is green in the Garden and blue on the
-   * Map. That divergence is intentional, not a drift between two palettes.
-   */
-  mapHex?: string;
-  mapName?: string;
   /** A UI neutral: documented, but never used as a channel identity colour. */
   neutral?: boolean;
 };
 
 /**
  * The brand palette: eleven named colours with their Pantone references. Single
- * source of truth for channel identity (Garden pills and leaves, Map nodes) and
- * for the swatch set on /design-system.
+ * source of truth for channel identity (Garden pills and leaves) and for the
+ * swatch set on /design-system.
  *
  * `neutral` marks the two greys. They are documented but excluded from the
  * channel rotation, so no channel reads as "uncoloured" beside the chromatic
- * ones, and Off White never becomes the brightest thing on the Map.
- *
- * Map nodes draw at full opacity so the hue lands true, and depth comes from
- * the scene fog rather than from tinting the colour. The only place the two
- * views differ is the deliberate green-to-blue swap described on `mapHex`.
+ * ones.
  */
 export const BRAND_PALETTE: BrandColor[] = [
   { name: 'Sunny Yellow',    pantone: '109 C',   hex: '#FFB500' },
   { name: 'Ocean Blue',      pantone: '2130',    hex: '#4E76D0' },
   { name: 'Sky Blue',        pantone: '283',     hex: '#8EBFE8' },
-  { name: 'Forest Green',    pantone: '2427',    hex: '#01561D', mapHex: '#1A4E8F', mapName: 'Deep Blue' },
-  { name: 'Emerald Green',   pantone: '7724',    hex: '#00936D', mapHex: '#0D8AAE', mapName: 'Teal Blue' },
+  { name: 'Forest Green',    pantone: '2427',    hex: '#01561D' },
+  { name: 'Emerald Green',   pantone: '7724',    hex: '#00936D' },
   { name: 'Lavender Purple', pantone: '7671',    hex: '#4F467F' },
   { name: 'Grape Purple',    pantone: '2715',    hex: '#8885D2' },
   { name: 'Ruby Red',        pantone: '1645',    hex: '#FC6E48' },
@@ -138,12 +123,6 @@ function channelSwatch(id: string): BrandColor {
 /** A channel's brand colour. Garden pills, leaves, and DOM chrome. */
 export function channelColor(id: string): string {
   return channelSwatch(id).hex;
-}
-
-/** A channel's colour on the Map, where the greens are swapped for blues. */
-export function channelMapColor(id: string): string {
-  const c = channelSwatch(id);
-  return c.mapHex ?? c.hex;
 }
 
 /**
@@ -251,13 +230,10 @@ export function facetColor(dimension: string): string {
 }
 
 /**
- * Shared explainer for the concept cloud, rendered on /concepts and on the
- * graph's concepts tab (components/GraphViewSwitcher.tsx). One constant so
- * the two copies can't drift. Keep it true to lib/extract-terms.ts (local
+ * Explainer for the concept cloud, rendered in the Garden's concepts panel
+ * (components/GardenShell.tsx). Keep it true to lib/extract-terms.ts (local
  * extraction, no AI) and the 2+ block floor the concept queries apply.
  */
 export const CONCEPTS_EXPLAINER =
-  "Concepts are recurring words and phrases pulled straight from the titles " +
-  "and text of the blocks I've collected, no AI involved. A term becomes a " +
-  "concept once at least two blocks share it, so the cloud grows as the " +
-  "archive does.";
+  "A term becomes a concept once at least two blocks share it, so the cloud " +
+  "grows as the archive does.";

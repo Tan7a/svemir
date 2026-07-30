@@ -86,7 +86,7 @@ async function refreshConceptCounts(
  * Idempotent: clears the block's existing concept links first, so re-running on
  * an edited block produces a clean set. Marks `items.concepts_indexed_at`, and
  * refreshes prevalence counts for every concept touched (added or removed) so
- * `/concepts` and the graph stay accurate after each add or backfill batch.
+ * the garden's concept panel stays accurate after each add or backfill batch.
  *
  * Returns the number of concept links written. Must be called with the
  * service-role client (writes are RLS-protected).

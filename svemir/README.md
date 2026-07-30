@@ -1,6 +1,6 @@
 # svemir
 
-Personal are.na — Next.js 16 + Supabase. Blocks, channels, connections, knowledge graph, Chrome extension.
+Personal are.na — Next.js 16 + Supabase. Blocks, channels, connections, idea garden, Chrome extension.
 
 ## Stack
 
@@ -8,7 +8,7 @@ Personal are.na — Next.js 16 + Supabase. Blocks, channels, connections, knowle
 - Tailwind CSS v4 (no config file)
 - Supabase (`@supabase/supabase-js`) — anon key for reads, service-role for writes
 - `open-graph-scraper` for URL metadata
-- `react-force-graph-2d` for the knowledge graph
+- `three` for the idea garden (see `docs/idea-garden.md`)
 - HTTP Basic Auth on `/admin/*` via Next 16 `proxy.ts`
 - Bearer-token API at `/api/v1/*` for the Chrome extension
 

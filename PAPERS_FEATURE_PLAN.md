@@ -163,6 +163,10 @@ each paper. Scope per the question below; can run in batches and grow over time.
 
 ### Phase 3 — The 5-dimension facet network
 
+> **Note (July 2026):** `KnowledgeGraph.tsx` and `GraphViewSwitcher.tsx` were removed in the
+> garden-roots release (`/graph` is the Idea Garden now; see `svemir/docs/idea-garden.md`). Both
+> are recoverable via git history if this phase is ever built as described.
+
 - Extend [app/graph/page.tsx](svemir/app/graph/page.tsx) to also fetch `kind='paper'` items +
   `paper_facet_links` + `paper_facets`.
 - Add a **"Research"** mode to [GraphViewSwitcher.tsx](svemir/components/GraphViewSwitcher.tsx) (4th toggle) rendering a

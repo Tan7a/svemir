@@ -10,7 +10,7 @@ import ProfileCorner from "./ProfileCorner";
 
 /**
  * Persistent top bar across every page of svemir. Brand mark on the left,
- * primary nav (Graph, +Add) on the right.
+ * primary nav (Garden, +Add) on the right.
  */
 export default function TopBar() {
   // Opaque, NOT backdrop-blurred: a backdrop-filter here would create a

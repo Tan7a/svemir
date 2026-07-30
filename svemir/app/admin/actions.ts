@@ -263,7 +263,6 @@ export async function deleteItem(
   if (error) return { success: false, error: error.message };
   revalidatePath("/");
   revalidatePath("/graph");
-  revalidatePath("/concepts");
   revalidatePath("/admin/manage");
   return { success: true };
 }
@@ -285,7 +284,6 @@ export async function bulkDeleteItems(
   if (error) return { success: false, error: error.message };
   revalidatePath("/");
   revalidatePath("/graph");
-  revalidatePath("/concepts");
   revalidatePath("/admin/manage");
   return { success: true, count: count ?? ids.length };
 }
@@ -860,7 +858,6 @@ export async function backfillBlockConcepts(
   const { count } = await countQuery;
   const remaining = count ?? 0;
 
-  revalidatePath("/concepts");
   revalidatePath("/graph");
   revalidatePath("/admin/manage");
 
@@ -1018,7 +1015,6 @@ export async function deleteChannel(
   }
   revalidatePath("/");
   revalidatePath("/graph");
-  revalidatePath("/concepts");
   return { success: true };
 }
 
@@ -1087,7 +1083,6 @@ export async function setChannelPrivacy(
   const slug = updated.slug as string;
   revalidatePath("/");
   revalidatePath("/graph");
-  revalidatePath("/concepts");
   revalidatePath("/facets");
   revalidatePath(`/channel/${slug}`);
   if (syncFailures > 0) {

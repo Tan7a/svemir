@@ -65,7 +65,7 @@ export default async function ConceptPage({ params }: { params: Params }) {
         <div className="px-5 pt-8 pb-6">
           <h1 className="flex items-baseline gap-3">
             <Link
-              href="/concepts"
+              href="/graph"
               className="font-[family-name:var(--font-display)] text-3xl tracking-wider text-neutral-500 hover:text-neutral-200"
             >
               concepts

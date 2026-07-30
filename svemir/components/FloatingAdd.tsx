@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthed } from "@/lib/use-authed";
 import {
   addItem,
@@ -73,12 +73,9 @@ export type EditPaperFullTextDetail = { id: string; title: string; text: string 
 export default function FloatingAdd() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  // The garden view shows the Poet Engineer credit above the maker pill, so the
+  // The garden shows the Poet Engineer credit above the maker pill, so the
   // + lifts there to make room - but nowhere else.
-  const viewParam = searchParams.get("view");
-  const isGarden =
-    pathname === "/graph" && (viewParam === null || viewParam === "garden");
+  const isGarden = pathname === "/graph";
 
   const authed = useAuthed();
   const [signInOpen, setSignInOpen] = useState(false);

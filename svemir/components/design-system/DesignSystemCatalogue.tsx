@@ -298,16 +298,6 @@ function BrandSwatch({ color }: { color: BrandColor }) {
           UI neutral, not a channel colour
         </span>
       )}
-      {color.mapHex && (
-        <span className="flex items-center gap-1 text-[10px] text-neutral-600">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full border border-neutral-700"
-            style={{ background: color.mapHex }}
-          />
-          <span className="font-mono uppercase">{color.mapHex}</span>{" "}
-          {color.mapName} on Map
-        </span>
-      )}
     </div>
   );
 }
@@ -504,8 +494,8 @@ export default function DesignSystemCatalogue() {
           <div className="sm:flex-1">
             <div className="ml-auto flex max-w-2xl flex-col gap-4 text-[15px] leading-relaxed text-neutral-300">
               <p>
-                svemir is my personal universe of references: blocks, channels, a
-                knowledge graph, and a research layer for papers.
+                svemir is my personal universe of references: blocks, channels,
+                an idea garden, and a research layer for papers.
               </p>
               <p className="text-neutral-400">
                 This is the system it runs on. A tight set of primitives sits over
@@ -650,16 +640,16 @@ export default function DesignSystemCatalogue() {
             <Spec
               id="f-color-brand"
               name="Colour · brand palette"
-              usage="channel identity across the Garden and the Map"
-              recipe="channelColor(id) for true colour (Garden pills, leaves) · channelGraphColor(id) for the Map · inkOn(hex) for readable text on a swatch"
+              usage="channel identity across the Garden"
+              recipe="channelColor(id) for a channel's colour (Garden pills, leaves) · inkOn(hex) for readable text on a swatch"
             >
               <div className="flex w-full flex-col gap-4">
                 <p className="max-w-prose text-xs leading-relaxed text-neutral-500">
                   Eleven named colours. The nine chromatic ones cycle
                   deterministically per channel, so a channel keeps the same
-                  colour everywhere: its Garden pill, its leaves, and its Map
-                  nodes. The two neutrals are documented but stay out of that
-                  rotation, so no channel reads as uncoloured.
+                  colour everywhere: its Garden pill and its leaves. The two
+                  neutrals are documented but stay out of that rotation, so no
+                  channel reads as uncoloured.
                 </p>
                 <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                   {BRAND_PALETTE.map((c) => (
@@ -667,13 +657,10 @@ export default function DesignSystemCatalogue() {
                   ))}
                 </div>
                 <p className="max-w-prose text-xs leading-relaxed text-neutral-500">
-                  Map nodes draw at full opacity so the hue lands true, and
-                  depth comes from the scene fog instead of from tinting the
-                  colour. The Map runs a cooler palette than the Garden: the two
-                  greens are swapped for blues there, marked above, matched to
-                  the same luminance so the depth fog reads identically. A green
-                  channel is therefore green in the Garden and blue on the Map.
-                  Text on a swatch uses{" "}
+                  Garden leaves draw the channel colour with only a little
+                  per-leaf lightness jitter, so the hue lands true and a crown
+                  reads as foliage rather than one flat block. Text on a swatch
+                  uses{" "}
                   <code className="rounded bg-neutral-900 px-1">inkOn()</code>,
                   which prefers the light ink and only falls back to near-black
                   where light text would drop under 3:1.

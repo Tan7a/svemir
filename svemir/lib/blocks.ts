@@ -183,7 +183,6 @@ export async function createBlock(
 
   revalidatePath("/");
   revalidatePath("/graph");
-  revalidatePath("/concepts");
   revalidatePath(`/block/${blockId}`);
   return { success: true, id: blockId };
 }

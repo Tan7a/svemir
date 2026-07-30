@@ -10,11 +10,20 @@ export type CloudConcept = {
 
 /**
  * The prevalence "word cloud" of recurring concepts, sized by how many blocks
- * mention each term. Presentational + hook-free, so it works in both a server
- * component (the /concepts page) and a client component (the graph's Concepts
- * tab). Each term links to its own /concept/[slug] page.
+ * mention each term. Presentational + hook-free, so it stays usable from both
+ * server and client components; today it renders inside the Garden's concepts
+ * panel (components/GardenShell.tsx). Each term links to /concept/[slug].
+ *
+ * `compact` caps the size ramp at ~1.6rem for narrow columns (the 320px
+ * panel), where the full 2.6rem headline sizes would wrap one word per line.
  */
-export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] }) {
+export default function ConceptCloud({
+  concepts,
+  compact = false,
+}: {
+  concepts: CloudConcept[];
+  compact?: boolean;
+}) {
   if (concepts.length === 0) {
     return (
       <p className="max-w-prose text-sm text-neutral-500">
@@ -31,8 +40,11 @@ export default function ConceptCloud({ concepts }: { concepts: CloudConcept[] })
   const max = Math.max(...counts);
   const min = Math.min(...counts);
   // Most prevalent → largest. rem so it scales with the root font.
-  const sizeRem = (n: number) =>
-    max === min ? 1.1 : 0.85 + ((n - min) / (max - min)) * 1.75;
+  const sizeRem = (n: number) => {
+    if (max === min) return compact ? 1 : 1.1;
+    const ratio = (n - min) / (max - min);
+    return compact ? 0.8 + ratio * 0.8 : 0.85 + ratio * 1.75;
+  };
 
   return (
     <ul className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
