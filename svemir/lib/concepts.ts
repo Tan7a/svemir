@@ -68,10 +68,16 @@ async function refreshConceptCounts(
       .from("block_concepts")
       .select("*", { count: "exact", head: true })
       .eq("concept_id", id);
-    await client
-      .from("concepts")
-      .update({ block_count: count ?? 0 })
-      .eq("id", id);
+    if ((count ?? 0) === 0) {
+      // A zero-count concept is dead weight at best and a privacy leak at
+      // worst: `concepts` is select-using(true), so a term whose only source
+      // was a private block would stay enumerable via PostgREST (and its
+      // /concept/<slug> page would still render). Deleting it closes that.
+      // If the term recurs later, ensureConcept simply recreates it.
+      await client.from("concepts").delete().eq("id", id);
+    } else {
+      await client.from("concepts").update({ block_count: count }).eq("id", id);
+    }
   }
 }
 
@@ -173,10 +179,16 @@ export async function isPrivateOnly(
   client: SupabaseClient,
   blockId: string
 ): Promise<boolean> {
-  const { data } = await client
+  const { data, error } = await client
     .from("connections")
     .select("channels(is_private)")
     .eq("block_id", blockId);
+  if (error) {
+    // Fail CLOSED. Swallowing this and returning false would treat the block
+    // as public - under a forced backfill that re-publishes concepts for a
+    // genuinely private block. Callers decide how to surface the failure.
+    throw new Error(`isPrivateOnly(${blockId}): ${error.message}`);
+  }
   const flags = (data ?? []).flatMap((r) => {
     const raw = (r as { channels: unknown }).channels;
     return (Array.isArray(raw) ? raw : [raw]).map(

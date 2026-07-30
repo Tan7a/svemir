@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CardItem, ChannelTag } from "@/lib/types";
-import { supabase } from "@/lib/supabase-client";
-import { addChannelToBlock, bulkDeleteItems } from "@/app/admin/actions";
+import {
+  addChannelToBlock,
+  bulkDeleteItems,
+  listAllChannelsAction,
+} from "@/app/admin/actions";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { IconFolder, IconDownload, IconTrash } from "@/components/ui/icons";
 
@@ -39,14 +42,12 @@ export default function BlockSelectionBar({ selected, onClear }: Props) {
   useEffect(() => {
     if (!picking) return;
     inputRef.current?.focus();
-    if (allChannels.length || !supabase) return;
-    supabase
-      .from("channels")
-      .select("title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) setAllChannels(data.map((c) => c.title as string));
-      });
+    if (allChannels.length) return;
+    // Server action, not the anon client: the owner's picker must include
+    // private channels, which the anon key can't see (migration 0012).
+    listAllChannelsAction()
+      .then((data) => setAllChannels(data.map((c) => c.title)))
+      .catch((e) => console.error("channel list failed:", e));
   }, [picking, allChannels.length]);
 
   const suggestions = useMemo(() => {

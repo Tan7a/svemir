@@ -109,7 +109,6 @@ export default function ChannelCard({ channel }: Props) {
           <ChannelActions
             channelId={channel.id}
             channelTitle={channel.title}
-            channelSlug={channel.slug}
             isPrivate={channel.is_private === true}
             hasParent={channel.parent_id !== null}
             info={{

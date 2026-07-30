@@ -27,8 +27,6 @@ import {
 type Props = {
   channelId: string;
   channelTitle: string;
-  /** Needed to route the owner to the right page after a privacy flip. */
-  channelSlug: string;
   /** Owner-only flag; public pages always pass false. */
   isPrivate?: boolean;
   hasParent: boolean;
@@ -45,7 +43,6 @@ type Props = {
 export default function ChannelActions({
   channelId,
   channelTitle,
-  channelSlug,
   isPrivate = false,
   hasParent,
   info,
@@ -55,6 +52,10 @@ export default function ChannelActions({
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Second-step confirmation for deleting a private channel: the server
+  // refuses the first call and reports how many blocks would become public.
+  const [publishCount, setPublishCount] = useState<number | null>(null);
+  const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [picking, setPicking] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(channelTitle);
@@ -78,13 +79,22 @@ export default function ChannelActions({
   useEffect(() => {
     if (!picking) return;
     inputRef.current?.focus();
-    if (allChannels.length) return;
+    // `channelsLoaded`, not `allChannels.length`: an owner with one channel
+    // (filtered out below) would otherwise refetch on every menu open.
+    if (channelsLoaded) return;
     // Server action, not the anon client: the owner's picker must include
     // private channels, which the anon key can't see (migration 0012).
-    listAllChannelsAction().then((data) => {
-      setAllChannels(data.filter((c) => c.id !== channelId));
-    });
-  }, [picking, allChannels.length, channelId]);
+    listAllChannelsAction()
+      .then((data) => {
+        setAllChannels(data.filter((c) => c.id !== channelId));
+        setChannelsLoaded(true);
+      })
+      .catch(() => {
+        // A server action rejects on network failure or deploy skew; without
+        // this the picker stays empty forever with no explanation.
+        setError("Couldn't load channels. Close the menu and try again.");
+      });
+  }, [picking, channelsLoaded, channelId]);
 
   useEffect(() => {
     if (!open) return;
@@ -161,13 +171,21 @@ export default function ChannelActions({
     const result = await setChannelPrivacy(channelId, !isPrivate);
     setBusy(false);
     if (result.success) {
+      if (result.warning) {
+        // Privacy WAS set, but some blocks failed concept sync; keep the menu
+        // open so the owner actually sees the retry instruction.
+        setError(result.warning);
+        router.refresh();
+        return;
+      }
       setOpen(false);
       // A now-private channel 404s on its public URL (RLS hides it), so send
-      // the owner to the admin mirror; going public routes back.
+      // the owner to the admin mirror; going public routes back. The slug
+      // comes from the action's response (server truth, survives renames).
       router.push(
         !isPrivate
-          ? `/admin/channel/${channelSlug}`
-          : `/channel/${channelSlug}`
+          ? `/admin/channel/${result.slug}`
+          : `/channel/${result.slug}`
       );
     } else {
       setError(result.error);
@@ -179,17 +197,24 @@ export default function ChannelActions({
     setConfirmOpen(true);
   }
 
-  async function doDelete() {
+  async function doDelete(confirmPublish = false) {
     setConfirmOpen(false);
+    setPublishCount(null);
     setBusy(true);
     setError(null);
-    const result = await deleteChannel(channelId);
+    const result = await deleteChannel(channelId, confirmPublish);
     setBusy(false);
-    if (result.success) {
-      router.push("/?view=channels");
-    } else {
+    if (!result.success) {
       setError(result.error);
+      return;
     }
+    if ("needsConfirmation" in result) {
+      // Private channel with members: the server refused to delete until the
+      // owner confirms that its blocks will become public.
+      setPublishCount(result.memberCount);
+      return;
+    }
+    router.push("/?view=channels");
   }
 
   const hasExactMatch =
@@ -362,8 +387,18 @@ export default function ChannelActions({
         title={`Delete “${channelTitle}”?`}
         message="Blocks stay in your archive - only their connection to this channel is removed. This can't be undone."
         confirmLabel="Delete channel"
-        onConfirm={doDelete}
+        onConfirm={() => doDelete()}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={publishCount !== null}
+        tone="danger"
+        title="This channel is private"
+        message={`Deleting it will make ${publishCount === 1 ? "its 1 block" : `its ${publishCount} blocks`} public: they will show up on the home page, in search, and on the map, and their concepts will rejoin the public cloud. Remove the blocks from the channel first if they should stay hidden.`}
+        confirmLabel="Delete and make blocks public"
+        onConfirm={() => doDelete(true)}
+        onCancel={() => setPublishCount(null)}
       />
     </div>
   );

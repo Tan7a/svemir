@@ -13,9 +13,10 @@ import type { CardItem, Channel } from "@/lib/types";
  * Owner's mirror of /channel/[slug], for PRIVATE channels: the public page
  * uses the anon key, which (after migration 0012) cannot see a private
  * channel at all, so it 404s for everyone. This page reads with the
- * service-role key instead. Double-gated: the proxy Basic-Auths /admin, and
- * isAuthed() re-checks the session cookie. Per-request rendering (no ISR):
- * private content must never land in a shared cache.
+ * service-role key instead. isAuthed() below is the ONLY gate: the proxy's
+ * Basic Auth covers a few /api scrape/upload routes, NOT /admin (check
+ * proxy.ts config.matcher before assuming otherwise). Per-request rendering
+ * (no ISR): private content must never land in a shared cache.
  */
 export const dynamic = "force-dynamic";
 
@@ -84,15 +85,16 @@ export default async function AdminChannelPage({
             </p>
           )}
           <p className="mt-3 text-xs text-neutral-500">
-            {blocks.length} block{blocks.length === 1 ? "" : "s"} · only you
-            can see this channel
+            {blocks.length} block{blocks.length === 1 ? "" : "s"}
+            {/* The mirror is reachable for public slugs too (hand-typed URL),
+                where "only you can see this" would be false. */}
+            {row.is_private && " · only you can see this channel"}
           </p>
         </div>
         <div className="shrink-0">
           <ChannelActions
             channelId={row.id}
             channelTitle={row.title}
-            channelSlug={row.slug}
             isPrivate={row.is_private === true}
             hasParent={row.parent_id !== null}
           />

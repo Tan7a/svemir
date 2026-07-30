@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase-client";
 import { useAuthed } from "@/lib/use-authed";
 import {
   addChannelToBlock,
   deleteItem,
+  listAllChannelsAction,
   scrapeAndUpdateItem,
   updateBlockImage,
 } from "@/app/admin/actions";
@@ -57,14 +57,12 @@ export default function BlockActions({
   useEffect(() => {
     if (!picking) return;
     inputRef.current?.focus();
-    if (allChannels.length || !supabase) return;
-    supabase
-      .from("channels")
-      .select("title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) setAllChannels(data.map((c) => c.title as string));
-      });
+    if (allChannels.length) return;
+    // Server action, not the anon client: the owner's picker must include
+    // private channels, which the anon key can't see (migration 0012).
+    listAllChannelsAction()
+      .then((data) => setAllChannels(data.map((c) => c.title)))
+      .catch((e) => console.error("channel list failed:", e));
   }, [picking, allChannels.length]);
 
   // Click outside closes the actions menu
