@@ -6,7 +6,7 @@ import { VIEW_OPTIONS, type ViewKind } from "./FilterBar";
 
 /**
  * Horizontal view switcher, centered in the TopBar. Channels / Blocks set the
- * ?view= param on the homepage; Graph / Research / Design are their own pages.
+ * ?view= param on the homepage; Garden / Research / System are their own pages.
  * Rendered on EVERY page (the menu is always reachable, incl. inside a channel
  * or block). Blocks / Channels highlight only on home; off-home nothing in the
  * pair is active and clicking one navigates home with a fresh ?view=. Absolutely
@@ -67,7 +67,7 @@ export default function ViewNav() {
         Research
       </Link>
       <Link href="/design-system" className={cls(onDesignSystem)}>
-        Design
+        System
       </Link>
     </nav>
   );

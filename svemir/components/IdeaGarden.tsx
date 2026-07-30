@@ -69,8 +69,21 @@ type PlantView = {
   height: number; // full plant height (world units, before growth scaling)
   pill: HTMLDivElement; // edge label
   line: SVGLineElement; // leader line to the plant
-  sx: number; // last projected anchor screen x
-  sy: number; // last projected anchor screen y
+  // ── label layout, rewritten every frame by updateLabels ─────────────────────
+  sx: number; // last projected anchor screen x (pill centre)
+  sy: number; // last projected anchor screen y (pill bottom, before any lift)
+  cx: number; // last projected crown-top screen x (where the leader line ends)
+  cy: number; // last projected crown-top screen y
+  /** Measured pill box, cached at build so the layout pass never reads layout. */
+  pw: number;
+  ph: number;
+  /** Pixels this pill must rise to clear its neighbours, and the eased value. */
+  lift: number;
+  liftEased: number;
+  /** Screen y of the pill's bottom edge as actually drawn; what pillAt tests. */
+  drawY: number;
+  /** False while the tree is scrubbed out: no pill, no line, no hit test. */
+  labelOn: boolean;
 };
 
 /**
@@ -337,12 +350,34 @@ export default function IdeaGarden({
           date: "#777",
         };
 
-    const width = mount.clientWidth || 1;
-    const height = mount.clientHeight || 1;
+    // ── device tier ──────────────────────────────────────────────────────────────
+    // `lite` covers only the choices that CANNOT change without rebuilding the
+    // scene: pixel density, how much grass and wildlife exists, camera feel. Read
+    // once, because re-tiering would rebuild the whole WebGL scene, which is worse
+    // than a brief mismatch.
+    //
+    // Everything about LAYOUT (pill type scale, scrubber placement, camera fit)
+    // deliberately keys off the live viewport instead, via stylePills /
+    // placeScrubber / setOrthoFrustum below. Layout has to follow the window it is
+    // in: latching it here left a phone-sized scrubber and phone-sized pills on a
+    // desktop window that had been resized after mount.
+    const lite =
+      window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 640;
+
+    // Live viewport size. Written by the ResizeObserver and read by the label
+    // layout + hover projection, so neither has to touch clientWidth/clientHeight
+    // mid-frame (that read lands after the previous frame's style writes and
+    // forces a synchronous layout every single frame).
+    let width = mount.clientWidth || 1;
+    let height = mount.clientHeight || 1;
 
     // ── renderer ───────────────────────────────────────────────────────────────
+    // Antialiasing stays ON everywhere, phones included: this scene is thin
+    // diagonal line-art, the worst case for stair-stepping, and mobile GPUs
+    // resolve MSAA cheaply in tile memory. The pixels come back from a lower
+    // density cap below instead, which is the bigger saving anyway.
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lite ? 1.5 : 2));
     renderer.setSize(width, height);
     renderer.setClearColor(skyColor, 1);
     mount.appendChild(renderer.domElement);
@@ -464,30 +499,30 @@ export default function IdeaGarden({
       // Per-channel "balloon": a rounded label that floats above the crown on a
       // short string. Centered on the plant and anchored from its bottom, so it
       // hovers over the tree. Positioned every frame.
+      //
+      // pointer-events:none is LOAD-BEARING, do not "restore" it. The pills live
+      // in the overlay, a SIBLING of the canvas, so anything they capture never
+      // reaches OrbitControls: a drag or pinch starting on a label moved nothing
+      // at all, and a two-finger one could be taken by the browser as a page
+      // zoom. On a phone the pills crowd the middle of the screen, exactly where
+      // a thumb lands, so that ate most gestures. They stay inert and are
+      // hit-tested in screen space by pillAt() instead, reusing the boxes the
+      // label layout already computes for collision.
+      //
+      // Positioning is transform-only (see updateLabels): left/top are not
+      // compositable, so writing them every frame forced layout.
       const pill = document.createElement("div");
       pill.textContent = channel.title;
+      // Type scale and box width come from stylePills(), which follows the live
+      // viewport rather than the build-time tier.
       pill.style.cssText =
-        "position:absolute;transform:translate(-50%,-100%);padding:3px 10px;border-radius:999px;" +
-        "font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;white-space:nowrap;" +
-        "max-width:150px;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;" +
-        "cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5);will-change:left,top";
+        "position:absolute;left:0;top:0;border-radius:999px;letter-spacing:.02em;" +
+        "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" +
+        "pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.5);will-change:transform";
       pill.style.background = channel.color;
       // Dark swatches (Forest Green, Lavender Purple) need light text, or the
       // label is unreadable on its own pill.
       pill.style.color = inkOn(channel.color);
-      // The balloon doubles as a link to its channel. Listeners die with the
-      // pill when the overlay is cleared on teardown.
-      pill.addEventListener("mouseenter", () => {
-        pill.style.textDecoration = "underline";
-        pillHoverChannel = channel.id; // darken this tree's roots
-      });
-      pill.addEventListener("mouseleave", () => {
-        pill.style.textDecoration = "";
-        pillHoverChannel = null;
-      });
-      pill.addEventListener("click", () => {
-        router.push(`/channel/${channel.slug}`);
-      });
       overlay.appendChild(pill);
 
       // The balloon's string, drawn down to the crown each frame.
@@ -512,7 +547,48 @@ export default function IdeaGarden({
         line,
         sx: 0,
         sy: 0,
+        cx: 0,
+        cy: 0,
+        pw: 0,
+        ph: 0,
+        lift: 0,
+        liftEased: 0,
+        drawY: 0,
+        labelOn: false,
       });
+    });
+
+    // Bigger type and a narrower box on a narrow viewport: readable at arm's
+    // length, and a narrow box collides with its neighbours far less often. Keyed
+    // to the live width, so a rotation or a window resize re-scales the labels.
+    const stylePills = () => {
+      const narrow = width < 640;
+      for (const pv of plantViews) {
+        pv.pill.style.font = `600 ${narrow ? 12 : 11}px/1 Inter,system-ui,sans-serif`;
+        pv.pill.style.padding = narrow ? "4px 11px" : "3px 10px";
+        pv.pill.style.maxWidth = narrow ? "42vw" : "150px";
+      }
+    };
+
+    // Measure every pill in ONE pass, after they are all in the DOM, so a single
+    // layout flush covers the lot instead of one per pill. These boxes drive both
+    // the collision pass and the tap hit test, so nothing downstream ever needs
+    // to read layout again.
+    const measurePills = () => {
+      for (const pv of plantViews) {
+        pv.pw = pv.pill.offsetWidth;
+        pv.ph = pv.pill.offsetHeight;
+      }
+    };
+    stylePills();
+    measurePills();
+    // Inter arriving after first paint changes every pill's width, which would
+    // leave the collision boxes and hit targets permanently stale. Re-measure
+    // once when the font is settled; the flag keeps a late resolve off a torn
+    // down scene.
+    let disposed = false;
+    document.fonts?.ready.then(() => {
+      if (!disposed) measurePills();
     });
 
     // Point sprites (root anchors, bees, grass dots) need a texture to be
@@ -721,7 +797,7 @@ export default function IdeaGarden({
     const pushSeg = (
       ax: number, ay: number, az: number, bx: number, by: number, bz: number
     ) => crystalSeg.push(ax, ay, az, bx, by, bz);
-    const CRYSTALS = Math.min(60, Math.max(20, Math.floor(sceneR * 0.9)));
+    const CRYSTALS = Math.min(lite ? 36 : 60, Math.max(20, Math.floor(sceneR * 0.9)));
     for (let i = 0; i < CRYSTALS; i++) {
       const a = Math.random() * Math.PI * 2;
       const rad = Math.sqrt(Math.random()) * (sceneR + 6);
@@ -766,7 +842,7 @@ export default function IdeaGarden({
     // ── grass: short splayed blades scattered on the ground (flat line-art) ──────
     // One LineSegments for all blades (cheap); muted green, low opacity so it
     // reads as ground cover, not a lawn. Clumped in tufts for an organic look.
-    const GRASS_TUFTS = Math.min(500, Math.max(120, Math.floor(sceneR * 4)));
+    const GRASS_TUFTS = Math.min(lite ? 220 : 500, Math.max(120, Math.floor(sceneR * 4)));
     const BLADES = 3;
     const grassPos = new Float32Array(GRASS_TUFTS * BLADES * 6);
     let gp = 0;
@@ -809,7 +885,10 @@ export default function IdeaGarden({
       ctx.arc(s / 2, s / 2, s * 0.26, 0, Math.PI * 2);
       ctx.fill();
     });
-    const GRASS_DOTS = Math.min(20000, Math.max(4000, Math.floor(sceneR * 16)));
+    // The stipple is the scene's one big blended-overdraw cost, so phones get a
+    // third of the dots. Their size goes up to compensate, keeping the meadow
+    // reading at a similar density rather than visibly thinning out.
+    const GRASS_DOTS = Math.min(lite ? 6000 : 20000, Math.max(4000, Math.floor(sceneR * 16)));
     const grassSpread = sceneR * 1.35; // reach past the tree ring
     const dotPos = new Float32Array(GRASS_DOTS * 3);
     const dotCol = new Float32Array(GRASS_DOTS * 3);
@@ -839,7 +918,7 @@ export default function IdeaGarden({
     const dotMat = new THREE.PointsMaterial({
       map: dotTex,
       vertexColors: true,
-      size: 4,
+      size: lite ? 5 : 4,
       sizeAttenuation: false,
       transparent: true,
       opacity: 0.6,
@@ -854,7 +933,9 @@ export default function IdeaGarden({
     // direction (so it flies forward, beak first) and its wings beat up and down
     // every frame - reads clearly as a bird, not a dot. No trails (that was the
     // bee "pollination path" idea); birds just fly around and above the canopy.
-    const BIRD_COUNT = Math.min(26, Math.max(12, built.length + 8));
+    // Each bird costs ~3 curve evaluations per frame plus its share of the
+    // rewritten vertex buffer, so phones fly a smaller flock.
+    const BIRD_COUNT = Math.min(lite ? 14 : 26, Math.max(lite ? 8 : 12, built.length + 8));
     const birdCurves: THREE.CatmullRomCurve3[] = [];
     const birdSpeed: number[] = [];
     const birdPhase: number[] = [];
@@ -960,11 +1041,43 @@ export default function IdeaGarden({
     // ── orthographic camera (low-angle field view) + controls ───────────────────
     const elevRad = THREE.MathUtils.degToRad(20);
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 8000);
+    // Portrait fit. On a phone (aspect ~0.46) the needFromH term below is ~2x
+    // needV, so fitting the whole tree ring horizontally pulled the camera back
+    // ~3.4x further than the garden needed vertically: trees became specks in a
+    // thin band, which is also what piled the labels on top of each other.
+    //
+    // Small viewports instead frame on the TREES: the view is a fixed number of
+    // tree heights tall, so a tree is a predictable share of the screen whatever
+    // the garden's size. Anchoring to sceneR does not work here, because sceneR
+    // grows with sqrt(channel count) and would shrink the trees again as the
+    // archive grows. Capped by fitAll so a small garden still fits whole, and
+    // minZoom lets anyone pinch out to the full ring, so nothing is unreachable.
+    //
+    // Applies to any narrow OR short viewport, not just portrait: a phone held
+    // sideways is 375px tall, where fitting the whole ring left the trees as
+    // specks under a solid mat of labels.
+    //
+    // Divided by sqrt(aspect) because visible world area goes as halfH²·aspect: a
+    // wide short viewport would otherwise show several times as many trees (and
+    // therefore labels) as a tall narrow one at the same tree size. Dividing holds
+    // the number of trees on screen roughly constant however the phone is held,
+    // which is what keeps the labels resolvable in both orientations.
+    const SMALL_VIEW_TREE_FIT = 2;
+    const SHORT_VIEW = 520;
+    // How far a pinch may zoom OUT, derived rather than fixed: the portrait crop
+    // has to stay escapable, so the floor is whatever reaches the fit-everything
+    // framing. A fixed 0.5 would have left the outer ring permanently unreachable.
+    let minZoomFit = 0.5;
     function setOrthoFrustum(w: number, h: number) {
       const aspect = w / h;
       const needV = sceneR * Math.sin(elevRad) + maxH; // vertical world extent
       const needFromH = sceneR / aspect; // horizontal needs halfW ≥ sceneR
-      const halfH = Math.max(needV, needFromH) * 1.18 + 1;
+      const fitAll = Math.max(needV, needFromH);
+      // Roomy landscape viewports (desktop) keep the exact fit-everything look.
+      const small = aspect < 1 || h < SHORT_VIEW;
+      const treeFit = (maxH * SMALL_VIEW_TREE_FIT) / Math.sqrt(aspect);
+      const halfH = (small ? Math.min(fitAll, treeFit) : fitAll) * 1.18 + 1;
+      minZoomFit = Math.min(0.5, halfH / (fitAll * 1.18 + 1));
       camera.top = halfH;
       camera.bottom = -halfH;
       camera.right = halfH * aspect;
@@ -984,16 +1097,34 @@ export default function IdeaGarden({
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.04; // lower = floatier, smoother glide
+    // Desktop keeps the floaty glide. On touch that same 0.04 (a ~0.4s time
+    // constant, floatier even than OrbitControls' own 0.05 default) reads as lag:
+    // the camera keeps sliding after your finger has stopped. Firmer damping lets
+    // it track the finger.
+    controls.dampingFactor = lite ? 0.14 : 0.04;
     controls.maxPolarAngle = Math.PI / 2.1; // stay above the ground
+    // Unbounded by default, which let a pinch strand you in deep space or inside
+    // a single crown with no way to read where you were. The floor is derived so
+    // that pinching out always reaches the whole ring (see setOrthoFrustum).
+    controls.minZoom = minZoomFit;
+    controls.maxZoom = 6;
+    // Pinch toward the fingers rather than the screen centre. Touch only: it
+    // shifts controls.target off centre, which would make the desktop idle drift
+    // orbit an arbitrary point.
+    controls.zoomToCursor = lite;
     controls.target.set(0, targetY, 0);
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.18; // very gentle drift
-    // Drift on/off has two inputs: the visitor's explicit Pause/Play toggle
-    // (motionRef, also flipped by clicking empty space) and a transient pause
-    // while dragging. Both are applied per-frame in the animation loop, so the
-    // two can never disagree about the final state.
+    // Drift on/off has three inputs: the visitor's explicit Pause/Play toggle
+    // (motionRef, also flipped by clicking empty space on desktop), a transient
+    // pause while dragging, and on touch a few seconds of hold after a gesture so
+    // a view you positioned deliberately does not immediately slide away. All are
+    // applied per-frame in the animation loop, so they can never disagree about
+    // the final state.
     let dragging = false;
+    const DRIFT_HOLD = 4; // seconds of stillness after a touch gesture
+    let driftHoldUntil = 0; // in the frame Timer's elapsed-seconds clock
+    let frameTime = 0; // last frame's elapsed time, so handlers can read the clock
     const onControlsStart = () => {
       dragging = true;
     };
@@ -1058,7 +1189,7 @@ export default function IdeaGarden({
 
     const scrubWrap = document.createElement("div");
     scrubWrap.style.cssText =
-      "position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;" +
+      "position:absolute;left:50%;transform:translateX(-50%);display:flex;" +
       `align-items:center;gap:12px;pointer-events:auto;background:${chrome.bg};` +
       `border:1px solid ${chrome.border};border-radius:999px;padding:7px 16px;backdrop-filter:blur(6px)`;
     const slider = document.createElement("input");
@@ -1066,7 +1197,9 @@ export default function IdeaGarden({
     slider.min = "0";
     slider.max = "1000";
     slider.value = "1000";
-    slider.style.cssText = `width:240px;accent-color:${chrome.accent};cursor:pointer`;
+    // Width comes from placeScrubber(): at 240px the row (plus the 104px date
+    // label, gaps and padding) came to ~390px and overflowed a 375px phone.
+    slider.style.cssText = `accent-color:${chrome.accent};cursor:pointer`;
     const dateLabel = document.createElement("div");
     dateLabel.style.cssText =
       `font:12px/1 Inter,system-ui,sans-serif;color:${chrome.text};min-width:104px;text-align:right;letter-spacing:.03em`;
@@ -1082,46 +1215,199 @@ export default function IdeaGarden({
     overlay.appendChild(scrubWrap);
     applyScrub();
 
+    // The bottom-right corner already stacks the add button and two credit pills,
+    // ~145px tall and wide enough to bury a centred scrubber on a narrow screen.
+    // Keyed to the live viewport, so rotating a phone moves the control rather
+    // than leaving it wherever it happened to start.
+    const placeScrubber = () => {
+      const narrow = width < 640; // phone portrait
+      const phoneLandscape = height < SHORT_VIEW && width < 900;
+      slider.style.width = narrow || phoneLandscape ? "min(50vw, 200px)" : "240px";
+      if (narrow) {
+        // Sit above the whole bottom-right pile.
+        scrubWrap.style.left = "50%";
+        scrubWrap.style.transform = "translateX(-50%)";
+        scrubWrap.style.bottom = "150px";
+      } else if (phoneLandscape) {
+        // Only ~375px tall, so lifting would strand the control mid-screen. There
+        // is width to spare instead, so anchor it left, clear of that corner.
+        scrubWrap.style.left = "16px";
+        scrubWrap.style.transform = "none";
+        scrubWrap.style.bottom = "18px";
+      } else {
+        scrubWrap.style.left = "50%";
+        scrubWrap.style.transform = "translateX(-50%)";
+        scrubWrap.style.bottom = "18px";
+      }
+    };
+    placeScrubber();
+
     // ── balloon labels: float each channel name above its own crown ──────────────
+    // Three passes per frame, allocating nothing: project every anchor, resolve
+    // overlaps, then write the DOM. Splitting them is what lets the collision pass
+    // see all the boxes at once, and it keeps every read ahead of every write.
     const projV = new THREE.Vector3();
+    // Scratch, all allocated once. labelOrder is re-sorted in place each frame;
+    // the placed* arrays hold the boxes already committed this frame.
+    const labelOrder: number[] = plantViews.map((_, i) => i);
+    const placedX0 = new Float64Array(plantViews.length);
+    const placedX1 = new Float64Array(plantViews.length);
+    const placedY0 = new Float64Array(plantViews.length);
+    const placedY1 = new Float64Array(plantViews.length);
+    // A crowded label is never hidden (a nameless tree is worse than a busy sky):
+    // it rises up its own leader line until clear, so it just hangs on a longer
+    // string. The climb is capped so a label cannot wander absurdly far from its
+    // tree, but the cap scales with the viewport: a fixed 90px could not resolve
+    // 60-odd labels in the 375px height of a phone held sideways, and left them
+    // in a solid mat. The cap only ever binds under real crowding.
+    // 5 rather than a hairline: the stack is solved on each label's TARGET
+    // position while the pill is drawn at its eased one, so during the drift the
+    // drawn boxes trail the solution by a pixel or two. The gap absorbs that lag,
+    // which is cheaper and steadier than feeding the eased positions back into the
+    // solver (which oscillates).
+    const LABEL_GAP = 5;
+    // Keep the stack clear of the Hide labels / sound / pause row and the Concepts
+    // button, which are React chrome painted above the overlay: a label that
+    // climbed into that band just disappeared behind a button.
+    const TOP_INSET = 52;
+
     const updateLabels = (time: number) => {
       if (!showLabelsRef.current) {
         for (const pv of plantViews) {
           pv.pill.style.display = "none";
           pv.line.style.display = "none";
+          pv.labelOn = false;
         }
         return;
       }
-      const w = mount.clientWidth || 1;
-      const h = mount.clientHeight || 1;
+
+      // ── pass A: project each balloon anchor and its crown point ──
       for (let i = 0; i < plantViews.length; i++) {
         const pv = plantViews[i];
-        if (!pv.group.visible) {
+        pv.labelOn = pv.group.visible;
+        if (!pv.labelOn) continue;
+        const top = pv.height * pv.group.scale.y;
+        const bob = Math.sin(time * 0.55 + i * 1.7) * 0.3; // slow, gentle floating
+        projV.set(pv.group.position.x, top + 1.5 + bob, pv.group.position.z);
+        projV.project(camera);
+        pv.sx = (projV.x * 0.5 + 0.5) * width;
+        pv.sy = (1 - (projV.y * 0.5 + 0.5)) * height;
+        projV.set(pv.group.position.x, top + 0.2, pv.group.position.z);
+        projV.project(camera);
+        pv.cx = (projV.x * 0.5 + 0.5) * width;
+        pv.cy = (1 - (projV.y * 0.5 + 0.5)) * height;
+        pv.lift = 0;
+        // A tree panned outside the canvas has no label to show: pinning one to
+        // the edge is clutter for something you cannot see. This is NOT the
+        // crowding case, where nothing visible ever loses its name; it is just
+        // content outside the view, and it matters now that portrait crops.
+        if (pv.cx < -8 || pv.cx > width + 8 || pv.cy < -40 || pv.cy > height + 40) {
+          pv.labelOn = false;
+          continue;
+        }
+        // Keep the whole label on screen. A pill cut in half by the edge is
+        // unreadable, and its leader line still says which tree it belongs to.
+        const halfW = pv.pw / 2;
+        if (pv.pw > 0 && pv.pw + 8 < width) {
+          pv.sx = Math.min(Math.max(pv.sx, halfW + 4), width - halfW - 4);
+        }
+      }
+
+      // ── pass B: lift crowded labels, nearest tree first ──
+      // The camera looks down from 20°, so a tree further away projects HIGHER on
+      // screen: the largest sy is the nearest tree. Placing those first leaves the
+      // front row's labels sitting on their own crowns and pushes the distant ones
+      // up into the sky above the canopy, which is the direction with room.
+      labelOrder.sort((a, b) => plantViews[b].sy - plantViews[a].sy);
+      const maxLift = Math.max(70, height * 0.4);
+      let placed = 0;
+      for (const idx of labelOrder) {
+        const pv = plantViews[idx];
+        if (!pv.labelOn) continue;
+        const x0 = pv.sx - pv.pw / 2;
+        const x1 = pv.sx + pv.pw / 2;
+        let bottom = pv.sy;
+        // Rise clear of everything already placed. Re-check after every move,
+        // since clearing one box can push into another; bounded by the number of
+        // boxes placed, so it always terminates.
+        for (let guard = 0; guard <= placed; guard++) {
+          let moved = false;
+          for (let k = 0; k < placed; k++) {
+            if (x1 <= placedX0[k] || x0 >= placedX1[k]) continue; // clear sideways
+            if (bottom <= placedY0[k] || bottom - pv.ph >= placedY1[k]) continue;
+            bottom = placedY0[k] - LABEL_GAP; // sit just above that one
+            moved = true;
+          }
+          if (!moved) break;
+        }
+        // Never climb further than the cap from home, and keep the whole box on
+        // screen: the overlay clips, so an overhanging label loses half its name.
+        // (A downward fallback for labels pinned at the inset was tried and
+        // removed: it re-collided after these clamps and read worse than the
+        // handful of residual overlaps it was meant to fix.)
+        if (bottom < pv.sy - maxLift) bottom = pv.sy - maxLift;
+        if (bottom > height - 4) bottom = height - 4;
+        if (bottom - pv.ph < TOP_INSET) bottom = pv.ph + TOP_INSET;
+        pv.lift = pv.sy - bottom;
+        placedX0[placed] = x0;
+        placedX1[placed] = x1;
+        placedY0[placed] = bottom - pv.ph;
+        placedY1[placed] = bottom;
+        placed++;
+      }
+
+      // ── pass C: write ──
+      for (let i = 0; i < plantViews.length; i++) {
+        const pv = plantViews[i];
+        if (!pv.labelOn) {
           pv.pill.style.display = "none";
           pv.line.style.display = "none";
           continue;
         }
-        const top = pv.height * pv.group.scale.y;
-        const bob = Math.sin(time * 0.55 + i * 1.7) * 0.3; // slow, gentle floating
-        // Balloon anchor (floats above the crown).
-        projV.set(pv.group.position.x, top + 1.5 + bob, pv.group.position.z);
-        projV.project(camera);
-        const bx = (projV.x * 0.5 + 0.5) * w;
-        const by = (1 - (projV.y * 0.5 + 0.5)) * h;
+        // Ease the lift (same shape as the root opacity easing below) so labels
+        // glide apart as the garden drifts instead of snapping between layouts.
+        pv.liftEased += (pv.lift - pv.liftEased) * 0.25;
+        if (Math.abs(pv.lift - pv.liftEased) < 0.2) pv.liftEased = pv.lift;
+        // Clamp what is actually DRAWN, not just the target: the ease lags, so on
+        // the first frames (liftEased still 0) an off-screen target would paint
+        // off-screen and get clipped before it settled.
+        const py = Math.min(
+          Math.max(pv.sy - pv.liftEased, pv.ph + TOP_INSET),
+          height - 4
+        );
+        pv.drawY = py; // pillAt hit-tests exactly this box
         pv.pill.style.display = "block";
-        pv.pill.style.left = `${bx}px`;
-        pv.pill.style.top = `${by}px`;
-        // String from the balloon down to the crown top.
-        projV.set(pv.group.position.x, top + 0.2, pv.group.position.z);
-        projV.project(camera);
-        const cx = (projV.x * 0.5 + 0.5) * w;
-        const cy = (1 - (projV.y * 0.5 + 0.5)) * h;
+        // transform, not left/top: compositable, so this costs no layout.
+        pv.pill.style.transform = `translate3d(${pv.sx}px, ${py}px, 0) translate(-50%, -100%)`;
+        // The string stretches to wherever the balloon ended up, which is what
+        // keeps a lifted label unmistakably tied to its own tree.
         pv.line.style.display = "block";
-        pv.line.setAttribute("x1", String(bx));
-        pv.line.setAttribute("y1", String(by));
-        pv.line.setAttribute("x2", String(cx));
-        pv.line.setAttribute("y2", String(cy));
+        pv.line.setAttribute("x1", String(pv.sx));
+        pv.line.setAttribute("y1", String(py));
+        pv.line.setAttribute("x2", String(pv.cx));
+        pv.line.setAttribute("y2", String(pv.cy));
       }
+    };
+
+    // Screen-space hit test for the (deliberately inert) pills. Reads the boxes
+    // the layout pass just wrote, including the eased lift, so it always tests
+    // exactly what is drawn. Reverse build order = reverse paint order, so the
+    // pill visually on top wins.
+    const pillAt = (px: number, py: number): PlantView | null => {
+      if (!showLabelsRef.current) return null;
+      for (let i = plantViews.length - 1; i >= 0; i--) {
+        const pv = plantViews[i];
+        if (!pv.labelOn || pv.pw === 0) continue;
+        const bottom = pv.drawY;
+        if (
+          px >= pv.sx - pv.pw / 2 &&
+          px <= pv.sx + pv.pw / 2 &&
+          py >= bottom - pv.ph &&
+          py <= bottom
+        )
+          return pv;
+      }
+      return null;
     };
 
     // ── interaction (raycast hover + click) ──────────────────────────────────────
@@ -1134,20 +1420,68 @@ export default function IdeaGarden({
     // radius than the lines so the dot is always the easiest thing to hit.
     raycaster.params.Points = { threshold: Math.max(1.2, sceneR * 0.018) };
     const pointer = new THREE.Vector2();
+    // Canvas-relative pixels for the same position, for the pill box test.
+    let pointerPx = 0;
+    let pointerPy = 0;
     let pointerInside = false;
     let hovered: GardenLeaf | null = null;
     let hoveredRoot: RootView | null = null;
     let hoveredTrunk: string | null = null;
+    let hoveredPill: PlantView | null = null;
     const worldPos = new THREE.Vector3();
 
-    function onMove(e: PointerEvent) {
+    // Tracked so the cursor is only written when it actually changes.
+    let cursorOn = false;
+    const setCursor = (on: boolean) => {
+      if (cursorOn === on) return;
+      cursorOn = on;
+      renderer.domElement.style.cursor = on ? "pointer" : "";
+    };
+    // Underline the hovered label and darken its tree's roots. Was a pair of
+    // mouseenter/mouseleave listeners per pill; now one call from the hover pass,
+    // which is what let the pills become inert.
+    const setPillHover = (pv: PlantView | null) => {
+      if (hoveredPill === pv) return;
+      if (hoveredPill) hoveredPill.pill.style.textDecoration = "";
+      hoveredPill = pv;
+      pillHoverChannel = pv ? pv.channel.id : null;
+      if (pv) pv.pill.style.textDecoration = "underline";
+    };
+
+    const readPointer = (clientX: number, clientY: number) => {
       const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      pointerInside = true;
+      pointerPx = clientX - rect.left;
+      pointerPy = clientY - rect.top;
+      pointer.x = (pointerPx / rect.width) * 2 - 1;
+      pointer.y = -(pointerPy / rect.height) * 2 + 1;
+    };
+
+    function onMove(e: PointerEvent) {
+      readPointer(e.clientX, e.clientY);
+      // Touch is deliberately excluded from frame-loop hover: there is no cursor
+      // to follow, taps run their own synchronous test in onClick, and leaving it
+      // on meant every pan and pinch frame also ran a full-scene raycast.
+      pointerInside = e.pointerType !== "touch";
     }
     function onLeave() {
       pointerInside = false;
+    }
+    function onUp(e: PointerEvent) {
+      if (e.pointerType !== "touch") return; // mouse keeps hovering after a drag
+      pointerInside = false;
+      clearHover();
+      // Hold the idle drift briefly so a view you just positioned by hand does
+      // not immediately slide out from under you.
+      driftHoldUntil = frameTime + DRIFT_HOLD;
+    }
+    function onCancel() {
+      // An interrupted gesture (iOS system swipe, an incoming call banner) never
+      // fires pointerup, which would otherwise leave hover latched on and the
+      // drift wedged off for good.
+      pointerInside = false;
+      dragging = false;
+      clearHover();
+      driftHoldUntil = frameTime + DRIFT_HOLD;
     }
     let downX = 0;
     let downY = 0;
@@ -1160,9 +1494,14 @@ export default function IdeaGarden({
       // Touch taps never fire pointermove, so the frame-loop hover state can
       // be stale or empty here: redo one synchronous raycast at the click
       // point before deciding what was clicked (fixes mobile taps).
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      readPointer(e.clientX, e.clientY);
+      // Labels are inert DOM, so their taps resolve here. They are painted over
+      // the scene, so they win over anything the raycast would find behind them.
+      const pillHit = pillAt(pointerPx, pointerPy);
+      if (pillHit) {
+        router.push(`/channel/${pillHit.channel.slug}`);
+        return;
+      }
       computeHover();
       if (hovered) {
         router.push(`/block/${hovered.id}`);
@@ -1176,28 +1515,47 @@ export default function IdeaGarden({
         onTreeSelectRef.current?.(hoveredTrunk);
         return;
       }
-      setMotionOn((v) => !v); // click empty space → toggle the drift
+      // Empty space toggles the drift, on desktop only: on a phone the sky is
+      // most of the screen and most taps that miss are simply misses, so this
+      // fired constantly by accident. The Pause button remains.
+      if (!lite) setMotionOn((v) => !v);
     }
     renderer.domElement.addEventListener("pointermove", onMove);
     renderer.domElement.addEventListener("pointerleave", onLeave);
     renderer.domElement.addEventListener("pointerdown", onDown);
+    renderer.domElement.addEventListener("pointerup", onUp);
+    renderer.domElement.addEventListener("pointercancel", onCancel);
     renderer.domElement.addEventListener("click", onClick);
 
     function clearHover() {
+      setPillHover(null);
       if (hovered || hoveredRoot || hoveredTrunk) {
         hovered = null;
         hoveredRoot = null;
         hoveredTrunk = null;
         hover.style.display = "none";
-        renderer.domElement.style.cursor = "";
       }
+      setCursor(false);
     }
-    // One raycast pass, hover priority leaf > root > trunk. Runs every frame
-    // while the pointer is inside, and once synchronously from onClick.
+    // One hover pass, priority pill > leaf > root > trunk. Runs every frame while
+    // a non-touch pointer is inside and the camera is still, and once
+    // synchronously from onClick.
     const computeHover = () => {
+      // Labels first: they are painted over the scene, so a point inside a pill
+      // belongs to the pill, not to whatever sits behind it. Also by far the
+      // cheapest test, and hitting it skips the raycast entirely.
+      const pillHit = pillAt(pointerPx, pointerPy);
+      if (pillHit) {
+        setPillHover(pillHit);
+        hovered = null;
+        hoveredRoot = null;
+        hoveredTrunk = null;
+        hover.style.display = "none";
+        setCursor(true);
+        return;
+      }
+      setPillHover(null);
       raycaster.setFromCamera(pointer, camera);
-      const w = mount.clientWidth || 1;
-      const h = mount.clientHeight || 1;
       // Leaves first: the most specific target.
       const hits = raycaster.intersectObjects(leafMeshes, false);
       const hit = hits.find((lh) => lh.instanceId !== undefined);
@@ -1214,10 +1572,10 @@ export default function IdeaGarden({
         worldPos.setFromMatrixPosition(tmpMatrix);
         inst.localToWorld(worldPos);
         worldPos.project(camera);
-        hover.style.left = `${(worldPos.x * 0.5 + 0.5) * w}px`;
-        hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * h}px`;
+        hover.style.left = `${(worldPos.x * 0.5 + 0.5) * width}px`;
+        hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * height}px`;
         hover.style.display = "block";
-        renderer.domElement.style.cursor = "pointer";
+        setCursor(true);
         return;
       }
       hovered = null;
@@ -1240,10 +1598,10 @@ export default function IdeaGarden({
         }`;
         // Tooltip anchors at the root's deepest dip, its most visible point.
         worldPos.copy(rv.mid).project(camera);
-        hover.style.left = `${(worldPos.x * 0.5 + 0.5) * w}px`;
-        hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * h}px`;
+        hover.style.left = `${(worldPos.x * 0.5 + 0.5) * width}px`;
+        hover.style.top = `${(1 - (worldPos.y * 0.5 + 0.5)) * height}px`;
         hover.style.display = "block";
-        renderer.domElement.style.cursor = "pointer";
+        setCursor(true);
         return;
       }
       hoveredRoot = null;
@@ -1256,7 +1614,7 @@ export default function IdeaGarden({
       if (tHit) {
         hoveredTrunk = tHit.object.userData.channelId as string;
         hover.style.display = "none";
-        renderer.domElement.style.cursor = "pointer";
+        setCursor(true);
         return;
       }
       clearHover();
@@ -1296,11 +1654,29 @@ export default function IdeaGarden({
     };
 
     // ── resize ───────────────────────────────────────────────────────────────────
+    // Coalesced into one frame: mobile browser chrome and orientation changes fire
+    // this in bursts, and reallocating the drawing buffer per callback is both
+    // wasteful and visibly jumpy mid-gesture.
+    let roRaf = 0;
     const ro = new ResizeObserver(() => {
-      const w = mount.clientWidth || 1;
-      const h = mount.clientHeight || 1;
-      setOrthoFrustum(w, h);
-      renderer.setSize(w, h);
+      if (roRaf) return;
+      roRaf = requestAnimationFrame(() => {
+        roRaf = 0;
+        const w = mount.clientWidth || 1;
+        const h = mount.clientHeight || 1;
+        if (w === width && h === height) return;
+        width = w;
+        height = h;
+        setOrthoFrustum(w, h);
+        controls.minZoom = minZoomFit; // the fit changed, so the floor moves with it
+        renderer.setSize(w, h);
+        // Label type scale and the scrubber both follow the viewport, and the
+        // pills' vw max-width means their boxes change with it too, so re-style
+        // before re-measuring.
+        stylePills();
+        measurePills();
+        placeScrubber();
+      });
     });
     ro.observe(mount);
 
@@ -1314,10 +1690,16 @@ export default function IdeaGarden({
       raf = requestAnimationFrame(animate);
       timer.update();
       const time = timer.getElapsed();
-      controls.autoRotate = motionRef.current && !dragging;
+      frameTime = time; // so the pointer handlers can read this clock
+      controls.autoRotate =
+        motionRef.current && !dragging && (!lite || time > driftHoldUntil);
       controls.update();
       updateBirds(time);
-      updateHover();
+      // The raycast is the most expensive thing in the frame and hover is
+      // meaningless while the camera is being moved, so drop it for the duration
+      // of the gesture. This is what was stealing frames from every pan and pinch.
+      if (dragging) clearHover();
+      else updateHover();
       updateRoots();
       updateLabels(time);
       renderer.render(scene, camera);
@@ -1326,11 +1708,15 @@ export default function IdeaGarden({
 
     // ── teardown (StrictMode-safe, no leaks) ──────────────────────────────────────
     return () => {
+      disposed = true; // stops a late document.fonts.ready re-measure
       cancelAnimationFrame(raf);
+      if (roRaf) cancelAnimationFrame(roRaf);
       ro.disconnect();
       renderer.domElement.removeEventListener("pointermove", onMove);
       renderer.domElement.removeEventListener("pointerleave", onLeave);
       renderer.domElement.removeEventListener("pointerdown", onDown);
+      renderer.domElement.removeEventListener("pointerup", onUp);
+      renderer.domElement.removeEventListener("pointercancel", onCancel);
       renderer.domElement.removeEventListener("click", onClick);
       slider.removeEventListener("input", onScrub);
       controls.removeEventListener("start", onControlsStart);
@@ -1367,7 +1753,13 @@ export default function IdeaGarden({
     "flex h-[26px] w-[26px] items-center justify-center rounded-full border border-neutral-800 bg-neutral-900/70 backdrop-blur transition-colors";
   return (
     <div ref={mountRef} className="relative h-full w-full">
-      <div ref={overlayRef} className="pointer-events-none absolute inset-0" />
+      {/* overflow-hidden matters now that the portrait fit crops the scene: a
+          tree just off the top edge would otherwise trail its leader line up
+          across the TopBar (the leader SVG is deliberately overflow:visible). */}
+      <div
+        ref={overlayRef}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      />
       {/* Garden controls: hide/show labels + forest ambience (top-left). */}
       <div className="absolute left-4 top-4 z-40 flex gap-2">
         <button
