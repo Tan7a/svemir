@@ -29,6 +29,19 @@ const nextConfig: NextConfig = {
       static: 180,
     },
   },
+  // /concepts is gone: the concept cloud lives in the Garden's side panel on
+  // /graph now. 307 (permanent: false) for the first release; flip to 308
+  // (permanent: true) once the move has proven itself, since browsers and
+  // search engines cache 308 forever.
+  async redirects() {
+    return [
+      {
+        source: "/concepts",
+        destination: "/graph",
+        permanent: false,
+      },
+    ];
+  },
   // Security headers applied to every route. The frame-ancestors / X-Frame-Options
   // pair is the key defence against the site being embedded or cloned in an
   // iframe (clickjacking). A strict script-src CSP is deliberately omitted for

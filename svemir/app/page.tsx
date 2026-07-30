@@ -419,9 +419,10 @@ function orderByType(blocks: CardItem[]): void {
 }
 
 /**
- * Order channels in place. "updated" (default) reuses the shared
- * most-recently-connected comparator from lib/channels so the home view and
- * the recent-channels picker stay consistent.
+ * Order channels in place. The channels view defaults to "alphabetical" (see
+ * the ?order= parsing above); "updated", the switch's fallback branch, reuses
+ * the shared most-recently-connected comparator from lib/channels so the home
+ * view and the recent-channels picker stay consistent.
  */
 function sortChannels(
   channels: (ChannelWithBlocks & { last_connected_at: string | null })[],

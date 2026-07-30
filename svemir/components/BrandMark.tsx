@@ -106,7 +106,7 @@ export default function BrandMark() {
           {view === "root" && (
             <>
               <MenuItem label="Open homepage" onClick={() => go("/")} />
-              <MenuItem label="Open graph" onClick={() => go("/graph")} />
+              <MenuItem label="Open garden" onClick={() => go("/graph")} />
               <MenuItem
                 label="Add block"
                 onClick={() => {

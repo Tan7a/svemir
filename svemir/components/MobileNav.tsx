@@ -47,7 +47,7 @@ export default function MobileNav() {
       href: "/?view=channels",
       active: onHome && view === "channels",
     },
-    { label: "Graph", href: "/graph", active: pathname === "/graph" },
+    { label: "Garden", href: "/graph", active: pathname === "/graph" },
     { label: "Research", href: "/facets", active: pathname === "/facets" },
     {
       label: "Design",

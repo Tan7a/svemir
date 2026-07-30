@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Suggestion } from "@/lib/suggest";
 import type { RecentChannel } from "@/lib/channels";
-import { supabase } from "@/lib/supabase-client";
+import { listAllChannelsAction } from "@/app/admin/actions";
 
 type Props = {
   value: string[];
@@ -61,15 +61,15 @@ export default function ChannelPicker({
 
   // Lazy-fetch all channel titles when the user starts typing.
   useEffect(() => {
-    if (!query || allLoaded || !supabase) return;
-    supabase
-      .from("channels")
-      .select("title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) setAllTitles(data.map((r) => r.title as string));
+    if (!query || allLoaded) return;
+    // Server action, not the anon client: the owner's picker must include
+    // private channels, which the anon key can't see (migration 0012).
+    listAllChannelsAction()
+      .then((data) => {
+        setAllTitles(data.map((c) => c.title));
         setAllLoaded(true);
-      });
+      })
+      .catch((e) => console.error("channel list failed:", e));
   }, [query, allLoaded]);
 
   function toggle(title: string) {

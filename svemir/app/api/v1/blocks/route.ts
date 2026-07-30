@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireBearerToken } from "@/lib/auth";
-import { addItem } from "@/app/admin/actions";
+import { createBlock } from "@/lib/blocks";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { scrapeOpenGraph } from "@/lib/scrape";
 import { detectSourceType } from "@/lib/bookmarks-parser";
 
@@ -107,7 +108,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await addItem({
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: "Supabase admin is not configured." },
+      { status: 500 }
+    );
+  }
+  // createBlock, not the addItem server action: addItem re-checks the httpOnly
+  // session cookie, which the extension's cross-origin fetch never carries.
+  // The bearer token above is this route's auth.
+  const result = await createBlock(supabaseAdmin, {
     kind,
     url,
     title,

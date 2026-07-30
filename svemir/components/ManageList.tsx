@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ItemWithChannels } from "@/lib/types";
 import { CATEGORIES } from "@/lib/constants";
-import { supabase } from "@/lib/supabase-client";
 import {
   backfillBlockConcepts,
+  listAllChannelsAction,
   bulkDeleteItems,
   deleteItem,
   refetchScreenshotCovers,
@@ -91,14 +91,11 @@ export default function ManageList({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("channels")
-      .select("title")
-      .order("title")
-      .then(({ data }) => {
-        if (data) setAllTagNames(data.map((t) => t.title as string));
-      });
+    // Server action, not the anon client: the owner's picker must include
+    // private channels, which the anon key can't see (migration 0012).
+    listAllChannelsAction()
+      .then((data) => setAllTagNames(data.map((c) => c.title)))
+      .catch((e) => console.error("channel list failed:", e));
   }, []);
 
   useEffect(() => {

@@ -332,5 +332,6 @@ node -e "const j=require('./scripts/paper-facets.json');const D={aiTechniques:'a
   copyright gate intact.
 - (Optional, separate task) **Phase 3 visual facet graph** — a "Research" mode in the
   graph drawing papers linked by shared facets, colored by dimension via `facetColor`
-  (already in `lib/constants.ts`). Cloneable from `KnowledgeGraph.tsx`. Not required for
-  the backfill, but the natural finale once the corpus is complete.
+  (already in `lib/constants.ts`). Cloneable from `KnowledgeGraph.tsx` (removed July 2026
+  with the old Map; recoverable via git history). Not required for the backfill, but the
+  natural finale once the corpus is complete.

@@ -1,36 +1,34 @@
-import { Suspense } from "react";
 import { supabase } from "@/lib/supabase-client";
 import TopBar from "@/components/TopBar";
-import GraphViewSwitcher from "@/components/GraphViewSwitcher";
-import type { GardenChannel } from "@/components/IdeaGarden";
-import {
-  type GraphItem,
-  type GraphConcept,
-  type BlockConceptLink,
-} from "@/components/KnowledgeGraph";
+import GardenShell from "@/components/GardenShell";
+import type {
+  GardenChannel,
+  GardenRoot,
+  RootTerm,
+} from "@/components/IdeaGarden";
+import type { CloudConcept } from "@/components/ConceptCloud";
 import { channelColor } from "@/lib/constants";
 
 export const revalidate = 60;
 
-// Cap concept nodes shown in the graph - keeps the force simulation legible.
-const MAX_CONCEPT_NODES = 220;
+// Concept budget for the panel's cloud. 500 was the standalone /concepts
+// page's budget; the panel inherits it (the old 220 cap existed only to keep
+// the Map's force simulation legible).
+const MAX_CONCEPTS = 500;
 
-type ChannelRef = { id: string; title: string; slug: string };
+// Root density cap: how many roots may touch one channel before weaker pairs
+// are dropped. Each channel always keeps its strongest pair regardless, so no
+// planted channel with any overlap reads as isolated.
+const MAX_ROOTS_PER_CHANNEL = 4;
 
-type GraphRow = {
-  id: string;
-  title: string;
-  categories: string[] | null;
-  image_url: string | null;
-  kind: string;
-  connections: { channels: unknown }[] | null;
+type PairRow = {
+  channel_a: string;
+  channel_b: string;
+  weight: number;
+  shared_count: number;
+  top_terms: string[] | null;
+  top_slugs: string[] | null;
 };
-
-function asChannelList(raw: unknown): ChannelRef[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw as ChannelRef[];
-  return [raw as ChannelRef];
-}
 
 export default async function GraphPage() {
   if (!supabase) {
@@ -44,106 +42,35 @@ export default async function GraphPage() {
     );
   }
 
-  const [
-    { data, error },
-    { data: edgeRows },
-    { data: conceptRows },
-    { data: channelData },
-  ] = await Promise.all([
-    supabase
-      .from("items")
-      .select(
-        "id, title, categories, image_url, kind, connections(channels(id, title, slug))"
-      ),
-    supabase.from("block_connections").select("a_id, b_id"),
-    supabase
-      .from("concepts")
-      .select("id, slug, term, block_count")
-      .gte("block_count", 2) // only concepts that actually link 2+ blocks
-      .order("block_count", { ascending: false })
-      .limit(MAX_CONCEPT_NODES),
-    // Garden: each channel + its blocks (oldest→newest decided below).
-    supabase
-      .from("channels")
-      .select("id, slug, title, connections(items(id, title, created_at))"),
-  ]);
-
-  // Block→concept links, restricted to the capped concept set above.
-  const concepts: GraphConcept[] = (
-    (conceptRows ?? []) as {
-      id: string;
-      slug: string;
-      term: string;
-      block_count: number;
-    }[]
-  ).map((c) => ({
-    id: c.id,
-    slug: c.slug,
-    term: c.term,
-    blockCount: c.block_count,
-  }));
-
-  let blockConceptLinks: BlockConceptLink[] = [];
-  if (concepts.length > 0) {
-    // Paged, because PostgREST caps a single response at 1000 rows. Fetching
-    // this in one shot silently returned exactly 1000 links, which left ~78 of
-    // the 150 concepts (including the biggest ones, "user" and "design") with
-    // no edges at all. On the Map those became orphans flung outside the orb.
-    const PAGE = 1000;
-    const MAX_PAGES = 25; // ~25k links; a backstop, not an expected limit
-    const conceptIds = concepts.map((c) => c.id);
-    const bcRows: { block_id: string; concept_id: string; tf: number }[] = [];
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const from = page * PAGE;
-      const { data: rows } = await supabase
-        .from("block_concepts")
-        .select("block_id, concept_id, tf")
-        .in("concept_id", conceptIds)
-        .range(from, from + PAGE - 1);
-      if (!rows?.length) break;
-      bcRows.push(...(rows as typeof bcRows));
-      if (rows.length < PAGE) break; // short page: that was the last one
-    }
-    blockConceptLinks = bcRows.map((r) => ({
-      blockId: r.block_id,
-      conceptId: r.concept_id,
-      weight: r.tf,
-    }));
-  }
+  const [{ data: channelData, error }, { data: conceptRows }, pairsRes] =
+    await Promise.all([
+      // Garden: each channel + its blocks (oldest→newest decided below).
+      supabase
+        .from("channels")
+        .select("id, slug, title, connections(items(id, title, created_at))"),
+      supabase
+        .from("concepts")
+        .select("id, slug, term, block_count")
+        .gte("block_count", 2) // 2+ blocks: a one-block term is a tag, not a thread
+        .order("block_count", { ascending: false })
+        .limit(MAX_CONCEPTS),
+      // Roots: channel pairs that share concepts (migration 0013). SECURITY
+      // INVOKER, so anon RLS keeps private channels out. Errors (including
+      // "the migration hasn't been run yet") degrade to zero roots below,
+      // matching the rpc house pattern in lib/channels.ts.
+      supabase.rpc("channel_concept_pairs", { min_shared: 1, per_pair_terms: 5 }),
+    ]);
 
   if (error) {
     return (
       <>
         <TopBar />
         <main className="p-8 text-sm text-red-400">
-          Failed to load graph: {error.message}
+          Failed to load the garden: {error.message}
         </main>
       </>
     );
   }
-
-  const items: GraphItem[] = ((data ?? []) as unknown as GraphRow[]).map(
-    (row) => {
-      const channelPairs = (row.connections ?? []).flatMap((c) =>
-        asChannelList(c.channels)
-      );
-      return {
-        id: row.id,
-        title: row.title,
-        category: row.categories?.[0] ?? null,
-        img: row.image_url,
-        kind: row.kind,
-        tagIds: channelPairs.map((c) => c.id),
-        tagNames: channelPairs.map((c) => c.title),
-        tagSlugs: channelPairs.map((c) => c.slug),
-      };
-    }
-  );
-
-  const manualEdges = (edgeRows ?? []).map((e) => ({
-    a: e.a_id as string,
-    b: e.b_id as string,
-  }));
 
   // Garden data: one plant per channel; leaves = blocks oldest→newest.
   type GardenRow = {
@@ -176,20 +103,63 @@ export default async function GraphPage() {
     })
     .filter((g) => g.leaves.length > 0);
 
+  // Shape the RPC rows into GardenRoots: keep pairs whose BOTH endpoints are
+  // planted, normalize weight against the strongest pair, then thin greedily
+  // (strongest first) so no tree drowns under too many roots.
+  const gardenIds = new Set(gardens.map((g) => g.id));
+  const pairRows =
+    pairsRes.error || !pairsRes.data ? [] : (pairsRes.data as PairRow[]);
+  const candidates = pairRows
+    .filter((r) => gardenIds.has(r.channel_a) && gardenIds.has(r.channel_b))
+    .sort((x, y) => y.weight - x.weight);
+  const maxWeight = candidates[0]?.weight || 1;
+  const degree = new Map<string, number>();
+  const roots: GardenRoot[] = [];
+  for (const r of candidates) {
+    const da = degree.get(r.channel_a) ?? 0;
+    const db = degree.get(r.channel_b) ?? 0;
+    // A channel's first appearance in this desc order IS its strongest pair,
+    // so it is always kept even when the other endpoint is already full.
+    const firstForEither = da === 0 || db === 0;
+    if (
+      !firstForEither &&
+      (da >= MAX_ROOTS_PER_CHANNEL || db >= MAX_ROOTS_PER_CHANNEL)
+    )
+      continue;
+    const slugs = r.top_slugs ?? [];
+    const terms: RootTerm[] = (r.top_terms ?? [])
+      .map((term, i) => ({ term, slug: slugs[i] ?? "" }))
+      .filter((t) => t.slug);
+    roots.push({
+      a: r.channel_a,
+      b: r.channel_b,
+      weight: r.weight / maxWeight,
+      sharedCount: r.shared_count,
+      terms,
+    });
+    degree.set(r.channel_a, da + 1);
+    degree.set(r.channel_b, db + 1);
+  }
+
+  const concepts: CloudConcept[] = (
+    (conceptRows ?? []) as {
+      id: string;
+      slug: string;
+      term: string;
+      block_count: number;
+    }[]
+  ).map((c) => ({ id: c.id, slug: c.slug, term: c.term, count: c.block_count }));
+
   return (
     <>
       <TopBar />
-      {items.length === 0 ? (
+      {gardens.length === 0 ? (
         <main className="flex h-[calc(100vh-3rem)] items-center justify-center text-sm text-neutral-500">
-          No blocks yet - add some from <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
+          No channels with blocks yet - add some from{" "}
+          <code className="ml-1 rounded bg-neutral-900 px-1">/admin</code>.
         </main>
       ) : (
-        <Suspense fallback={<div className="h-[calc(100vh-3rem)]" />}>
-          <GraphViewSwitcher
-            gardens={gardens}
-            graphProps={{ items, manualEdges, concepts, blockConceptLinks }}
-          />
-        </Suspense>
+        <GardenShell gardens={gardens} roots={roots} concepts={concepts} />
       )}
     </>
   );

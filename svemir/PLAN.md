@@ -2,13 +2,18 @@
 
 A personal knowledge base for inspiration links, with bulk import from Chrome bookmarks, free-form tagging, an Obsidian-style knowledge graph, and per-item detail pages.
 
+> **Superseded (July 2026):** the force-directed knowledge graph described throughout this
+> historical roadmap was removed. `/graph` renders the Idea Garden (Three.js) with a root system
+> showing shared concepts between channels; see `docs/idea-garden.md`. Graph sections below are
+> kept as history.
+
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack), TypeScript
 - **Tailwind CSS v4** (no config file; `@import "tailwindcss"` in `globals.css`)
 - **Supabase** (`@supabase/supabase-js`) — anon/publishable key for reads, service-role for writes
 - **`open-graph-scraper`** for URL metadata
-- **`react-force-graph-2d`** for the knowledge graph
+- **`three`** for the Idea Garden on `/graph` (`react-force-graph-2d` removed with the old graph)
 - HTTP Basic Auth on `/admin/*` via Next.js 16 `proxy.ts` (renamed from `middleware.ts`)
 - Vercel-ready
 

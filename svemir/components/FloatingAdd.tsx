@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthed } from "@/lib/use-authed";
 import {
   addItem,
   renameBlock,
   updateBlockDescription,
   listItems,
+  recentChannelsAction,
 } from "@/app/admin/actions";
 import { listTokens, type TokenRow } from "@/app/admin/tokens/actions";
 import {
@@ -24,7 +25,6 @@ import TokensClient from "@/app/admin/tokens/TokensClient";
 import GuestbookAdminList from "./GuestbookAdminList";
 import SignInModal from "./SignInModal";
 import { MenuPanel, MenuItem, MenuDivider } from "./ui/Menu";
-import { supabase } from "@/lib/supabase-client";
 import type { RecentChannel } from "@/lib/channels";
 import type { ItemWithChannels } from "@/lib/types";
 
@@ -73,12 +73,9 @@ export type EditPaperFullTextDetail = { id: string; title: string; text: string 
 export default function FloatingAdd() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  // The garden view shows the Poet Engineer credit above the maker pill, so the
+  // The garden shows the Poet Engineer credit above the maker pill, so the
   // + lifts there to make room - but nowhere else.
-  const viewParam = searchParams.get("view");
-  const isGarden =
-    pathname === "/graph" && (viewParam === null || viewParam === "garden");
+  const isGarden = pathname === "/graph";
 
   const authed = useAuthed();
   const [signInOpen, setSignInOpen] = useState(false);
@@ -210,26 +207,15 @@ export default function FloatingAdd() {
     };
   }, [open]);
 
-  // Recent channels for the picker's suggestions (blocks-style), newest first.
+  // Recent channels for the picker's suggestions (blocks-style). Server
+  // action, not the anon client: the owner's suggestions must include private
+  // channels, which the anon key can't see (migration 0012). Also switches
+  // "newest created" to "recently used", matching the extension.
   useEffect(() => {
-    if (!open || recents.length > 0 || !supabase) return;
-    supabase
-      .from("channels")
-      .select("id,title,slug,created_at")
-      .order("created_at", { ascending: false })
-      .limit(14)
-      .then(({ data }) => {
-        if (data)
-          setRecents(
-            data.map((r) => ({
-              id: r.id as string,
-              title: r.title as string,
-              slug: r.slug as string,
-              block_count: 0,
-              last_connected_at: (r.created_at as string) ?? null,
-            }))
-          );
-      });
+    if (!open || recents.length > 0) return;
+    recentChannelsAction()
+      .then((data) => setRecents(data.slice(0, 14)))
+      .catch((e) => console.error("recent channels failed:", e));
   }, [open, recents.length]);
 
   // Lazy-load a heavy tab's data the first time it's shown in the manage view.

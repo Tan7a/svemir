@@ -10,6 +10,8 @@ export type ExtractedAsset = {
   source_name: string;
   kind: Kind;
   body_text?: string;
+  /** Set when stashed via right-click save; the popup ignores stale stashes. */
+  stashedAt?: number;
 };
 
 export type RecentChannel = {

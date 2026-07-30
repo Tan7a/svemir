@@ -61,7 +61,7 @@ export default function ViewNav() {
         );
       })}
       <Link href="/graph" className={cls(onGraph)}>
-        Graph
+        Garden
       </Link>
       <Link href="/facets" className={cls(onFacets)}>
         Research

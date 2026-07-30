@@ -85,23 +85,46 @@ export default function App() {
         .then((all) => setAllChannels(all.map((c) => c.title)))
         .catch((e) => console.warn("all channels fetch failed:", e));
 
-      const tabs = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      const tab = tabs[0];
+      // The fallback popup WINDOW (opened by the service worker when
+      // chrome.action.openPopup is unavailable, e.g. in Dia) carries the
+      // target tab in the URL; queried from inside a detached window,
+      // "active tab of the current window" would be the popup page itself.
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      let tab: chrome.tabs.Tab | undefined;
+      if (tabParam) {
+        try {
+          tab = await chrome.tabs.get(Number(tabParam));
+        } catch {
+          /* tab already closed; fall through to the active-tab lookup */
+        }
+      }
+      if (!tab) {
+        const tabs = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+        tab = tabs[0];
+      }
       if (!tab?.id) {
         setPhase({ kind: "error", message: "No active tab" });
         return;
       }
 
-      // Pending asset from right-click context menu?
+      // Pending asset from right-click context menu? Claimed once, and only
+      // while fresh: if openPopup failed and the user moved on, an old stash
+      // must not hijack a plain toolbar click hours later.
+      const PENDING_MAX_AGE_MS = 10 * 60 * 1000;
       const pending = await getPendingAsset(tab.id);
       if (pending) {
-        setAsset(pending);
         await clearPendingAsset(tab.id);
-        setPhase({ kind: "ready" });
-        return;
+        const fresh =
+          pending.stashedAt == null ||
+          Date.now() - pending.stashedAt < PENDING_MAX_AGE_MS;
+        if (fresh) {
+          setAsset(pending);
+          setPhase({ kind: "ready" });
+          return;
+        }
       }
 
       // Inject extractor on demand.
@@ -327,28 +350,35 @@ export default function App() {
         autoApplyKey={suggestKey ?? undefined}
       />
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={selected.length === 0 || phase.kind === "saving"}
-        className={`mt-1 rounded-xl py-2.5 text-sm font-medium transition-colors ${
-          selected.length === 0 || phase.kind === "saving"
-            ? "bg-neutral-800 text-neutral-500"
-            : "bg-neutral-100 text-neutral-900 hover:bg-neutral-50"
-        }`}
-      >
-        {phase.kind === "saving"
-          ? "Saving…"
-          : phase.kind === "saved"
-          ? "Saved ✓"
-          : `Connect to ${selected.length} channel${
-              selected.length === 1 ? "" : "s"
-            }`}
-      </button>
+      {/* Sticky footer: the channel lists can be long, and the save button
+          must stay reachable without scrolling. Negative margins bleed over
+          the root p-4 so list items scroll fully behind the solid backdrop;
+          the hairline top border mirrors the header's divider (flat, no
+          shadow). */}
+      <div className="sticky bottom-0 -mx-4 -mb-4 mt-1 border-t border-neutral-800 bg-[#0a0a0a] px-4 pb-4 pt-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={selected.length === 0 || phase.kind === "saving"}
+          className={`w-full rounded-xl py-2.5 text-sm font-medium transition-colors ${
+            selected.length === 0 || phase.kind === "saving"
+              ? "bg-neutral-800 text-neutral-500"
+              : "bg-neutral-100 text-neutral-900 hover:bg-neutral-50"
+          }`}
+        >
+          {phase.kind === "saving"
+            ? "Saving…"
+            : phase.kind === "saved"
+            ? "Saved ✓"
+            : `Connect to ${selected.length} channel${
+                selected.length === 1 ? "" : "s"
+              }`}
+        </button>
 
-      {phase.kind === "error" && (
-        <p className="text-xs text-red-400">{phase.message}</p>
-      )}
+        {phase.kind === "error" && (
+          <p className="mt-2 text-xs text-red-400">{phase.message}</p>
+        )}
+      </div>
     </div>
   );
 }
