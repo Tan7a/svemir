@@ -227,8 +227,68 @@ async function BlocksRoute({
   // constraint on items.url), merging the topics from each copy so the survivor
   // still shows every channel it belonged to.
   const blocks = dedupeBlocks((data ?? []) as BlockRow[]);
-  // Vibes is now an interactive scale rather than a one-shot shuffle.
-  if (order === "vibes") return <BlocksVibeView blocks={blocks} />;
+  // Vibes: an interactive scale over the top concepts. Fetch the 7 most
+  // prevalent concepts, then which of the on-screen blocks mention each -
+  // the client component scrubs between those buckets with no further I/O.
+  if (order === "vibes") {
+    // 9 stops: two pinned vibes that always get a dot (AI and the future),
+    // topped up with the most prevalent concepts. Sorted by prevalence so the
+    // scale runs big themes → niche ones and the pins slot in naturally. A
+    // pinned slug that no longer exists simply drops out.
+    const PINNED_SLUGS = ["artificial-intelligence", "future"];
+    const VIBE_STOPS = 9;
+    type ConceptRow = {
+      id: string;
+      term: string;
+      slug: string;
+      block_count: number;
+    };
+    const [pinnedRes, topRes] = await Promise.all([
+      supabase
+        .from("concepts")
+        .select("id, term, slug, block_count")
+        .in("slug", PINNED_SLUGS),
+      supabase
+        .from("concepts")
+        .select("id, term, slug, block_count")
+        .order("block_count", { ascending: false })
+        .limit(VIBE_STOPS),
+    ]);
+    const pinned = (pinnedRes.data ?? []) as ConceptRow[];
+    const filler = ((topRes.data ?? []) as ConceptRow[]).filter(
+      (c) => !pinned.some((p) => p.slug === c.slug)
+    );
+    const topConcepts = [...pinned, ...filler]
+      .slice(0, VIBE_STOPS)
+      .sort((a, b) => b.block_count - a.block_count);
+    const conceptIds = topConcepts.map((c) => c.id);
+    const { data: links } = conceptIds.length
+      ? await supabase
+          .from("block_concepts")
+          .select("block_id, concept_id")
+          .in("concept_id", conceptIds)
+          .limit(8000)
+      : { data: [] };
+    // Keep only links to blocks actually in the grid (the 500-cap + dedupe
+    // above may have dropped some), then group block ids per concept.
+    const inGrid = new Set(blocks.map((b) => b.id));
+    const byConcept = new Map<string, string[]>();
+    for (const l of (links ?? []) as { block_id: string; concept_id: string }[]) {
+      if (!inGrid.has(l.block_id)) continue;
+      const bucket =
+        byConcept.get(l.concept_id) ??
+        byConcept.set(l.concept_id, []).get(l.concept_id)!;
+      bucket.push(l.block_id);
+    }
+    const vibes = topConcepts
+      .map((c) => ({
+        term: c.term,
+        slug: c.slug,
+        blockIds: byConcept.get(c.id) ?? [],
+      }))
+      .filter((v) => v.blockIds.length > 0);
+    return <BlocksVibeView blocks={blocks} vibes={vibes} />;
+  }
   if (order === "random") shuffle(blocks);
   else if (order === "type") orderByType(blocks);
   else if (order === "connections") {
