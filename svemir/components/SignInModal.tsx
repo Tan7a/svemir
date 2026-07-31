@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/access-actions";
 
 type Props = {
@@ -19,7 +18,6 @@ type Props = {
  * scroll-lock pattern from components/Modal.tsx.
  */
 export default function SignInModal({ open, onClose }: Props) {
-  const router = useRouter();
   const usernameRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -53,17 +51,18 @@ export default function SignInModal({ open, onClose }: Props) {
     setPending(true);
     setError(null);
     const res = await signIn(username, password);
-    setPending(false);
     if (res.ok) {
-      onClose();
-      // Land on Blocks (home) after sign-in, not the retired admin page. The
-      // floating + is where signed-in owners add/manage from now on.
-      router.push("/");
-      router.refresh();
-    } else {
-      setError(res.error);
-      setPassword("");
+      // Hard navigation to Blocks (home), NOT router.push: useAuthed reads the
+      // hint cookie only on mount, and a soft navigation keeps long-lived
+      // components (the floating +) mounted with their stale signed-out state.
+      // A full reload remounts everything, matching how logout already works.
+      // Keep `pending` true so the button stays disabled while the page turns.
+      window.location.assign("/");
+      return;
     }
+    setPending(false);
+    setError(res.error);
+    setPassword("");
   }
 
   const inputClass =

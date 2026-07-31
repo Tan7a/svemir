@@ -11,8 +11,10 @@ import { HINT_COOKIE } from "@/lib/access";
  * visitors get a clean read-only view instead of buttons that would just error.
  *
  * Returns false during SSR and the first client render, then flips to the real
- * value after mount (hydration-safe). Auth changes elsewhere navigate + refresh
- * the tree, so a mount-time read stays current.
+ * value after mount (hydration-safe). The cookie is read ONCE per mount, so any
+ * auth change (sign-in, log out) must do a FULL page reload
+ * (window.location.assign), never router.push/refresh - soft navigation keeps
+ * long-lived components mounted and this value stale.
  */
 export function hasHintCookie(): boolean {
   if (typeof document === "undefined") return false;
