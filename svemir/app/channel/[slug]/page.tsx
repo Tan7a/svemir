@@ -9,7 +9,7 @@ import type { CardItem, Channel, ChannelWithBlocks } from "@/lib/types";
 import ChannelCard from "@/components/ChannelCard";
 import ChannelActions from "@/components/ChannelActions";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 type Params = Promise<{ slug: string }>;
 

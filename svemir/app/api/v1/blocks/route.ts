@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     categories,
     channelTitles: channels,
     body_text: body.body_text,
-  });
+  }, { revalidateBroad: false });
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 500 });

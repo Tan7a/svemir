@@ -16,7 +16,7 @@ import type {
   CardItem,
 } from "@/lib/types";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 const ALLOWED_VIEWS: Record<string, ViewKind> = {
   channels: "channels",

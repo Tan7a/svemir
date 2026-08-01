@@ -3,7 +3,7 @@ import TopBar from "@/components/TopBar";
 import BlockDetail from "@/components/BlockDetail";
 import { getBlockWithChannels } from "@/lib/queries";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 /**
  * Full-page block detail. Rendered on direct navigation / refresh.

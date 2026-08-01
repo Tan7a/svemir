@@ -120,10 +120,18 @@ export async function syncBlockConceptPrivacy(
  */
 export async function createBlock(
   client: SupabaseClient,
-  data: CreateBlockInput
+  data: CreateBlockInput,
+  opts: { revalidateBroad?: boolean } = {}
 ): Promise<
   { success: true; id: string } | { success: false; error: string }
 > {
+  // revalidateBroad busts the home + graph pages on every insert. Interactive
+  // admin adds want that (instant feedback); the bulk /api/v1/blocks path
+  // (Chrome extension, hundreds of inserts per re-extraction) passes false so
+  // it only writes the targeted /block/{id} ISR entry - home + graph catch up
+  // on their own revalidate timer instead of one write per block. Keeps Vercel
+  // ISR Writes off the free-tier ceiling.
+  const { revalidateBroad = true } = opts;
   const { channelTitles, kind, body_text, ...rest } = data;
 
   // body_text is omitted from the insert when empty so callers (and the
@@ -181,8 +189,10 @@ export async function createBlock(
   // and soft-failed inside sync: a concept hiccup must never lose the save.
   await syncBlockConceptPrivacy(client, blockId);
 
-  revalidatePath("/");
-  revalidatePath("/graph");
+  if (revalidateBroad) {
+    revalidatePath("/");
+    revalidatePath("/graph");
+  }
   revalidatePath(`/block/${blockId}`);
   return { success: true, id: blockId };
 }

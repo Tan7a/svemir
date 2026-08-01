@@ -3,7 +3,7 @@ import TopBar from "@/components/TopBar";
 import FacetDetail from "@/components/FacetDetail";
 import { getFacetWithPapers } from "@/lib/queries";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 /**
  * Full-page facet view. Rendered on direct navigation / refresh. From within the

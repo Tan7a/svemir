@@ -3,7 +3,7 @@ import GuestbookForm from "@/components/GuestbookForm";
 import { supabase } from "@/lib/supabase-client";
 import { cardBg, styleClass } from "@/lib/guestbook";
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 type Entry = {
   id: string;

@@ -9,7 +9,7 @@ import type {
 import type { CloudConcept } from "@/components/ConceptCloud";
 import { channelColor } from "@/lib/constants";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 // Concept budget for the panel's cloud. 500 was the standalone /concepts
 // page's budget; the panel inherits it (the old 220 cap existed only to keep

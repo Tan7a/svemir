@@ -8,7 +8,7 @@ import { FACET_DIMENSIONS } from "@/lib/constants";
 import { ITEM_CARD_COLUMNS } from "@/lib/types";
 import type { BlockWithChannelTags, CardItem, ChannelTag } from "@/lib/types";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 /** Orders that render the papers themselves as a block grid. */
 const PAPER_ORDERS = new Set(["newest", "oldest", "alphabetical", "source"]);

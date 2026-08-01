@@ -7,7 +7,7 @@ import ExportPapersButton from "@/components/ExportPapersButton";
 import { ITEM_CARD_COLUMNS } from "@/lib/types";
 import type { CardItem } from "@/lib/types";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 type Params = Promise<{ slug: string }>;
 
